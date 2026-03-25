@@ -34,3 +34,4 @@ prompts/
 .history/
 .worktrees/
 .tmp_rg_files.txt
+artifacts/semester_features/
