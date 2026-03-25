@@ -1,0 +1,646 @@
+=== 技术指标要求 ===
+【技术要求与指标】
+（此项目中，需要学生团队使用的相关技术、及开发完成程度指标）
+开发完成程度指标：基于样本数据，输出8~10个学生行为数据分析成果，生成个性化评价报告（必须包含学生个体画像和群体画像，其他成果可自定义）。至少能发现学生的4类模式，相关预测模型的AUC不低于80%，对关键问题提供不少于3个维度的解释。
+
+=== 数据集字段 (XLSX Headers) ===
+- 上网统计.xlsx: ['WID', 'XSBH', 'TJNY', 'SWLJSC', 'XXPJZ', 'XN', 'XQ', 'TBRQ', 'TBLX', 'CZRQ', 'CZZ', 'CZZXM']
+- 上课信息统计表.xlsx: ['ID', 'COURSE_NAME', 'COURSE_CODE', 'TEACHER_USER_NAME', 'TEACHER_REAL_NAME', 'TEACH_TIME', 'ATTENDEES_NUM', 'ARRIVE_NUM', 'BOWING_RATE', 'HEAD_UP_RATE', 'FRONT_ROW_RATE', 'TOTAL_SCORE']
+- 体测数据.xlsx: ['XH', 'XB', 'NJ', 'YX', 'ZY', 'BJ', 'BH', 'TCNF', 'ZF', 'BZ', 'BMI', 'FHL', 'WS', 'LDTY', 'ZWTQQ', 'BB', 'YQ', 'YWQZ', 'YTXS']
+- 体育课.xlsx: ['XH', 'XB', 'NJ', 'YX', 'ZY', 'BJ', 'BH', 'XQ', 'ZKC', 'KC', 'SKSJ']
+- 四六级成绩.xlsx: ['KS_XH', 'KS_YYJB', 'KS_CJ']
+- 图书馆打卡记录.xlsx: ['cardld', 'type', 'dept', 'visittime', 'gateno', 'direction']
+- 奖学金获奖.xlsx: ['XSBH', 'JXJMC', 'PDXN', 'PDDJ', 'JXJJZDW', 'JLJB', 'FFJE']
+- 学生体能考核.xlsx: ['XM', 'XH', 'XB', 'NJ', 'YX', 'ZY', 'BJ', 'BH', 'CFBFS', 'SJCJ', 'HSCJ', 'XQ', 'TSTAMP']
+- 学生作业提交记录.xlsx: ['CREATER_ID', 'CREATER_NAME', 'CREATER_LOGIN_NAME', 'COLLEDGE_ID', 'COLLEDGE_NAME', 'MAJOR_ID', 'MAJOR_NAME', 'CLASS_ID', 'CLASS_NAME', 'REVIEW_ID', 'REVIEW_NAME', 'REVIEW_LOGIN_NAME', 'WORK_ID', 'WORK_TITLE', 'CLAZZ_ID', 'CLAZZ_NAME', 'COURSE_ID', 'COURSE_NAME', 'STATUS', 'FULLMARKS', 'COMMENT', 'SCORE', 'TYPE', 'CREATER_TIME', 'ANSWER_TIME', 'REVIEW_TIME', 'UPDATE_TIME', 'INSERT_TIME', 'TSTAMP']
+- 学生基本信息.xlsx: ['XH', 'XB', 'MZMC', 'ZZMMMC', 'CSRQ', 'JG', 'XSM', 'ZYM']
+- 学生成绩.xlsx: ['BY1', 'XH', 'ZXJXJHH', 'KCH', 'KXH', 'KSSJ', 'KCSXDM', 'XF', 'XDFSDM', 'KSLXDM', 'CXBKBZ', 'KCCJ', 'DJCJ', 'JDCJ', 'TDKCH', 'SSXS']
+- 学生签到记录.xlsx: ['ACTIVE_ID', 'ACTIVE_STATE', 'LOGIN_NAME', 'ATTEND_TIME', 'INSERT_TIME', 'ROLE', 'XYID', 'XYMC', 'MAJORID', 'MAJORNAME', 'CLASSID', 'CLASSNAME', 'TSTAMP']
+- 学生选课信息.xlsx: ['XH', 'JXBH', 'KCH', 'KXH', 'XKZY', 'SFCX', 'XKRQ', 'KKXN', 'KCLB', 'KKXQ', 'TSTAMP']
+- 学科竞赛.xlsx: ['JSMC', 'HJJB', 'HJDJ', 'HJSJ', 'XHHGH', 'NJ', 'XY', 'ZY', 'DNPX', 'ZZ']
+- 学籍异动.xlsx: ['XH', 'YDRQ', 'YDLBDM', 'YDYYDM', 'SPRQ', 'YYXDM', 'YZYDM', 'YZYFXDM', 'YNJ', 'XYXDM', 'XZYDM', 'XZYFXDM', 'XNJ', 'SFZX', 'YDSM', 'YXZ', 'XBH', 'BY1', 'BY2', 'SFSCXKJG', 'SFTBPYFA']
+- 日常锻炼.xlsx: ['XH', 'XB', 'NJ', 'YX', 'ZY', 'BJ', 'BH', 'XQ', 'ZC', 'DKCS']
+- 本科生综合测评.xlsx: ['BZ', 'XZNJ', 'XB', 'DWDM', 'ZYDM', 'BJDM', 'SYDDM', 'CPXN', 'CPXQ', 'CJF', 'CJPM', 'SZF', 'SZFPM', 'NLF', 'NLFPM', 'XSPF', 'BZRPF', 'FJF', 'ZCJ', 'ZYNJPM', 'DJ', 'CZRQ', 'CZZ', 'SZNLF', 'SZNLFPM', 'ZYNJRS', 'BY1', 'BY2', 'TSTAMP', 'XH', 'PDXN', 'PDXQ', 'DYF', 'DYCJPM', 'ZYF', 'ZYCJPM', 'TYF', 'TYCJPM', 'ZHJNF', 'FZSZCJPM', 'QTPF', 'JF', 'JFLY', 'KF', 'KFLY', 'ZF', 'BJPM', 'BJRS', 'BJPMBL', 'ZYPM', 'ZYRS', 'ZYPMBL', 'XNZPM']
+- 毕业去向.xlsx: ['YXMCXX', 'GRADE', 'SID', 'DEPARTMENT', 'MAJOR', 'ZYDM', 'ZYFX', 'BJMC', 'GENDER', 'XBMC', 'DURATION', 'ZXWYYZ', 'ZXWYYZMC', 'BIRTHDAY', 'XL', 'XLMC', 'GRADUATE_YEAR', 'BYQX', 'BYQXMC', 'SJDWMC', 'DWZZJGDM', 'DWXZ', 'DWXZMC', 'DWHY', 'DWHYMC', 'GZZWLBDM', 'GZZWLBMC', 'DWSZDDM', 'DWSZDMC', 'DWYB', 'JKZK', 'JKZKMC', 'MZ', 'MZMC', 'POLITICAL', 'ZZMCMC', 'STUDENT_IN', 'SYSZDMC', 'CXSY', 'CXSYMC', 'RXSJ', 'XXXS', 'XXXSMC', 'SFSLBDM', 'SFSLBMC', 'KNSLBDM', 'TRAIN_MODE', 'PYFSMC', 'DASFZRXX', 'HKSFZRXX', 'BDZQFLB', 'DWMC', 'QWDWSZD', 'QWDWSZDMC']
+- 社团活动.xlsx: ['XSBH', 'HDRQ']
+- 线上学习（综合表现）.xlsx: ['LOGIN_NAME', 'XM', 'DEPARTMENT_NAME', 'MAJOR_NAME', 'CLASS_NAME', 'ROLEID', 'BFB']
+- 考勤汇总.xlsx: ['XN', 'XQ', 'ZC', 'SKXQ', 'RQ', 'KSJC', 'KSJCSJ', 'JSJC', 'JSJCSJ', 'XH', 'XY', 'ZY', 'NJ', 'JASDM', 'KCM', 'KCH', 'KXH', 'JSMC', 'SZJZ', 'SZLC', 'FJBH', 'PLACE_CODE', 'SZXQ', 'FJEJFL', 'JZBM', 'ZTDM', 'ZT', 'DKSJ', 'KCXZ', 'KCLB']
+- 考试提交记录.xlsx: ['CREATER_ID', 'CREATER_NAME', 'CREATER_LOGIN_NAME', 'COLLEDGE_NAME', 'MAJOR_ID', 'MAJOR_NAME', 'CLASS_ID', 'CLASS_NAME', 'REVIEW_ID', 'REVIEW_NAME', 'REVIEW_LOGIN_NAME', 'WORK_ID', 'WORK_TITLE', 'CLAZZ_ID', 'COURSE_ID', 'COURSE_NAME', 'STATUS', 'FULLMARKS', 'SCORE', 'TYPE', 'CREATER_TIME', 'ANSWER_TIME', 'REVIEW_TIME', 'UPDATE_TIME', 'INSERT_TIME', 'TSTAMP']
+- 讨论记录.xlsx: ['COURSE_ID', 'COURSE_NAME', 'TOPIC_ID', 'TOPIC_TITLE', 'CREATER_ROLE', 'CREATER_NAME', 'CREATER_LOGIN_NAME', 'CREATE_TIME', 'REPLY_USER_NAME', 'REPLY_LOGIN_NAME', 'REPLY_USER_ROLE', 'REPLY_CONTENT', 'ISDELETE', 'INSERT_TIME', 'TOPIC_ISDELETE']
+- 课堂任务参与.xlsx: ['USER_ID', 'LOGIN_NAME', 'USER_NAME', 'DEPARTMENT_ID', 'DEPARTMENT_NAME', 'MAJOR_ID', 'MAJOR_NAME', 'CLASS_ID', 'CLASS_NAME', 'STATE', 'SCHOOL_YEAR', 'COURSE_ID', 'COURSE_NAME', 'JWCOURSE_ID', 'CREATE_TIME', 'COURSE_TYPE', 'COURSE_STATUS', 'COURSE_DELETE', 'CLAZZ_ID', 'CLAZZ_NAME', 'CLAZZ_STATUS', 'CLAZZ_STATE', 'JOB_NUM', 'JOB_RATE', 'VIDEOJOB_NUM', 'VIDEOJOB_RATE', 'VIDEOJOB_TIME', 'TEST_NUM', 'TEST_RATE', 'TEST_AVGSCORE', 'WORK_NUM', 'WORK_RATE', 'WORK_AVGSCORE', 'EXAM_NUM', 'EXAM_RATE', 'EXAM_AVGSCORE', 'PV', 'SIGN_NUM', 'SIGN_RATE', 'COURSE_LIVE_TIME', 'SPECIAL_TIME', 'BBS_NUM', 'TOPIC_NUM', 'REPLY_NUM', 'POINTS', 'PAPER_NUM', 'PAPER_RATE', 'PICK_NUM', 'ANSWER_NUM', 'MARKSCORE_NUM', 'MARKSCORE_RATE', 'TASK_NUM', 'TASK_RATE', 'UPDATE_TIME', 'INSERT_TIME', 'TSTAMP']
+- 课程信息.xlsx: ['KCH', 'KCCCDM', 'KCFLDM', 'JXFSDM', 'SKYZDM', 'KCZTDM', 'KCM', 'YWKCM', 'JXMD', 'XS', 'XF', 'KNZXS', 'KTJSXS', 'SYXS', 'SJIXS', 'SJXS', 'TLXS', 'QTXS1', 'QTXS2', 'QTXS3', 'JZSJZ', 'KCSJXS', 'KSLXDM', 'ZWJC', 'ZWCKS', 'WWJC', 'WWCKS', 'SYYX', 'KCSM', 'ZWNRJJ', 'YWNRJJ', 'KSRQ', 'YBZS', 'CZSJ', 'BZ', 'TKYY', 'HFYY', 'XGXKLBDM', 'XXKDM', 'XXKMC', 'KSXQ', 'SFXGXK', 'KCSJZXS', 'XFLBDM', 'KCFL1', 'SFSYSK', 'SFQYWSK', 'CJKHFS', 'KCMB', 'XXKSFQY', 'XXKBXTG']
+- 跑步打卡.xlsx: ['PUNCH_DAY', 'PUNCH_TIME', 'WEEKNUM', 'MACHINE_ID', 'TERM_ID', 'USERNUM', 'STATE']
+- 门禁数据.xlsx: ['IDSERTAL', 'LOGINTIME', 'LOGINADDRESS', 'LOGINSIGN', 'DOORCTRLCODE', 'DOORCODE']
+
+=== 字段说明 (DOCX Dictionaries) ===
+
+--- 上网统计.docx ---
+参数名 | 描述
+WID | wid
+XSBH | 学生编号
+TJNY | 统计年月
+SWLJSC | 上网累计时长
+XXPJZ | 学校平均值
+XN | 学年
+XQ | 学期
+TBRQ | 同步日期
+TBLX | 同步类型
+CZRQ | 操作日期
+CZZ | 操作者
+CZZXM | 操作者姓名
+
+--- 上课信息统计表.docx ---
+参数名 | 描述
+ID | 主键
+COURSE_NAME | 课程名称
+COURSE_CODE | 课程编号
+TEACHER_USER_NAME | 教师工号
+TEACHER_REAL_NAME | 教师
+TEACH_TIME | 上课时间
+ATTENDEES_NUM | 到课人数
+ARRIVE_NUM | 应到人数
+BOWING_RATE | 低头率
+HEAD_UP_RATE | 抬头率
+FRONT_ROW_RATE | 前排率
+TOTAL_SCORE | 总评分
+
+--- 体测数据.docx ---
+参数名 | 类型 | 必填 | 模糊查询 | 描述
+XM | string | 否 | 否 | 学生学号
+XB | string | 否 | 否 | 学生性别
+NJ | string | 否 | 否 | 年级
+YX | string | 否 | 否 | 院系
+ZY | string | 否 | 否 | 专业
+BJ | string | 否 | 否 | 班级
+BH | string | 否 | 否 | 班号
+TCNF | string | 否 | 否 | 体测年份
+ZF | string | 否 | 否 | 总分
+BZ | string | 否 | 否 | 备注
+BMI | string | 否 | 否 | 身高/体重
+FHL | string | 否 | 否 | 肺活量
+WS | string | 否 | 否 | 50米
+LDTY | string | 否 | 否 | 立定跳远
+ZWTQQ | string | 否 | 否 | 坐位体前屈
+BB | string | 否 | 否 | 800米
+YQ | string | 否 | 否 | 1000米
+YWQZ | string | 否 | 否 | 仰卧起坐
+YTXS | string | 否 | 否 | 引体向上
+
+--- 体育课.docx ---
+参数名 | 类型 | 必填 | 模糊查询 | 描述
+XH | string | 否 | 否 | 学生学号
+XB | string | 否 | 否 | 学生性别
+NJ | string | 否 | 否 | 年级
+YX | string | 否 | 否 | 院系
+ZY | string | 否 | 否 | 专业
+BJ | string | 否 | 否 | 班级
+BH | string | 否 | 否 | 班号
+XQ | string | 否 | 否 | 学期
+ZKC | string | 否 | 否 | 总课程
+KC | string | 否 | 否 | 课程
+SKSJ | string | 否 | 否 | 上课时间
+
+--- 四六级成绩.docx ---
+参数名 | 类型 | 必填 | 模糊查询 | 描述
+KS_YYJB | string | 否 | 否 | 语言级别
+KS_XH | string | 否 | 否 | 学号
+KS_CJ | string | 否 | 否 | 成绩
+
+--- 图书馆打卡记录.docx ---
+参数名 | 类型 | 必填 | 模糊查询 | 描述
+cardId | string | 否 | 否 | 学号
+type | string | 否 | 否 | 学生类型
+dept | string | 否 | 否 | 学院
+visittime | string | 否 | 否 | 闸机时间
+gateno | string | 否 | 否 | 闸机编号
+direction | string | 否 | 否 | 进出方向（1进，2出）
+
+--- 奖学金获奖.docx ---
+参数名 | 类型 | 必填 | 模糊查询 | 描述
+XSBH | string | 否 | 否 | 学生编号
+JXJMC | string | 否 | 否 | 奖学金名称
+PDXN | string | 否 | 否 | 评定学年
+PDDJ | string | 否 | 否 | 评定等级
+JXJJZDW | string | 否 | 否 | 奖学金捐赠单位
+JLJB | string | 否 | 否 | 奖励级别
+FFJE | string | 否 | 否 | 发放金额
+
+--- 学生体能考核数据.docx ---
+参数名 | 描述
+XM | 学生姓名
+XH | 学生学号
+XB | 学生性别
+NJ | 年级
+YX | 院系
+ZY | 专业
+BJ | 班级
+BH | 班号
+CFBFS | 查分表分数
+SJCJ | 实际成绩
+HSCJ | 换算成绩
+XQ | 学期
+TSTAMP | 时间戳
+
+--- 学生作业提交记录.docx ---
+参数名 | 描述
+CREATER_ID | 创建人id
+CREATER_NAME | 创建人姓名
+CREATER_LOGIN_NAME | 创建人账号
+COLLEDGE_ID | 院系id
+COLLEDGE_NAME | 院系名称
+MAJOR_ID | 专业id
+MAJOR_NAME | 专业名称
+CLASS_ID | 班级id
+CLASS_NAME | 班级名称
+REVIEW_ID | 批阅人id
+REVIEW_NAME | 批阅人姓名
+REVIEW_LOGIN_NAME | 批阅人账号
+WORK_ID | 作业id
+WORK_TITLE | 作业标题
+CLAZZ_ID | 教学班id
+CLAZZ_NAME | 教学班名称
+COURSE_ID | 课程id
+COURSE_NAME | 课程名称
+STATUS | 3待批阅,4已批阅,0和1未做
+FULLMARKS | 满分
+COMMENT | 批语
+SCORE | 分数
+TYPE | 1作业  2考试
+CREATER_TIME | 作业创建时间
+ANSWER_TIME | 回答时间
+REVIEW_TIME | 批阅时间
+UPDATE_TIME | 更新时间
+INSERT_TIME | 插入时间
+TSTAMP | 更新时间
+
+--- 学生基本信息.docx ---
+参数名 | 类型 | 必填 | 模糊查询 | 描述
+XH | string | 否 | 否 | 学号
+MZMC | string | 否 | 否 | 民族名称
+XB | string | 否 | 否 | 性别
+ZZMMMC | string | 否 | 否 | 政治面貌名称
+CSRQ | string | 否 | 否 | 出生日期
+JG | string | 否 | 否 | 籍贯
+XSM | string | 否 | 否 | 学院名称
+ZYM | string | 否 | 否 | 专业名称
+
+--- 学生成绩.docx ---
+参数名 | 类型 | 必填 | 模糊查询 | 描述
+XH | string | 否 | 否 | 学号
+ZXJXJHH | string | 否 | 否 | 教学计划号
+KCH | string | 否 | 否 | 课程号
+KXH | string | 否 | 否 | 课序号
+KSSJ | string | 否 | 否 | 考试时间
+KCSXDM | string | 否 | 否 | 课程属性代码
+XF | string | 否 | 否 | 学分
+XDFSDM | string | 否 | 否 | 修读方式代码
+KSLXDM | string | 否 | 否 | 考试类型代码
+CXBKBZ | string | 否 | 否 | 重修补考备注（01初修02重修03复修04重考）
+KCCJ | string | 否 | 否 | 课程成绩
+DJCJ | string | 否 | 否 | 等级成绩
+JDCJ | string | 否 | 否 | 绩点成绩
+TDKCH | string | 否 | 否 | 替代课程号
+SSXS | string | 否 | 否 | 实上学时
+SDXF | string | 否 | 否 | 实得学分
+BY1 | string | 否 | 否 | 卷面成绩
+
+--- 学生签到记录.docx ---
+参数名 | 描述
+ID | 
+ACTIVE_ID | 活动id
+ACTIVE_STATE | 活动状态(0未签 1已签 2代签 4请假 5缺勤 7病假 8事假 9迟到  10早退 11签到已过期 12公假)
+LOGIN_NAME | 参与人账号
+ATTEND_TIME | 创建时间
+INSERT_TIME | 插入时间
+ROLE | 角色 1老师 3学生
+XYID | 院系id
+XYMC | 院系名称
+MAJORID | 专业id
+MAJORNAME | 专业名称
+CLASSID | (行政)班级id
+CLASSNAME | 班级名称
+TSTAMP | 更新时间
+
+--- 学科竞赛.docx ---
+参数名 | 类型 | 必填 | 模糊查询 | 描述
+JSMC | string | 否 | 否 | 竞赛名称
+HJJB | string | 否 | 否 | 获奖级别
+HJDJ | string | 否 | 否 | 获奖等级
+HJSJ | string | 否 | 否 | 获奖时间
+XHHGH | string | 否 | 否 | 学号或工号
+NJ | string | 否 | 否 | 年级
+XY | string | 否 | 否 | 学院
+ZY | string | 否 | 否 | 专业
+DNPX | string | 否 | 否 | 队内排序
+ZZ | string | 否 | 否 | 职责
+
+--- 学籍异动.docx ---
+参数名 | 类型 | 必填 | 模糊查询 | 描述
+XH | string | 否 | 否 | 学号
+YDRQ | string | 否 | 否 | 异动日期
+YDLBDM | string | 否 | 否 | 异动类别代码
+YDYYDM | string | 否 | 否 | 异动原因代码
+SPRQ | string | 否 | 否 | 审批日期
+YYXDM | string | 否 | 否 | 原院系代码
+YZYDM | string | 否 | 否 | 原专业代码
+YZYFXDM | string | 否 | 否 | 原专业方向代码
+YNJ | string | 否 | 否 | 原年级
+XYXDM | string | 否 | 否 | 现院系代码
+XZYDM | string | 否 | 否 | 现专业代码
+XZYFXDM | string | 否 | 否 | 现专业方向代码
+XNJ | string | 否 | 否 | 现年级
+SFZX | string | 否 | 否 | 是否在校
+YDSM | string | 否 | 否 | 异动说明
+YXZ | string | 否 | 否 | 原学制
+XBH | string | 否 | 否 | 现班号
+BY1 | string | 否 | 否 | 生效日期
+BY2 | string | 否 | 否 | 备用
+SFSCXKJG | string | 否 | 否 | 是否删除选课结果
+SFTBPYFA | string | 否 | 否 | 是否同步培养方案
+
+--- 日常锻炼.docx ---
+参数名 | 类型 | 必填 | 模糊查询 | 描述
+XH | string | 否 | 否 | 学生学号
+XB | string | 否 | 否 | 学生性别
+NJ | string | 否 | 否 | 年级
+YX | string | 否 | 否 | 院系
+ZY | string | 否 | 否 | 专业
+BJ | string | 否 | 否 | 班级
+BH | string | 否 | 否 | 班号
+XQ | string | 否 | 否 | 学期
+ZC | string | 否 | 否 | 周
+DKCS | string | 否 | 否 | 有效打卡次数
+
+--- 本科生综合测评.docx ---
+参数名 | 描述
+BZ | 备注
+XZNJ | 现在年级
+XB | 性别
+DWDM | 院系代码
+ZYDM | 专业代码
+BJDM | 班级代码
+SYDDM | 生源地代码
+CPXN | 测评学年
+CPXQ | 测评学期
+CJF | 成绩分
+CJPM | 成绩排名
+SZF | 素质分
+SZFPM | 素质分排名
+NLF | 能力分
+NLFPM | 能力分排名
+XSPF | 学生评分
+BZRPF | 班主任评分
+FJF | 附加分
+ZCJ | 总成绩
+ZYNJPM | 专业年级排名
+DJ | 等级
+CZRQ | 操作日期
+CZZ | 操作者
+CZZXM | 操作者姓名
+SZNLF | 素质+能力分
+SZNLFPM | 素质+能力分排名
+ZYNJRS | 专业年级人数
+BY1 | 备用1
+BY2 | 备用2
+TSTAMP | 时间戳
+WID | 唯一标识
+XH | 学号
+XM | 姓名
+PDXN | 评定学年
+PDXQ | 评定学期
+DYF | 德育分
+DYCJPM | 德育成绩排名
+ZYF | 智育分
+ZYCJPM | 智育成绩排名
+TYF | 体育分
+TYCJPM | 体育成绩排名
+ZHJNF | 综合技能分
+FZSZCJPM | 发展素质成绩排名
+QTPF | 其它评分
+JF | 加分
+JFLY | 加分理由
+KF | 扣分
+KFLY | 扣分理由
+ZF | 总分
+BJPM | 班级排名
+BJRS | 班级人数
+BJPMBL | 班级排名比例
+ZYPM | 专业排名
+ZYRS | 专业人数
+ZYPMBL | 专业排名比例
+XNZPM | 学年总排名
+
+--- 毕业去向.docx ---
+参数名 | 类型 | 必填 | 模糊查询 | 描述
+YXMCXX | string | 否 | 否 | 院校名称
+XQDM | string | 否 | 否 | 校区代码
+XQMC | string | 否 | 否 | 校区名称
+GRADE | string | 否 | 否 | 毕业年度
+SID | string | 否 | 否 | 学号
+REALNAME | string | 否 | 否 | 姓名
+DEPARTMENT | string | 否 | 否 | 所在院系
+MAJOR | string | 否 | 否 | 专业名称
+ZYDM | string | 否 | 否 | 专业代码
+ZYFX | string | 否 | 否 | 专业方向
+BJMC | string | 否 | 否 | 班级名称
+GENDER | string | 否 | 否 | 性别代码
+XBMC | string | 否 | 否 | 性别名称
+DURATION | string | 否 | 否 | 学制
+ZXWYYZ | string | 否 | 否 | 主修外语语种代码
+ZXWYYZMC | string | 否 | 否 | 主修外语语种名称
+BIRTHDAY | string | 否 | 否 | 出生日期
+XL | string | 否 | 否 | 学历代码
+XLMC | string | 否 | 否 | 学历名称
+GRADUATE_YEAR | string | 否 | 否 | 毕业时间
+BYQX | string | 否 | 否 | 毕业去向代码
+BYQXMC | string | 否 | 否 | 毕业去向名称
+SJDWMC | string | 否 | 否 | 单位名称
+DWZZJGDM | string | 否 | 否 | 单位组织机构代码
+DWXZ | string | 否 | 否 | 单位性质代码
+DWXZMC | string | 否 | 否 | 单位性质名称
+DWHY | string | 否 | 否 | 单位行业代码
+DWHYMC | string | 否 | 否 | 单位行业名称
+GZZWLBDM | string | 否 | 否 | 工作职位类别代码
+GZZWLBMC | string | 否 | 否 | 工作职位类别名称
+DWSZDDM | string | 否 | 否 | 单位所在地代码
+DWSZDMC | string | 否 | 否 | 单位所在地名称
+DWDZ | string | 否 | 否 | 单位地址
+DWYB | string | 否 | 否 | 单位邮编
+JKZK | string | 否 | 否 | 健康状况代码
+JKZKMC | string | 否 | 否 | 健康状况名称
+MZ | string | 否 | 否 | 民族代码
+MZMC | string | 否 | 否 | 民族名称
+POLITICAL | string | 否 | 否 | 政治面貌代码
+ZZMCMC | string | 否 | 否 | 政治面貌名称
+STUDENT_IN | string | 否 | 否 | 生源所在地代码
+SYSZDMC | string | 否 | 否 | 生源所在地名称
+CXSY | string | 否 | 否 | 城乡生源代码
+CXSYMC | string | 否 | 否 | 城乡生源名称
+RXSJ | string | 否 | 否 | 入学时间
+XXXS | string | 否 | 否 | 学习形式代码
+XXXSMC | string | 否 | 否 | 学习形式名称
+SFSLBDM | string | 否 | 否 | 师范生类别代码
+SFSLBMC | string | 否 | 否 | 师范生类别名称
+TRAIN_MODE | string | 否 | 否 | 培养方式代码
+PYFSMC | string | 否 | 否 | 培养方式名称
+DASFZRXX | string | 否 | 否 | 档案是否转入学校
+HKSFZRXX | string | 否 | 否 | 户口是否转入学校
+BDZQFLB | string | 否 | 否 | 报到证签发类别
+DWMC | string | 否 | 否 | 报到证签往单位名称
+QWDWSZD | string | 否 | 否 | 签往单位所在地代码
+QWDWSZDMC | string | 否 | 否 | 签往单位所在地名称
+BY1 | string | 否 | 否 | 备用1
+BY2 | string | 否 | 否 | 备用2
+TSTAMP | string | 否 | 否 | 时间戳
+
+--- 社团活动.docx ---
+参数名 | 描述
+XSBH | 学生编号
+HDRQ | 活动日期
+
+--- 线上学习（综合表现）.docx ---
+参数名 | 描述
+LOGIN_NAME | 账号 登录名
+XM | 真实姓名
+DEPARTMENT_NAME | 院系名称
+MAJOR_NAME | 专业名称
+CLASS_NAME | 班级名称
+ROLEID | 角色 1老师 3学生 7管理员
+BFB | 综合表现
+
+--- 考勤-汇总表.docx ---
+参数名 | 描述
+JWKQLSH | 教务考勤流水号
+XN | 学年
+XQ | 学期
+ZC | 周次
+SKXQ | 上课学期
+RQ | 日期
+KSJC | 开始节次
+KSJCSJ | 开始节次时间
+JSJC | 结束节次
+JSJCSJ | 结束节次时间
+XH | 学号
+XY | 学院
+ZY | 专业
+NJ | 年级
+JASDM | 教室
+KCM | 课程名
+KCH | 课程号
+KXH | 课序号
+JSMC | 教室名称
+SZJZ | 所在建筑
+SZLC | 所在楼层
+FJBH | 房间编号
+PLACE_CODE | 房间编码
+SZXQ | 所在校区
+FJEJFL | 房间二级分类
+JZBM | 建筑编码
+WGKQLSH | 无感考勤流水号
+WGKQXH | 无感考勤学号
+JWKQZT | 教务考勤状态
+JWDKSJ | 教务打卡时间
+WGKQZT | 无感考勤状态
+WGDKSJ | 无感打卡时间
+ZTDM | 状态代码
+ZT | 状态
+DKSJ | 打卡时间
+KCXZ | 课程学制
+KCLB | 课程类别
+
+--- 考试提交记录.docx ---
+参数名 | 描述
+ID | 
+CREATER_ID | 创建人id
+CREATER_NAME | 创建人姓名
+CREATER_LOGIN_NAME | 创建人账号
+COLLEDGE_ID | 院系id
+COLLEDGE_NAME | 院系名称
+MAJOR_ID | 专业id
+MAJOR_NAME | 专业名称
+CLASS_ID | 班级id
+CLASS_NAME | 班级名称
+REVIEW_ID | 批阅人id
+REVIEW_NAME | 批阅人姓名
+REVIEW_LOGIN_NAME | 批阅人账号
+WORK_ID | 测验id
+WORK_TITLE | 测验标题
+CLAZZ_ID | 教学班id
+CLAZZ_NAME | 教学班名称
+COURSE_ID | 课程id
+COURSE_NAME | 课程名称
+STATUS | 3待批阅,4已批阅,0和1未做
+FULLMARKS | 满分
+SCORE | 分数
+TYPE | 1作业  2考试 3测验
+CREATER_TIME | 测验创建时间
+ANSWER_TIME | 回答时间
+REVIEW_TIME | 批阅时间
+UPDATE_TIME | 更新时间
+INSERT_TIME | 插入时间
+TSTAMP | 更新时间
+
+--- 讨论记录.docx ---
+参数名 | 描述
+COURSE_ID | 课程id
+COURSE_NAME | 课程名称
+TOPIC_ID | 话题id
+TOPIC_TITLE | 话题标题
+CREATER_ROLE | 发布人角色
+CREATER_NAME | 发布人姓名
+CREATER_LOGIN_NAME | 发布人账号
+CREATE_TIME | 发布时间
+REPLY_USER_NAME | 回帖人姓名
+REPLY_LOGIN_NAME | 回帖人账号
+REPLY_USER_ROLE | 回帖人角色
+REPLY_CONTENT | 回帖内容
+ISDELETE | 是否删除
+INSERT_TIME | 插入日期
+TOPIC_ISDELETE | 话题是否删除
+
+--- 课堂任务参与.docx ---
+参数名 | 描述
+ID | 
+USER_ID | mooc中用户id
+LOGIN_NAME | 
+USER_NAME | 
+DEPARTMENT_ID | 院系id
+DEPARTMENT_NAME | 
+MAJOR_ID | 专业id
+MAJOR_NAME | 
+CLASS_ID | 行政班id
+CLASS_NAME | 
+STATE | 学生状态 0 正常 1 已冻结
+SCHOOL_YEAR | 入学年级
+COURSE_ID | 课程id
+COURSE_NAME | 
+JWCOURSE_ID | 
+CREATE_TIME | 课程创建时间
+COURSE_TYPE | 0 学校课程 1 尔雅课程
+COURSE_STATUS | 课程状态 0 未归档 1 已归档
+COURSE_DELETE | 课程是否删除（0 未删除 1 已删除）
+CLAZZ_ID | 班级id
+CLAZZ_NAME | 
+CLAZZ_STATUS | 1已归档 0 未归档
+CLAZZ_STATE | 教学班状态（0学习模式；1复习模式）
+JOB_NUM | 学生任务点完成数
+JOB_RATE | 学生任务点完成率
+VIDEOJOB_NUM | 学生视频任务点完成数
+VIDEOJOB_RATE | 学生视频任务点完成率
+VIDEOJOB_TIME | 视频任务点观看时长
+TEST_NUM | 学生章节测验完成数
+TEST_RATE | 学生章节测验完成率
+TEST_AVGSCORE | 学生章节测验平均分
+WORK_NUM | 学生作业完成数
+WORK_RATE | 学生作业完成率
+WORK_AVGSCORE | 学生作业平均分
+EXAM_NUM | 学生考试完成数
+EXAM_RATE | 学生考试完成率
+EXAM_AVGSCORE | 学生考试平均分
+PV | 学生章节访问量
+SIGN_NUM | 学生签到完成数
+SIGN_RATE | 学生平均签到率
+COURSE_LIVE_TIME | 课程直播总时长
+SPECIAL_TIME | 学生课程专题阅读时长
+BBS_NUM | 学生讨论数
+TOPIC_NUM | 学生发帖总数
+REPLY_NUM | 学生回帖总数
+POINTS | 学生课程积分
+PAPER_NUM | 学生投票问卷提交数
+PAPER_RATE | 学生投票问卷参与率
+PICK_NUM | 学生选人被选中数
+ANSWER_NUM | 学生抢答参与数
+MARKSCORE_NUM | 学生评分参与数
+MARKSCORE_RATE | 学生评分参与率
+TASK_NUM | 学生小组任务参与数
+TASK_RATE | 学生小组任务参与率
+UPDATE_TIME | 更新时间
+INSERT_TIME | 插入时间
+TSTAMP | 更新时间
+
+--- 课程信息.docx ---
+参数名 | 类型 | 必填 | 模糊查询 | 描述
+KCH | string | 否 | 否 | 课程号
+KCCCDM | string | 否 | 否 | 课程层次
+KCFLDM | string | 否 | 否 | 课程分类
+JXFSDM | string | 否 | 否 | 教学方式
+SKYZDM | string | 否 | 否 | 授课语种
+KCZTDM | string | 否 | 否 | 课程状态
+KCM | string | 否 | 否 | 课程名
+YWKCM | string | 否 | 否 | 英文课程名
+JXMD | string | 否 | 否 | 教学目的
+XS | string | 否 | 否 | 学时
+XF | string | 否 | 否 | 学分
+KNZXS | string | 否 | 否 | 课内周学时
+KTJSXS | string | 否 | 否 | 课堂讲授学时
+SYXS | string | 否 | 否 | 实验学时
+SJIXS | string | 否 | 否 | 设计学时
+SJXS | string | 否 | 否 | 上机学时
+TLXS | string | 否 | 否 | 讨论学时
+QTXS1 | string | 否 | 否 | 其他学时1
+QTXS2 | string | 否 | 否 | 其他学时2
+QTXS3 | string | 否 | 否 | 其他学时3
+JZSJZ | string | 否 | 否 | 集中实践周
+KCSJXS | string | 否 | 否 | 课程实践学时
+KSLXDM | string | 否 | 否 | 考试类型
+ZWJC | string | 否 | 否 | 中文教材
+ZWCKS | string | 否 | 否 | 中文参考书
+WWJC | string | 否 | 否 | 外文教材
+WWCKS | string | 否 | 否 | 外文参考书
+SYYX | string | 否 | 否 | 适用院系或专业
+KCSM | string | 否 | 否 | 课程说明
+ZWNRJJ | string | 否 | 否 | 中文内容简介
+YWNRJJ | string | 否 | 否 | 英文内容简介
+KSRQ | string | 否 | 否 | 开始日期
+YBZS | string | 否 | 否 | 预备知识
+CZSJ | string | 否 | 否 | 操作时间
+BZ | string | 否 | 否 | 备注
+TKYY | string | 否 | 否 | 停开原因
+HFYY | string | 否 | 否 | 恢复原因
+XGXKLBDM | string | 否 | 否 | 校公选课类别
+XXKDM | string | 否 | 否 | 先修课代码
+XXKMC | string | 否 | 否 | 先修课名称
+KSXQ | string | 否 | 否 | 开课学期
+SFXGXK | string | 否 | 否 | 是否校公选课
+KCSJZXS | string | 否 | 否 | 课程实践周学时
+XFLBDM | string | 否 | 否 | 学分类别代码
+KCFL1 | string | 否 | 否 | 课程分类
+SFSYSK | string | 否 | 否 | 是否双语授课
+SFQYWSK | string | 否 | 否 | 是否全英文授课
+CJKHFS | string | 否 | 否 | 成绩考核方式
+KCMB | string | 否 | 否 | 课程目标
+XXKSFQY | string | 否 | 否 | 先修课是否启用
+XXKBXTG | string | 否 | 否 | 先修课必须通过
+
+--- 跑步打卡.docx ---
+参数名 | 类型 | 必填 | 模糊查询 | 描述
+PUNCH_DAY | string | 否 | 否 | 打卡日期
+PUNCH_TIME | string | 否 | 否 | 打卡时间
+WEEKNUM | string | 否 | 否 | 周次
+MACHINE_ID | string | 否 | 否 | 设备id
+TERM_ID | string | 否 | 否 | 学期
+USERNUM | string | 否 | 否 | 学生学号
+STATE | string | 否 | 否 | 状态
+
+--- 选课信息.docx ---
+参数名 | 类型 | 必填 | 模糊查询 | 描述
+XH | string | 否 | 否 | 学号
+JXBH | string | 否 | 否 | 教学班号
+KCH | string | 否 | 否 | 课程号
+KXH | string | 否 | 否 | 课序号
+XKZY | string | 否 | 否 | 选课专业
+SFCX | string | 否 | 否 | 是否重修
+XKRQ | string | 否 | 否 | 选课日期
+KKXN | string | 否 | 否 | 开课学年
+KCLB | string | 否 | 否 | 课程类别
+KKXQ | string | 否 | 否 | 开课学期
+TSTAMP | string | 否 | 否 | 时间戳
+
+--- 门禁数据.docx ---
+参数名 | 描述
+IDSERTAL | 学号
+LOGINTIME | 刷卡时间
+LOGINADDRESS | 刷卡地点
+LOGINSIGN | (标识（1出0进）)LOGINSIGN
+DOORCTRLCODE | (控制器编号)
+DOORCODE | (门数)

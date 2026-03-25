@@ -1,0 +1,36 @@
+# OS / editor noise
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+
+# Node
+node_modules/
+dist/
+
+# Vite cache
+.vite/
+
+# Local workflow assets
+skill/
+prompts/
+数据集及类型/
+.history/
+.worktrees/
+.tmp_rg_files.txt

@@ -1,0 +1,75 @@
+{
+  "project": "StudentBehavior",
+  "last_updated": "2026-03-20",
+  "source_of_truth": [
+    "docs/architecture-baseline.md",
+    "docs/current-system-inventory.md",
+    "docs/session-progress.md",
+    "docs/task-board.md"
+  ],
+  "items": [
+    {
+      "id": "INIT-001",
+      "title": "建立当前系统资产清单",
+      "status": "done",
+      "priority": "P0",
+      "notes": "已识别前端、后端、数据集、现有架构文档、评审文档和提示词模板。"
+    },
+    {
+      "id": "INIT-002",
+      "title": "建立长期运行所需的 docs 基础设施",
+      "status": "done",
+      "priority": "P0",
+      "notes": "已补充 feature backlog、session progress、git harness、启动说明、任务板。"
+    },
+    {
+      "id": "INIT-003",
+      "title": "确认 Git checkpoint 与 handoff 机制",
+      "status": "in_progress",
+      "priority": "P0",
+      "notes": "Git 仓库已初始化，默认分支为 main；下一步需要创建首个基线提交并明确 checkpoint 命名规则。"
+    },
+    {
+      "id": "REWRITE-001",
+      "title": "提炼当前系统的保留能力与可废弃实现",
+      "status": "todo",
+      "priority": "P0",
+      "notes": "当前目标是删掉旧实现后重写；删除前需先把业务能力与关键约束提取出来，再区分必须继承、仅供参考和可删除实现。"
+    },
+    {
+      "id": "REWRITE-002",
+      "title": "形成新版系统目标与边界文档",
+      "status": "todo",
+      "priority": "P0",
+      "notes": "在提取现状后，进入需求收敛或文档写作阶段。"
+    },
+    {
+      "id": "REWRITE-003",
+      "title": "核对前端文档与前端实现差异",
+      "status": "todo",
+      "priority": "P1",
+      "notes": "当前存在前端蓝图与实现，需要确认哪些内容仍有效。"
+    },
+    {
+      "id": "REWRITE-004",
+      "title": "核对后端 API 文档与后端实现差异",
+      "status": "todo",
+      "priority": "P1",
+      "notes": "当前存在 API 说明书与后端代码，需要确认接口、模型与测试状态。"
+    },
+    {
+      "id": "REWRITE-005",
+      "title": "确认数据集接入路径与字段映射策略",
+      "status": "todo",
+      "priority": "P1",
+      "notes": "数据目录完整，但新版是否全量复用尚未确认。"
+    },
+    {
+      "id": "REWRITE-006",
+      "title": "在删除旧代码前冻结基线快照",
+      "status": "todo",
+      "priority": "P0",
+      "notes": "必须先完成基线提交，再进行旧实现删除或大规模重写，避免丢失可追溯信息。"
+    }
+  ]
+}
