@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from numbers import Real
 import re
 
 
@@ -28,10 +29,18 @@ def normalize_term_key(raw_xn: object, raw_xq: object) -> str | None:
     if isinstance(raw_xq, bool):
         return None
 
-    try:
-        xq = int(raw_xq)
-    except (TypeError, ValueError):
-        return None
+    if isinstance(raw_xq, Real):
+        try:
+            xq = int(raw_xq)
+        except (TypeError, ValueError, OverflowError):
+            return None
+        if raw_xq != xq:
+            return None
+    else:
+        raw_xq_text = str(raw_xq).strip()
+        if raw_xq_text not in {"1", "2"}:
+            return None
+        xq = int(raw_xq_text)
 
     if xq not in (1, 2):
         return None

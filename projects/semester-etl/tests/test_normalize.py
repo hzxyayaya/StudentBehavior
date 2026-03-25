@@ -1,3 +1,6 @@
+from decimal import Decimal
+from fractions import Fraction
+
 import pytest
 
 from student_behavior_etl.normalize import normalize_student_id, normalize_term_key
@@ -19,12 +22,22 @@ def test_normalize_term_key_formats_valid_term() -> None:
     assert normalize_term_key("2023-2024", 2) == "2023-2"
 
 
+def test_normalize_term_key_formats_first_term() -> None:
+    assert normalize_term_key("2023-2024", 1) == "2023-1"
+
+
 @pytest.mark.parametrize(
     "raw_xn, raw_xq",
     [
         ("", 1),
         (None, 1),
+        ("2023-2024", None),
         ("2023-2024", 3),
+        ("2023-2024", 1.9),
+        ("2023-2024", Decimal("1.9")),
+        ("2023-2024", Fraction(3, 2)),
+        ("2023-2024", True),
+        ("2023-2024", False),
         ("2023/2024", 1),
         ("foo-bar", 1),
         ("23-2024", 1),
