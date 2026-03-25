@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "student-behavior-etl"
+version = "0.0.0"
+requires-python = ">=3.12"
+dependencies = [
+  "pandas",
+  "openpyxl",
+]
+
+[project.scripts]
+semester-features = "student_behavior_etl.cli:main"
+
+[dependency-groups]
+dev = [
+  "pytest",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/student_behavior_etl"]
