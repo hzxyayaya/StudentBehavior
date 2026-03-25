@@ -3,9 +3,11 @@ from __future__ import annotations
 from numbers import Real
 import re
 
+import pandas as pd
+
 
 def normalize_student_id(raw: object) -> str | None:
-    if raw is None:
+    if raw is None or pd.isna(raw):
         return None
 
     value = str(raw).strip()

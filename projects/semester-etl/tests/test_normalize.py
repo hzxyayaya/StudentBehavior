@@ -18,6 +18,13 @@ def test_normalize_student_id_returns_none_for_none() -> None:
     assert normalize_student_id(None) is None
 
 
+def test_normalize_student_id_returns_none_for_pandas_missing_values() -> None:
+    import pandas as pd
+
+    assert normalize_student_id(pd.NA) is None
+    assert normalize_student_id(float("nan")) is None
+
+
 def test_normalize_term_key_formats_valid_term() -> None:
     assert normalize_term_key("2023-2024", 2) == "2023-2"
 

@@ -86,6 +86,19 @@ def test_missing_major_name_rows_are_removed_from_dimension() -> None:
     ]
 
 
+def test_missing_student_ids_are_removed_before_major_conflict_check() -> None:
+    students = pd.DataFrame(
+        [
+            {"XH": pd.NA, "ZYM": "信息安全"},
+            {"XH": pd.NA, "ZYM": "电子信息工程"},
+        ]
+    )
+
+    result = build_student_dimension(students)
+
+    assert result.empty
+
+
 def test_invalid_attendance_rows_are_dropped_with_warning_counts() -> None:
     attendance = pd.DataFrame(
         [
@@ -107,6 +120,18 @@ def test_invalid_attendance_rows_are_dropped_with_warning_counts() -> None:
     assert len(result) == 1
     assert collector.dropped_attendance_rows["missing_student_id"] == 1
     assert collector.dropped_attendance_rows["invalid_term_fields"] == 1
+
+
+def test_missing_student_id_from_excel_nan_is_counted_before_final_join() -> None:
+    attendance = pd.DataFrame([{"XH": pd.NA, "XN": "2023-2024", "XQ": 1}])
+    students = pd.DataFrame([{"XH": "stu-1", "ZYM": "信息安全"}])
+    collector = WarningCollector()
+
+    result = build_semester_feature_frame(attendance, students, None, collector)
+
+    assert result.empty
+    assert collector.dropped_attendance_rows["missing_student_id"] == 1
+    assert collector.dropped_final_rows["missing_major_name"] == 0
 
 
 def test_rows_without_major_name_are_dropped_and_counted() -> None:
