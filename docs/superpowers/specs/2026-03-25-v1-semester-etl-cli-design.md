@@ -50,6 +50,8 @@ The CLI will be project-bound for V1.
 
 - Input directory is fixed to `C:\Users\Orion\Desktop\StudentBehavior\数据集及类型`
 - Output directory is fixed to `C:\Users\Orion\Desktop\StudentBehavior\artifacts\semester_features`
+- Output CSV path is fixed to `C:\Users\Orion\Desktop\StudentBehavior\artifacts\semester_features\v1_semester_features.csv`
+- Output warning path is fixed to `C:\Users\Orion\Desktop\StudentBehavior\artifacts\semester_features\v1_warnings.json`
 - Primary command is `uv run semester-features build`
 
 The command should print a concise terminal summary covering:
@@ -105,6 +107,17 @@ These facts are implementation inputs, not a reason to expand the frozen schema.
   - `XSBH` from `上网统计.xlsx`
 - normalization trims surrounding whitespace
 - empty student ids are invalid and the affected rows are dropped with warnings
+
+### Student Dimension Duplicate Rule
+
+`学生基本信息.xlsx` is treated as the authoritative source for `major_name`.
+
+Rules:
+
+- repeated rows with the same `(student_id, ZYM)` are harmless and may be deduplicated
+- if one `student_id` maps to multiple distinct non-empty `ZYM` values, this is a structural dimension conflict and the run must hard-fail instead of guessing
+
+This keeps the join deterministic and avoids silently assigning the wrong major.
 
 ### Term Key
 
@@ -256,7 +269,9 @@ Minimum test layers:
 ### CLI integration test
 
 - create minimal Excel fixtures in a temporary directory
-- run the CLI against the fixture directory using the project-bound defaults or a test seam that preserves the same behavior
+- keep the public CLI project-bound in production
+- allow tests to inject temporary input and output roots through an internal seam, such as an internal configuration object or builder function, rather than adding public path flags to the CLI
+- run the CLI or CLI-adjacent entry path against the fixture directory through that internal seam
 - assert both CSV and JSON outputs exist
 - assert output columns and warning contents match the frozen rules
 
