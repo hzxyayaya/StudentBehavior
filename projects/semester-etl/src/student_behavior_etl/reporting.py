@@ -95,6 +95,26 @@ class WarningCollector:
             }
         )
 
+    def add_degraded_source(
+        self,
+        source_file: str,
+        reason: str,
+        excluded_row_count: int,
+        affected_student_count: int,
+        tjny_min: str | None,
+        tjny_max: str | None,
+    ) -> None:
+        record = {
+            "source_file": source_file,
+            "reason": reason,
+            "excluded_row_count": excluded_row_count,
+            "affected_student_count": affected_student_count,
+            "tjny_min": tjny_min,
+            "tjny_max": tjny_max,
+        }
+        _validate_degraded_source_values(record)
+        self.degraded_sources.append(record)
+
     def to_payload(self, output_file: str) -> dict[str, object]:
         return {
             "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
