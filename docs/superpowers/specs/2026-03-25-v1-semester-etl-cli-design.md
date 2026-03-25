@@ -6,7 +6,7 @@ Last Updated: 2026-03-25
 
 ## Purpose
 
-This spec defines the first implementation slice for V1: a project-bound offline ETL CLI that reads the frozen semester-feature sources and writes the first semester-level feature table as CSV.
+This spec defines the first implementation slice for V1: an isolated offline ETL CLI project under `projects/semester-etl` that reads the frozen semester-feature sources and writes the first semester-level feature table as CSV.
 
 This implementation exists to satisfy `V1-IMPL-001` from the frozen backlog and must stay aligned with:
 
@@ -29,7 +29,7 @@ This slice only builds the first offline ETL CLI.
 
 In scope:
 
-- create a minimal Python project in the repository root
+- create a minimal isolated Python project under `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl`
 - provide one runnable CLI command
 - read the currently frozen semester-feature sources from the project dataset directory
 - output one semester feature CSV and one warning summary JSON
@@ -46,13 +46,15 @@ Out of scope:
 
 ## Runtime Contract
 
-The CLI will be project-bound for V1.
+The CLI will be project-bound for V1, but the code must live in an isolated subproject directory instead of the repository root.
+
+- Code project root is fixed to `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl`
 
 - Input directory is fixed to `C:\Users\Orion\Desktop\StudentBehavior\数据集及类型`
 - Output directory is fixed to `C:\Users\Orion\Desktop\StudentBehavior\artifacts\semester_features`
 - Output CSV path is fixed to `C:\Users\Orion\Desktop\StudentBehavior\artifacts\semester_features\v1_semester_features.csv`
 - Output warning path is fixed to `C:\Users\Orion\Desktop\StudentBehavior\artifacts\semester_features\v1_warnings.json`
-- Primary command is `uv run semester-features build`
+- Primary command is `uv run --project projects/semester-etl semester-features build`
 
 The command should print a concise terminal summary covering:
 
@@ -255,15 +257,15 @@ For the degraded network source, include at least:
 
 The implementation plan should stay close to this shape unless a smaller equivalent is clearly better:
 
-- `pyproject.toml`
-- `src/.../cli.py`
-- `src/.../io.py`
-- `src/.../normalize.py`
-- `src/.../build_semester_features.py`
-- `src/.../reporting.py`
-- `tests/...`
+- `projects/semester-etl/pyproject.toml`
+- `projects/semester-etl/src/.../cli.py`
+- `projects/semester-etl/src/.../io.py`
+- `projects/semester-etl/src/.../normalize.py`
+- `projects/semester-etl/src/.../build_semester_features.py`
+- `projects/semester-etl/src/.../reporting.py`
+- `projects/semester-etl/tests/...`
 
-The exact package name is an implementation detail, but the public command must remain `uv run semester-features build`.
+The exact package name is an implementation detail, but the public command must remain `uv run --project projects/semester-etl semester-features build`.
 
 ## Testing Strategy
 
@@ -297,8 +299,8 @@ Minimum test layers:
 
 The implementation plan should be judged against these outcomes:
 
-- `uv` can install and run the project locally
-- `uv run semester-features build` works from the repository root
+- `uv` can install and run the isolated subproject locally
+- `uv run --project projects/semester-etl semester-features build` works from the repository root
 - the output CSV only contains the five frozen columns
 - `term_key` values only use the `YYYY-1` or `YYYY-2` shape
 - the current real snapshot produces a CSV and a warning JSON

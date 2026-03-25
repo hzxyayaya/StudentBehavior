@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 在仓库根目录实现一个项目绑定型离线 ETL CLI，读取 `数据集及类型` 下的冻结源表，输出 `v1_semester_features.csv` 和 `v1_warnings.json`。
+**Goal:** 在隔离子项目 `projects/semester-etl` 中实现一个项目绑定型离线 ETL CLI，读取仓库根目录 `数据集及类型` 下的冻结源表，输出 `v1_semester_features.csv` 和 `v1_warnings.json`。
 
-**Architecture:** 使用 `uv` 管理的最小 Python 包结构，在代码内部固定项目默认输入/输出路径，对外只暴露 `uv run semester-features build` 一个命令。数据链路严格以 `考勤汇总.xlsx` 生成 `(student_id, term_key)` 基础行集，`学生基本信息.xlsx` 只做专业字段广播，`上网统计.xlsx` 在当前快照下按冻结规则整表降级并输出告警摘要。
+**Architecture:** 使用 `uv` 管理的最小 Python 包结构，并把代码工程隔离到 `projects/semester-etl` 目录；运行入口仍从仓库根目录触发。数据链路严格以 `考勤汇总.xlsx` 生成 `(student_id, term_key)` 基础行集，`学生基本信息.xlsx` 只做专业字段广播，`上网统计.xlsx` 在当前快照下按冻结规则整表降级并输出告警摘要。
 
 **Tech Stack:** Python 3.12+, `uv`, `pandas`, `openpyxl`, `pytest`, 标准库 `argparse`, `dataclasses`, `json`, `pathlib`
 
@@ -14,34 +14,37 @@
 
 ### 需要创建的文件
 
-- `C:\Users\Orion\Desktop\StudentBehavior\pyproject.toml`
+- `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\pyproject.toml`
   - 定义项目元数据、依赖、测试依赖和 `semester-features` 命令入口
-- `C:\Users\Orion\Desktop\StudentBehavior\src\student_behavior_etl\__init__.py`
+- `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\src\student_behavior_etl\__init__.py`
   - 包初始化
-- `C:\Users\Orion\Desktop\StudentBehavior\src\student_behavior_etl\config.py`
+- `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\src\student_behavior_etl\config.py`
   - 固定项目路径、输出文件名、数据类配置
-- `C:\Users\Orion\Desktop\StudentBehavior\src\student_behavior_etl\normalize.py`
+- `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\src\student_behavior_etl\normalize.py`
   - 学号清洗、`XN/XQ -> term_key` 归一化
-- `C:\Users\Orion\Desktop\StudentBehavior\src\student_behavior_etl\reporting.py`
+- `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\src\student_behavior_etl\reporting.py`
   - warning 计数器、source status 和 JSON 输出
-- `C:\Users\Orion\Desktop\StudentBehavior\src\student_behavior_etl\io.py`
+- `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\src\student_behavior_etl\io.py`
   - Excel 读取、必需列校验、临时文件过滤
-- `C:\Users\Orion\Desktop\StudentBehavior\src\student_behavior_etl\build_semester_features.py`
+- `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\src\student_behavior_etl\build_semester_features.py`
   - 聚合 `attendance_record_count`、补齐 `major_name`、网络源降级、生成最终 CSV DataFrame
-- `C:\Users\Orion\Desktop\StudentBehavior\src\student_behavior_etl\cli.py`
+- `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\src\student_behavior_etl\cli.py`
   - CLI 入口、`build` 子命令、终端摘要输出
-- `C:\Users\Orion\Desktop\StudentBehavior\tests\test_config.py`
+- `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\tests\test_config.py`
   - 默认路径与输出文件名测试
-- `C:\Users\Orion\Desktop\StudentBehavior\tests\test_normalize.py`
+- `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\tests\test_normalize.py`
   - 学号和学期键归一化测试
-- `C:\Users\Orion\Desktop\StudentBehavior\tests\test_reporting.py`
+- `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\tests\test_reporting.py`
   - warning 结构和 reason key 测试
-- `C:\Users\Orion\Desktop\StudentBehavior\tests\test_build_semester_features.py`
+- `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\tests\test_build_semester_features.py`
   - 核心构建逻辑测试
-- `C:\Users\Orion\Desktop\StudentBehavior\tests\test_cli.py`
+- `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\tests\test_cli.py`
   - CLI 集成测试
 
 ### 目录与运行时产物
+
+- `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\`
+  - 隔离的 Python 工程根目录
 
 - `C:\Users\Orion\Desktop\StudentBehavior\artifacts\semester_features\`
   - 运行时自动创建，不手动提交真实产物
@@ -60,11 +63,11 @@
 ### Task 1: 建立最小工程骨架与固定路径配置
 
 **Files:**
-- Create: `C:\Users\Orion\Desktop\StudentBehavior\pyproject.toml`
-- Create: `C:\Users\Orion\Desktop\StudentBehavior\src\student_behavior_etl\__init__.py`
-- Create: `C:\Users\Orion\Desktop\StudentBehavior\src\student_behavior_etl\config.py`
-- Create: `C:\Users\Orion\Desktop\StudentBehavior\src\student_behavior_etl\cli.py`
-- Test: `C:\Users\Orion\Desktop\StudentBehavior\tests\test_config.py`
+- Create: `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\pyproject.toml`
+- Create: `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\src\student_behavior_etl\__init__.py`
+- Create: `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\src\student_behavior_etl\config.py`
+- Create: `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\src\student_behavior_etl\cli.py`
+- Test: `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\tests\test_config.py`
 
 - [ ] **Step 1: 写最小工程壳子，先让 `uv` 和 `pytest` 可用**
 
@@ -93,7 +96,7 @@ def main(argv: list[str] | None = None) -> int:
 
 - [ ] **Step 2: 同步开发依赖**
 
-Run: `uv sync --dev`
+Run: `uv sync --project projects/semester-etl --dev`
 Expected: environment created successfully with `pytest` available
 
 - [ ] **Step 3: 写默认路径失败测试**
@@ -117,7 +120,7 @@ def test_build_default_paths_uses_project_bound_locations() -> None:
 
 - [ ] **Step 4: 运行测试，确认当前失败**
 
-Run: `uv run pytest tests/test_config.py -v`
+Run: `uv run --project projects/semester-etl pytest projects/semester-etl/tests/test_config.py -v`
 Expected: FAIL with `ModuleNotFoundError` or import failure for `student_behavior_etl.config`
 
 - [ ] **Step 5: 写最小配置实现**
@@ -128,18 +131,16 @@ from pathlib import Path
 
 
 @dataclass(frozen=True)
-class ProjectPaths:
-    repo_root: Path
+class DefaultPaths:
     input_dir: Path
     output_dir: Path
     output_csv: Path
     output_warning_json: Path
 
 
-def build_default_paths(repo_root: Path) -> ProjectPaths:
+def build_default_paths(repo_root: Path) -> DefaultPaths:
     output_dir = repo_root / "artifacts" / "semester_features"
-    return ProjectPaths(
-        repo_root=repo_root,
+    return DefaultPaths(
         input_dir=repo_root / "数据集及类型",
         output_dir=output_dir,
         output_csv=output_dir / "v1_semester_features.csv",
@@ -149,21 +150,21 @@ def build_default_paths(repo_root: Path) -> ProjectPaths:
 
 - [ ] **Step 6: 重新运行配置测试，确认通过**
 
-Run: `uv run pytest tests/test_config.py -v`
+Run: `uv run --project projects/semester-etl pytest projects/semester-etl/tests/test_config.py -v`
 Expected: PASS
 
 - [ ] **Step 7: 提交骨架**
 
 ```bash
-git add pyproject.toml src/student_behavior_etl/__init__.py src/student_behavior_etl/config.py src/student_behavior_etl/cli.py tests/test_config.py
+git add projects/semester-etl/pyproject.toml projects/semester-etl/src/student_behavior_etl/__init__.py projects/semester-etl/src/student_behavior_etl/config.py projects/semester-etl/src/student_behavior_etl/cli.py projects/semester-etl/tests/test_config.py
 git commit -m "feat: scaffold semester etl project"
 ```
 
 ### Task 2: 实现学号与学期键归一化
 
 **Files:**
-- Create: `C:\Users\Orion\Desktop\StudentBehavior\src\student_behavior_etl\normalize.py`
-- Test: `C:\Users\Orion\Desktop\StudentBehavior\tests\test_normalize.py`
+- Create: `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\src\student_behavior_etl\normalize.py`
+- Test: `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\tests\test_normalize.py`
 
 - [ ] **Step 1: 写 `student_id` 和 `term_key` 失败测试**
 
@@ -195,7 +196,7 @@ def test_normalize_term_key_rejects_invalid_values(xn, xq) -> None:
 
 - [ ] **Step 2: 运行归一化测试，确认失败**
 
-Run: `uv run pytest tests/test_normalize.py -v`
+Run: `uv run --project projects/semester-etl pytest projects/semester-etl/tests/test_normalize.py -v`
 Expected: FAIL because `normalize.py` does not exist yet
 
 - [ ] **Step 3: 写最小归一化实现**
@@ -233,22 +234,22 @@ def normalize_term_key(raw_xn: object, raw_xq: object) -> str | None:
 
 - [ ] **Step 4: 重新运行归一化测试，确认通过**
 
-Run: `uv run pytest tests/test_normalize.py -v`
+Run: `uv run --project projects/semester-etl pytest projects/semester-etl/tests/test_normalize.py -v`
 Expected: PASS
 
 - [ ] **Step 5: 提交归一化能力**
 
 ```bash
-git add src/student_behavior_etl/normalize.py tests/test_normalize.py
+git add projects/semester-etl/src/student_behavior_etl/normalize.py projects/semester-etl/tests/test_normalize.py
 git commit -m "feat: add semester etl normalization helpers"
 ```
 
 ### Task 3: 实现 warning 模型与源表读取校验
 
 **Files:**
-- Create: `C:\Users\Orion\Desktop\StudentBehavior\src\student_behavior_etl\reporting.py`
-- Create: `C:\Users\Orion\Desktop\StudentBehavior\src\student_behavior_etl\io.py`
-- Test: `C:\Users\Orion\Desktop\StudentBehavior\tests\test_reporting.py`
+- Create: `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\src\student_behavior_etl\reporting.py`
+- Create: `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\src\student_behavior_etl\io.py`
+- Test: `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\tests\test_reporting.py`
 
 - [ ] **Step 1: 写 warning 与列校验失败测试**
 
@@ -284,7 +285,7 @@ def test_validate_required_columns_rejects_missing_columns() -> None:
 
 - [ ] **Step 2: 运行 warning 测试，确认失败**
 
-Run: `uv run pytest tests/test_reporting.py -v`
+Run: `uv run --project projects/semester-etl pytest projects/semester-etl/tests/test_reporting.py -v`
 Expected: FAIL because reporting/io helpers do not exist yet
 
 - [ ] **Step 3: 写最小 warning 与校验实现**
@@ -343,22 +344,22 @@ def validate_required_columns(actual_columns: list[str], required_columns: set[s
 
 - [ ] **Step 4: 重新运行 warning 测试，确认通过**
 
-Run: `uv run pytest tests/test_reporting.py -v`
+Run: `uv run --project projects/semester-etl pytest projects/semester-etl/tests/test_reporting.py -v`
 Expected: PASS
 
 - [ ] **Step 5: 提交 warning 与列校验**
 
 ```bash
-git add src/student_behavior_etl/reporting.py src/student_behavior_etl/io.py tests/test_reporting.py
+git add projects/semester-etl/src/student_behavior_etl/reporting.py projects/semester-etl/src/student_behavior_etl/io.py projects/semester-etl/tests/test_reporting.py
 git commit -m "feat: add etl warning reporting primitives"
 ```
 
 ### Task 4: 实现考勤聚合、专业补齐和排序规则
 
 **Files:**
-- Create: `C:\Users\Orion\Desktop\StudentBehavior\src\student_behavior_etl\build_semester_features.py`
-- Modify: `C:\Users\Orion\Desktop\StudentBehavior\src\student_behavior_etl\io.py`
-- Test: `C:\Users\Orion\Desktop\StudentBehavior\tests\test_build_semester_features.py`
+- Create: `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\src\student_behavior_etl\build_semester_features.py`
+- Modify: `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\src\student_behavior_etl\io.py`
+- Test: `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\tests\test_build_semester_features.py`
 
 - [ ] **Step 1: 写基础特征构建失败测试**
 
@@ -448,7 +449,7 @@ def test_missing_major_name_rows_are_removed_from_dimension() -> None:
 
 - [ ] **Step 3: 运行构建测试，确认失败**
 
-Run: `uv run pytest tests/test_build_semester_features.py -v`
+Run: `uv run --project projects/semester-etl pytest projects/semester-etl/tests/test_build_semester_features.py -v`
 Expected: FAIL because builder does not exist yet
 
 - [ ] **Step 4: 写最小聚合实现**
@@ -500,22 +501,22 @@ def build_semester_feature_frame(attendance_df, student_df, internet_df, collect
 
 - [ ] **Step 5: 重新运行构建测试，确认通过**
 
-Run: `uv run pytest tests/test_build_semester_features.py -v`
+Run: `uv run --project projects/semester-etl pytest projects/semester-etl/tests/test_build_semester_features.py -v`
 Expected: PASS
 
 - [ ] **Step 6: 提交基础构建能力**
 
 ```bash
-git add src/student_behavior_etl/build_semester_features.py src/student_behavior_etl/io.py tests/test_build_semester_features.py
+git add projects/semester-etl/src/student_behavior_etl/build_semester_features.py projects/semester-etl/src/student_behavior_etl/io.py projects/semester-etl/tests/test_build_semester_features.py
 git commit -m "feat: build attendance-based semester features"
 ```
 
 ### Task 5: 接入行级告警和网络源整表降级
 
 **Files:**
-- Modify: `C:\Users\Orion\Desktop\StudentBehavior\src\student_behavior_etl\build_semester_features.py`
-- Modify: `C:\Users\Orion\Desktop\StudentBehavior\src\student_behavior_etl\reporting.py`
-- Test: `C:\Users\Orion\Desktop\StudentBehavior\tests\test_build_semester_features.py`
+- Modify: `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\src\student_behavior_etl\build_semester_features.py`
+- Modify: `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\src\student_behavior_etl\reporting.py`
+- Test: `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\tests\test_build_semester_features.py`
 
 - [ ] **Step 1: 写考勤脏行与网络降级失败测试**
 
@@ -600,7 +601,7 @@ def test_internet_source_can_aggregate_when_frozen_term_fields_exist() -> None:
 
 - [ ] **Step 2: 运行降级测试，确认失败**
 
-Run: `uv run pytest tests/test_build_semester_features.py -v`
+Run: `uv run --project projects/semester-etl pytest projects/semester-etl/tests/test_build_semester_features.py -v`
 Expected: FAIL because warning counters and degraded source details are incomplete
 
 - [ ] **Step 3: 写最小降级与 warning 集成实现**
@@ -666,23 +667,23 @@ def build_semester_feature_frame(attendance_df, student_df, internet_df, collect
 
 - [ ] **Step 4: 重新运行降级测试，确认通过**
 
-Run: `uv run pytest tests/test_build_semester_features.py -v`
+Run: `uv run --project projects/semester-etl pytest projects/semester-etl/tests/test_build_semester_features.py -v`
 Expected: PASS
 
 - [ ] **Step 5: 提交降级逻辑**
 
 ```bash
-git add src/student_behavior_etl/build_semester_features.py src/student_behavior_etl/reporting.py tests/test_build_semester_features.py
+git add projects/semester-etl/src/student_behavior_etl/build_semester_features.py projects/semester-etl/src/student_behavior_etl/reporting.py projects/semester-etl/tests/test_build_semester_features.py
 git commit -m "feat: degrade internet source under frozen term rules"
 ```
 
 ### Task 6: 实现 Excel 读取器、JSON 写出和 CLI 入口
 
 **Files:**
-- Modify: `C:\Users\Orion\Desktop\StudentBehavior\src\student_behavior_etl\io.py`
-- Modify: `C:\Users\Orion\Desktop\StudentBehavior\src\student_behavior_etl\reporting.py`
-- Modify: `C:\Users\Orion\Desktop\StudentBehavior\src\student_behavior_etl\cli.py`
-- Test: `C:\Users\Orion\Desktop\StudentBehavior\tests\test_cli.py`
+- Modify: `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\src\student_behavior_etl\io.py`
+- Modify: `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\src\student_behavior_etl\reporting.py`
+- Modify: `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\src\student_behavior_etl\cli.py`
+- Test: `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\tests\test_cli.py`
 
 - [ ] **Step 1: 写 CLI 集成失败测试**
 
@@ -694,7 +695,7 @@ import pandas as pd
 import pytest
 
 from student_behavior_etl.cli import run_build
-from student_behavior_etl.config import ProjectPaths
+from student_behavior_etl.config import DefaultPaths
 
 
 def test_run_build_writes_csv_and_warning_json(tmp_path: Path) -> None:
@@ -706,8 +707,7 @@ def test_run_build_writes_csv_and_warning_json(tmp_path: Path) -> None:
     pd.DataFrame([{"XH": "stu-1", "XN": "2023-2024", "XQ": 1}]).to_excel(input_dir / "考勤汇总.xlsx", index=False)
     pd.DataFrame([{"XSBH": "stu-1", "XN": None, "XQ": None, "TJNY": "2023-03-01", "SWLJSC": 9.5}]).to_excel(input_dir / "上网统计.xlsx", index=False)
 
-    paths = ProjectPaths(
-        repo_root=tmp_path,
+    paths = DefaultPaths(
         input_dir=input_dir,
         output_dir=output_dir,
         output_csv=output_dir / "v1_semester_features.csv",
@@ -744,8 +744,7 @@ def test_run_build_marks_internet_source_used_when_frozen_term_fields_exist(tmp_
         [{"XSBH": "stu-1", "XN": "2023-2024", "XQ": 1, "TJNY": "2023-03-01", "SWLJSC": 9.5}]
     ).to_excel(input_dir / "上网统计.xlsx", index=False)
 
-    paths = ProjectPaths(
-        repo_root=tmp_path,
+    paths = DefaultPaths(
         input_dir=input_dir,
         output_dir=output_dir,
         output_csv=output_dir / "v1_semester_features.csv",
@@ -767,8 +766,7 @@ def test_run_build_hard_fails_when_required_source_is_missing(tmp_path: Path) ->
     pd.DataFrame([{"XH": "stu-1", "ZYM": "信息安全"}]).to_excel(input_dir / "学生基本信息.xlsx", index=False)
     pd.DataFrame([{"XH": "stu-1", "XN": "2023-2024", "XQ": 1}]).to_excel(input_dir / "考勤汇总.xlsx", index=False)
 
-    paths = ProjectPaths(
-        repo_root=tmp_path,
+    paths = DefaultPaths(
         input_dir=input_dir,
         output_dir=output_dir,
         output_csv=output_dir / "v1_semester_features.csv",
@@ -781,7 +779,7 @@ def test_run_build_hard_fails_when_required_source_is_missing(tmp_path: Path) ->
 
 - [ ] **Step 2: 运行 CLI 测试，确认失败**
 
-Run: `uv run pytest tests/test_cli.py -v`
+Run: `uv run --project projects/semester-etl pytest projects/semester-etl/tests/test_cli.py -v`
 Expected: FAIL because CLI and file writers do not exist yet
 
 - [ ] **Step 3: 写最小 CLI、读取器和 JSON 写出实现**
@@ -872,36 +870,36 @@ def main(argv: list[str] | None = None) -> int:
 
 - [ ] **Step 4: 重新运行 CLI 测试，确认通过**
 
-Run: `uv run pytest tests/test_cli.py -v`
+Run: `uv run --project projects/semester-etl pytest projects/semester-etl/tests/test_cli.py -v`
 Expected: PASS
 
 - [ ] **Step 5: 提交 CLI 入口**
 
 ```bash
-git add src/student_behavior_etl/io.py src/student_behavior_etl/reporting.py src/student_behavior_etl/cli.py tests/test_cli.py
+git add projects/semester-etl/src/student_behavior_etl/io.py projects/semester-etl/src/student_behavior_etl/reporting.py projects/semester-etl/src/student_behavior_etl/cli.py projects/semester-etl/tests/test_cli.py
 git commit -m "feat: add semester feature cli entrypoint"
 ```
 
 ### Task 7: 跑全量验证并用真实数据快照验收
 
 **Files:**
-- Modify: `C:\Users\Orion\Desktop\StudentBehavior\src\student_behavior_etl\cli.py`
-- Modify: `C:\Users\Orion\Desktop\StudentBehavior\src\student_behavior_etl\reporting.py`
-- Modify: `C:\Users\Orion\Desktop\StudentBehavior\src\student_behavior_etl\build_semester_features.py`
-- Test: `C:\Users\Orion\Desktop\StudentBehavior\tests\test_config.py`
-- Test: `C:\Users\Orion\Desktop\StudentBehavior\tests\test_normalize.py`
-- Test: `C:\Users\Orion\Desktop\StudentBehavior\tests\test_reporting.py`
-- Test: `C:\Users\Orion\Desktop\StudentBehavior\tests\test_build_semester_features.py`
-- Test: `C:\Users\Orion\Desktop\StudentBehavior\tests\test_cli.py`
+- Modify: `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\src\student_behavior_etl\cli.py`
+- Modify: `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\src\student_behavior_etl\reporting.py`
+- Modify: `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\src\student_behavior_etl\build_semester_features.py`
+- Test: `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\tests\test_config.py`
+- Test: `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\tests\test_normalize.py`
+- Test: `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\tests\test_reporting.py`
+- Test: `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\tests\test_build_semester_features.py`
+- Test: `C:\Users\Orion\Desktop\StudentBehavior\projects\semester-etl\tests\test_cli.py`
 
 - [ ] **Step 1: 跑完整测试集**
 
-Run: `uv run pytest -v`
+Run: `uv run --project projects/semester-etl pytest projects/semester-etl/tests -v`
 Expected: PASS
 
 - [ ] **Step 2: 用真实项目快照运行 CLI**
 
-Run: `uv run semester-features build`
+Run: `uv run --project projects/semester-etl semester-features build`
 Expected:
 - 退出码为 `0`
 - 生成 `C:\Users\Orion\Desktop\StudentBehavior\artifacts\semester_features\v1_semester_features.csv`
@@ -931,7 +929,7 @@ assert list(df.columns) == [
 assert df["internet_duration_sum"].eq(0).all()
 assert payload["degraded_sources"][0]["source_file"] == "上网统计.xlsx"
 print("real snapshot acceptance passed")
-'@ | uv run python -
+'@ | uv run --project projects/semester-etl python -
 ```
 
 Note:
@@ -941,21 +939,21 @@ Note:
 - [ ] **Step 4: 如有必要做最小修正后，再跑一次全量验证**
 
 Run:
-- `uv run pytest -v`
-- `uv run semester-features build`
+- `uv run --project projects/semester-etl pytest projects/semester-etl/tests -v`
+- `uv run --project projects/semester-etl semester-features build`
 
 Expected: PASS and artifacts updated
 
 - [ ] **Step 5: 提交验收版实现**
 
 ```bash
-git add pyproject.toml src/student_behavior_etl tests
+git add projects/semester-etl/pyproject.toml projects/semester-etl/src/student_behavior_etl projects/semester-etl/tests
 git commit -m "feat: ship v1 semester feature etl cli"
 ```
 
 ## 完成定义
 
-- `uv run semester-features build` 在仓库根目录可直接运行
+- `uv run --project projects/semester-etl semester-features build` 在仓库根目录可直接运行
 - 输出 CSV 仅包含冻结的 5 个字段
 - 输出 JSON 具有稳定的 warning 结构
 - 行排序稳定为 `(student_id, term_key)` 升序
