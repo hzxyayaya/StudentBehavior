@@ -153,6 +153,11 @@ Construction flow:
 
 `学生基本信息.xlsx` does not create semester rows by itself. It only broadcasts student-dimension data onto the retained `(student_id, term_key)` rows.
 
+Final CSV ordering must be deterministic:
+
+- sort by `student_id` ascending
+- then sort by `term_key` ascending
+
 ## Feature Rules
 
 ### `major_name`
@@ -224,6 +229,19 @@ The warning summary should be stable enough for later tooling and include at lea
 - counts of dropped attendance rows by reason
 - counts of dropped final rows by reason
 - degraded source list
+
+Minimum stable shape for `source file status list`:
+
+- `source_file`
+- `status` where status is one of `used`, `degraded`, or `failed`
+- `rows_read`
+- `notes`
+
+Minimum stable reason keys for dropped-row counters:
+
+- `missing_student_id`
+- `invalid_term_fields`
+- `missing_major_name`
 
 For the degraded network source, include at least:
 
