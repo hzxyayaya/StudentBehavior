@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import student_behavior_analytics_db.cli as cli
+import student_behavior_analytics_db.db as db
 from student_behavior_analytics_db.config import build_default_paths
 
 
@@ -32,3 +33,46 @@ def test_cli_bootstrap_uses_checkout_root_from_package_location(
     assert captured["repo_root"] == expected_root
     assert captured["repo_root"] != Path.cwd()
     assert captured["repo_root"] != Path(cli.__file__).resolve().parents[2]
+
+
+EXPECTED_TABLES = {
+    "students",
+    "terms",
+    "courses",
+    "majors",
+    "student_course_enrollments",
+    "student_grade_records",
+    "student_attendance_records",
+    "student_signin_events",
+    "student_assignment_submissions",
+    "student_exam_submissions",
+    "student_task_participation",
+    "student_discussion_events",
+    "student_library_visits",
+    "student_running_events",
+    "student_evaluation_labels",
+    "student_term_features",
+}
+
+EXPECTED_SQL_FILES = [
+    "001_create_dimensions.sql",
+    "002_create_fact_tables.sql",
+    "003_create_student_term_features.sql",
+    "004_indexes.sql",
+]
+
+
+def test_schema_scaffold_defines_expected_tables() -> None:
+    project_root = Path(db.__file__).resolve().parents[2]
+    sql_dir = project_root / "sql"
+    fact_sql = (sql_dir / "002_create_fact_tables.sql").read_text(encoding="utf-8")
+    mart_sql = (sql_dir / "003_create_student_term_features.sql").read_text(
+        encoding="utf-8"
+    )
+
+    assert db.collect_schema_table_names(project_root) == EXPECTED_TABLES
+    assert [path.name for path in db.get_schema_sql_files(project_root)] == EXPECTED_SQL_FILES
+    assert all((sql_dir / name).exists() for name in EXPECTED_SQL_FILES)
+    assert "source_file text not null" in fact_sql
+    assert "source_row_hash text not null" in fact_sql
+    assert "primary key (student_id, term_key)" in mart_sql
