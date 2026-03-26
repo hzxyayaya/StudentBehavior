@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "student-behavior-analytics-db"
+version = "0.0.0"
+requires-python = ">=3.12"
+
+[project.scripts]
+analytics-db = "student_behavior_analytics_db.cli:main"
+
+[dependency-groups]
+dev = [
+  "pytest",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/student_behavior_analytics_db"]
