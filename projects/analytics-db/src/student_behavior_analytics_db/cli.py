@@ -7,7 +7,7 @@ from .config import build_default_paths
 
 
 def resolve_project_root() -> Path:
-    return Path(__file__).resolve().parents[2]
+    return Path(__file__).resolve().parents[6]
 
 
 def bootstrap() -> None:
