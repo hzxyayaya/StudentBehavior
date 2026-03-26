@@ -12,5 +12,22 @@ def test_normalize_term_key_from_stable_combined_format():
     assert normalize_term_key("2020-2021学年第1学期", None) == "2020-1"
 
 
+def test_normalize_term_key_rejects_invalid_school_years():
+    assert normalize_term_key("2020-2022", 1) is None
+
+
+def test_normalize_term_key_rejects_invalid_term_numbers():
+    assert normalize_term_key("2020-2021", 3) is None
+
+
+def test_normalize_term_key_rejects_booleans():
+    assert normalize_term_key(True, 1) is None
+    assert normalize_term_key("2020-2021", False) is None
+
+
+def test_normalize_term_key_rejects_unsupported_combined_format_when_raw_term_is_none():
+    assert normalize_term_key("2020-2022学年第1学期", None) is None
+
+
 def test_guess_based_term_inference_is_rejected():
     assert infer_term_from_month_only("2023-03-01") is None
