@@ -18,7 +18,7 @@ def build_default_paths(repo_root: Path) -> DefaultPaths:
         output_dir=output_dir,
         student_results_csv=output_dir / "v1_student_results.csv",
         student_reports_jsonl=output_dir / "v1_student_reports.jsonl",
-        overview_json=output_dir / "v1_overview.json",
+        overview_json=output_dir / "v1_overview_by_term.json",
         model_summary_json=output_dir / "v1_model_summary.json",
         warnings_json=output_dir / "v1_warnings.json",
     )
