@@ -273,7 +273,7 @@ def _extract_quadrant_factor_entries(
 
     report_factors = _parse_json_field(report_row.get("top_factors"), field_name="top_factors")
     if not isinstance(report_factors, list):
-        return []
+        raise ValueError("top_factors must be a list")
 
     entries = []
     for item in report_factors:

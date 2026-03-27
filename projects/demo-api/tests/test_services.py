@@ -235,6 +235,57 @@ def test_get_quadrants_aggregates_top_factors_from_reports(sample_store) -> None
     assert counts["课堂参与表现"] != counts["课堂学习投入"]
 
 
+def test_get_quadrants_raises_for_invalid_report_top_factors_schema(tmp_path: Path) -> None:
+    artifact_root = (
+        Path(__file__).resolve().parents[4]
+        / "v1-model-stubs"
+        / "artifacts"
+        / "model_stubs"
+    )
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230001",
+                "term_key": "2023-1",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "quadrant_label": "被动守纪型",
+                "risk_probability": 0.81,
+                "risk_level": "medium",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+            },
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.write_text(
+        json.dumps(
+            {
+                "student_id": "20230001",
+                "term_key": "2023-1",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "top_factors": {"dimension": "课堂学习投入"},
+                "intervention_advice": ["优先关注课程作业完成质量"],
+                "report_text": "2023-1 report",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    store = DemoApiStore(
+        overview_path=artifact_root / "v1_overview_by_term.json",
+        model_summary_path=artifact_root / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    with pytest.raises(ValueError, match="top_factors must be a list"):
+        store.get_quadrants(term="2023-1")
+
+
 def test_get_student_profile_uses_injected_results_path(tmp_path: Path) -> None:
     warnings_path = tmp_path / "custom" / "student_results.csv"
     warnings_path.parent.mkdir(parents=True, exist_ok=True)
