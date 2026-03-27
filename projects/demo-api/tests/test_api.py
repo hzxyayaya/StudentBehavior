@@ -2,6 +2,7 @@ import importlib
 import json
 from pathlib import Path
 
+import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
 
@@ -20,13 +21,35 @@ def client(monkeypatch, tmp_path: Path) -> TestClient:
         / "artifacts"
         / "model_stubs"
     )
-    warnings_path = tmp_path / "v1_student_results.csv"
-    warnings_path.write_text(
-        "\ufeffstudent_id,term_key,student_name,major_name,quadrant_label,risk_probability,risk_level,dimension_scores_json\n"
-        '20230002,2023-1,Alice,软件工程,情绪驱动型,0.92,high,"[]"\n'
-        '20230001,2023-1,Bob,软件工程,被动守纪型,0.81,medium,"[]"\n',
-        encoding="utf-8",
-    )
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230002",
+                "term_key": "2023-1",
+                "student_name": "Alice",
+                "major_name": "软件工程",
+                "quadrant_label": "情绪驱动型",
+                "risk_probability": 0.92,
+                "risk_level": "high",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+            },
+            {
+                "student_id": "20230001",
+                "term_key": "2023-1",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "quadrant_label": "被动守纪型",
+                "risk_probability": 0.81,
+                "risk_level": "medium",
+                "dimension_scores_json": json.dumps(
+                    [{"dimension": "学业基础表现", "score": 88}],
+                    ensure_ascii=False,
+                ),
+            },
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
     reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
     reports_path.parent.mkdir(parents=True, exist_ok=True)
     reports_path.write_text(
@@ -38,22 +61,27 @@ def client(monkeypatch, tmp_path: Path) -> TestClient:
                     "term_key": "2022-2",
                     "student_name": "Bob",
                     "major_name": "软件工程",
-                    "dimension_scores_json": json.dumps(
-                        [{"dimension": "学业基础表现", "score": 82}],
-                        ensure_ascii=False,
-                    ),
+                    "top_factors": ["作业完成度偏低"],
                     "intervention_advice": ["继续保持稳定节奏"],
+                    "report_text": "2022-2 report",
                 },
                 {
                     "student_id": "20230001",
                     "term_key": "2023-1",
                     "student_name": "Bob",
                     "major_name": "软件工程",
-                    "dimension_scores_json": json.dumps(
-                        [{"dimension": "学业基础表现", "score": 88}],
-                        ensure_ascii=False,
-                    ),
+                    "top_factors": ["课堂互动不足"],
                     "intervention_advice": ["优先关注课程作业完成质量"],
+                    "report_text": "2023-1 report",
+                },
+                {
+                    "student_id": "20230002",
+                    "term_key": "2023-1",
+                    "student_name": "Alice",
+                    "major_name": "软件工程",
+                    "top_factors": ["课堂参与活跃"],
+                    "intervention_advice": ["优先补齐课堂互动"],
+                    "report_text": "2023-1 report for Alice",
                 },
             ]
         ),
@@ -140,6 +168,11 @@ def test_get_warnings_returns_404_for_unknown_term(client) -> None:
 
 def test_get_student_profile_returns_404_for_unknown_student(client) -> None:
     response = client.get("/api/students/404/profile", params={"term": "2023-1"})
+    assert response.status_code == 404
+
+
+def test_get_student_report_returns_404_for_unknown_student(client) -> None:
+    response = client.get("/api/students/404/report", params={"term": "2023-1"})
     assert response.status_code == 404
 
 

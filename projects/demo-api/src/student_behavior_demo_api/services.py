@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from student_behavior_demo_api.loaders import load_json_records
+from student_behavior_demo_api.loaders import load_student_results
 from student_behavior_demo_api.loaders import validate_model_summary_payload
 from student_behavior_demo_api.loaders import validate_overview_payload
 
@@ -46,8 +47,8 @@ class DemoApiStore:
         return dict(self._model_summary_payload)
 
     def get_student_profile(self, *, student_id: str, term: str) -> dict[str, Any]:
-        report_rows = _load_student_report_rows(self._repo_root)
-        student_rows = [row for row in report_rows if row.get("student_id") == student_id]
+        student_rows = _load_student_result_rows(self._repo_root)
+        student_rows = [row for row in student_rows if row.get("student_id") == student_id]
         if not student_rows:
             raise KeyError((student_id, term))
 
@@ -62,7 +63,9 @@ class DemoApiStore:
             "quadrant_label": current_row.get("quadrant_label"),
             "risk_level": current_row.get("risk_level"),
             "risk_probability": current_row.get("risk_probability"),
-            "dimension_scores": _parse_json_field(current_row.get("dimension_scores_json"), field_name="dimension_scores_json"),
+            "dimension_scores": _parse_json_field(
+                current_row.get("dimension_scores_json"), field_name="dimension_scores_json"
+            ),
             "trend": [
                 {
                     "term": row.get("term_key"),
@@ -83,11 +86,13 @@ class DemoApiStore:
         if current_row is None:
             raise KeyError((student_id, term))
 
-        payload = dict(current_row)
-        payload["intervention_advice"] = _parse_json_field(
-            current_row.get("intervention_advice"), field_name="intervention_advice"
-        )
-        return payload
+        return {
+            "top_factors": _parse_json_field(current_row.get("top_factors"), field_name="top_factors"),
+            "intervention_advice": _parse_json_field(
+                current_row.get("intervention_advice"), field_name="intervention_advice"
+            ),
+            "report_text": current_row.get("report_text"),
+        }
 
     def list_warnings(
         self,
@@ -175,6 +180,15 @@ def _load_warning_rows(path: Path | None) -> list[dict[str, Any]]:
 def _load_student_report_rows(repo_root: Path) -> list[dict[str, Any]]:
     report_path = _resolve_artifact_path(repo_root, "v1_student_reports.jsonl")
     return load_json_records(report_path)
+
+
+def _load_student_result_rows(repo_root: Path) -> list[dict[str, Any]]:
+    results_path = _resolve_artifact_path(repo_root, "v1_student_results.csv")
+    frame = load_student_results(results_path)
+    frame = frame.copy()
+    frame["student_id"] = frame["student_id"].astype(str)
+    frame["term_key"] = frame["term_key"].astype(str)
+    return frame.to_dict(orient="records")
 
 
 def _parse_json_field(raw_value: Any, *, field_name: str) -> Any:
