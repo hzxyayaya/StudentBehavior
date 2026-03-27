@@ -20,16 +20,25 @@ _STUDENT_COLUMNS = (
 
 _STUDENT_ID_KEYS = (
     "student_id",
+    "学号",
+    "学生学号",
+    "学籍号",
     "XH",
     "XSBH",
     "LOGIN_NAME",
     "USERNUM",
     "SID",
-    "cardld",
-    "IDSERTAL",
-    "KS_XH",
-    "XHHGH",
 )
+
+_STUDENT_FIELD_ALIASES = {
+    "gender": ("gender", "性别"),
+    "ethnicity": ("ethnicity", "民族"),
+    "political_status": ("political_status", "政治面貌"),
+    "major_name": ("major_name", "专业名称", "专业"),
+    "college_name": ("college_name", "学院名称", "学院"),
+    "class_name": ("class_name", "班级名称", "班级"),
+    "enrollment_year": ("enrollment_year", "入学年份", "入学年"),
+}
 
 
 def load_students(rows: list[dict[str, Any]]) -> pd.DataFrame:
@@ -41,10 +50,19 @@ def load_students(rows: list[dict[str, Any]]) -> pd.DataFrame:
 
         record = {"student_id": student_id}
         for column in _STUDENT_COLUMNS[1:]:
-            record[column] = _normalize_value(row.get(column))
+            value = _first_value(row, *_STUDENT_FIELD_ALIASES[column])
+            if column == "enrollment_year":
+                record[column] = _normalize_enrollment_year(value)
+            else:
+                record[column] = _normalize_value(value)
         records.append(record)
 
-    return pd.DataFrame(records, columns=_STUDENT_COLUMNS)
+    if not records:
+        return pd.DataFrame(columns=_STUDENT_COLUMNS)
+
+    frame = pd.DataFrame(records, columns=_STUDENT_COLUMNS)
+    frame = frame.drop_duplicates(subset=["student_id"], keep="first", ignore_index=True)
+    return frame.astype(object).where(pd.notna(frame), None)
 
 
 def _pick_student_id(row: dict[str, Any]) -> str | None:
@@ -52,6 +70,24 @@ def _pick_student_id(row: dict[str, Any]) -> str | None:
         student_id = normalize_student_id(row.get(key))
         if student_id is not None:
             return student_id
+    return None
+
+
+def _first_value(row: dict[str, Any], *keys: str) -> Any:
+    for key in keys:
+        if key not in row:
+            continue
+        value = row.get(key)
+        if value is None or isinstance(value, bool):
+            continue
+        if isinstance(value, float) and isnan(value):
+            continue
+        if isinstance(value, str):
+            text = value.strip()
+            if text:
+                return text
+            continue
+        return value
     return None
 
 
@@ -63,6 +99,19 @@ def _normalize_value(raw: Any) -> Any:
     if isinstance(raw, str):
         value = raw.strip()
         return value or None
-    if isinstance(raw, int) and not isinstance(raw, bool):
+    if isinstance(raw, int):
         return raw
+    if isinstance(raw, float) and raw.is_integer():
+        return int(raw)
     return raw
+
+
+def _normalize_enrollment_year(raw: Any) -> int | None:
+    value = _normalize_value(raw)
+    if value is None:
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.isdigit():
+        return int(value)
+    return None

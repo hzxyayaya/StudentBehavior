@@ -15,25 +15,57 @@ _COURSE_COLUMNS = (
     "assessment_type",
 )
 
+_COURSE_FIELD_ALIASES = {
+    "course_id": ("course_id", "课程号", "课程编号", "课程代码", "course_code"),
+    "course_code": ("course_code", "课程代码", "课程编号", "课程号"),
+    "course_name": ("course_name", "课程名称", "课程名"),
+    "course_type": ("course_type", "课程类型"),
+    "credit": ("credit", "学分"),
+    "hours": ("hours", "学时"),
+    "assessment_type": ("assessment_type", "考核方式"),
+}
+
 
 def load_courses(rows: list[dict[str, Any]]) -> pd.DataFrame:
     records = []
     for row in rows:
-        course_id = _clean_text(row.get("course_id") or row.get("course_code"))
+        course_id = _clean_text(_first_value(row, *_COURSE_FIELD_ALIASES["course_id"]))
         if course_id is None:
             continue
         records.append(
             {
                 "course_id": course_id,
-                "course_code": _clean_text(row.get("course_code")),
-                "course_name": _clean_text(row.get("course_name")),
-                "course_type": _clean_text(row.get("course_type")),
-                "credit": _clean_number(row.get("credit")),
-                "hours": _clean_number(row.get("hours")),
-                "assessment_type": _clean_text(row.get("assessment_type")),
+                "course_code": _clean_text(_first_value(row, *_COURSE_FIELD_ALIASES["course_code"])),
+                "course_name": _clean_text(_first_value(row, *_COURSE_FIELD_ALIASES["course_name"])),
+                "course_type": _clean_text(_first_value(row, *_COURSE_FIELD_ALIASES["course_type"])),
+                "credit": _clean_number(_first_value(row, *_COURSE_FIELD_ALIASES["credit"])),
+                "hours": _clean_number(_first_value(row, *_COURSE_FIELD_ALIASES["hours"])),
+                "assessment_type": _clean_text(_first_value(row, *_COURSE_FIELD_ALIASES["assessment_type"])),
             }
         )
-    return pd.DataFrame(records, columns=_COURSE_COLUMNS)
+    if not records:
+        return pd.DataFrame(columns=_COURSE_COLUMNS)
+    frame = pd.DataFrame(records, columns=_COURSE_COLUMNS)
+    frame = frame.drop_duplicates(subset=["course_id"], keep="first", ignore_index=True)
+    return frame.astype(object).where(pd.notna(frame), None)
+
+
+def _first_value(row: dict[str, Any], *keys: str) -> Any:
+    for key in keys:
+        if key not in row:
+            continue
+        value = row.get(key)
+        if value is None or isinstance(value, bool):
+            continue
+        if isinstance(value, float) and isnan(value):
+            continue
+        if isinstance(value, str):
+            text = value.strip()
+            if text:
+                return text
+            continue
+        return value
+    return None
 
 
 def _clean_text(raw: Any) -> str | None:

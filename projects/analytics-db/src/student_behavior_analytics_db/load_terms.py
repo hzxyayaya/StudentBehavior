@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from datetime import date, datetime
 from typing import Any
 
@@ -18,6 +17,41 @@ _TERM_COLUMNS = (
     "is_analysis_term",
 )
 
+_TERM_COMBINED_KEYS = (
+    "term_name",
+    "term_key",
+    "学年学期",
+    "学年学期名称",
+    "学期名称",
+    "xnxq",
+    "XNXQ",
+)
+
+_TERM_SCHOOL_YEAR_KEYS = (
+    "school_year",
+    "学年",
+    "学年度",
+    "开课学年",
+    "XN",
+    "xn",
+)
+
+_TERM_NO_KEYS = (
+    "term_no",
+    "学期",
+    "学期序号",
+    "开课学期",
+    "XQ",
+    "xq",
+)
+
+_TERM_DATE_KEYS = {
+    "start_date": ("start_date", "起始日期", "开始日期"),
+    "end_date": ("end_date", "结束日期", "终止日期"),
+}
+
+_TERM_BOOL_KEYS = ("is_analysis_term", "是否分析学期", "分析学期")
+
 
 def load_terms(rows: list[dict[str, Any]]) -> pd.DataFrame:
     records = []
@@ -25,19 +59,23 @@ def load_terms(rows: list[dict[str, Any]]) -> pd.DataFrame:
         record = _build_term_record(row)
         if record is not None:
             records.append(record)
-    return pd.DataFrame(records, columns=_TERM_COLUMNS)
+    if not records:
+        return pd.DataFrame(columns=_TERM_COLUMNS)
+    frame = pd.DataFrame(records, columns=_TERM_COLUMNS)
+    frame = frame.drop_duplicates(subset=["term_key"], keep="first", ignore_index=True)
+    return frame.astype(object).where(pd.notna(frame), None)
 
 
 def _build_term_record(row: dict[str, Any]) -> dict[str, Any] | None:
-    combined_term = _first_text(row, "term_name", "term_key", "xnxq", "XNXQ")
-    school_year = _first_text(row, "school_year", "xn", "schoolYear", "XN")
+    combined_term = _first_text(row, *_TERM_COMBINED_KEYS)
+    school_year = _first_text(row, *_TERM_SCHOOL_YEAR_KEYS)
     term_no = _first_term_no(row)
 
     term_key = None
     term_name = None
 
     if combined_term is not None:
-        term_key = normalize_term_key(combined_term, None)
+        term_key = _normalize_combined_term_key(combined_term)
         if term_key is not None:
             school_year, term_no = _split_term_key(term_key)
             term_name = combined_term.strip()
@@ -55,9 +93,9 @@ def _build_term_record(row: dict[str, Any]) -> dict[str, Any] | None:
         "school_year": school_year,
         "term_no": term_no,
         "term_name": term_name,
-        "start_date": _normalize_date(row.get("start_date")),
-        "end_date": _normalize_date(row.get("end_date")),
-        "is_analysis_term": _normalize_bool(row.get("is_analysis_term"), default=True),
+        "start_date": _normalize_date(_first_value(row, *_TERM_DATE_KEYS["start_date"])),
+        "end_date": _normalize_date(_first_value(row, *_TERM_DATE_KEYS["end_date"])),
+        "is_analysis_term": _normalize_bool(_first_value(row, *_TERM_BOOL_KEYS), default=True),
     }
 
 
@@ -68,6 +106,8 @@ def _split_term_key(term_key: str) -> tuple[str, int]:
 
 def _first_text(row: dict[str, Any], *keys: str) -> str | None:
     for key in keys:
+        if key not in row:
+            continue
         value = row.get(key)
         if value is None or isinstance(value, bool):
             continue
@@ -78,7 +118,7 @@ def _first_text(row: dict[str, Any], *keys: str) -> str | None:
 
 
 def _first_term_no(row: dict[str, Any]) -> int | str | None:
-    value = row.get("term_no")
+    value = _first_value(row, *_TERM_NO_KEYS)
     if value is None or isinstance(value, bool):
         return None
     if isinstance(value, int):
@@ -86,6 +126,24 @@ def _first_term_no(row: dict[str, Any]) -> int | str | None:
     text = str(value).strip()
     if text in {"1", "2"}:
         return int(text)
+    return None
+
+
+def _first_value(row: dict[str, Any], *keys: str) -> Any:
+    for key in keys:
+        if key not in row:
+            continue
+        value = row.get(key)
+        if value is None or isinstance(value, bool):
+            continue
+        if isinstance(value, float) and value != value:
+            continue
+        if isinstance(value, str):
+            text = value.strip()
+            if text:
+                return text
+            continue
+        return value
     return None
 
 
@@ -113,3 +171,25 @@ def _normalize_bool(raw: Any, default: bool) -> bool:
     if text in {"0", "false", "no", "n", "否"}:
         return False
     return default
+
+
+def _normalize_combined_term_key(raw: object) -> str | None:
+    if raw is None or isinstance(raw, bool):
+        return None
+    text = str(raw).strip()
+    if not text:
+        return None
+    direct = normalize_term_key(text, None)
+    if direct is not None:
+        return direct
+
+    text = text.replace("第", "").replace("学期", "")
+    if "学年" in text and "学期" not in text:
+        return None
+    for separator in ("-", "—", "–", "~", "～", "至"):
+        if separator in text:
+            parts = text.split(separator)
+            if len(parts) == 3 and parts[2] in {"1", "2"}:
+                school_year = f"{parts[0]}-{parts[1]}"
+                return normalize_term_key(school_year, parts[2])
+    return None
