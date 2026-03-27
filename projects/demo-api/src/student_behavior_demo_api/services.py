@@ -280,15 +280,17 @@ def _extract_quadrant_factor_entries(
         if isinstance(item, str):
             if item:
                 entries.append({"dimension": item, "importance": 1.0})
+            else:
+                raise ValueError("top_factors items must be strings or factor objects")
             continue
         if not isinstance(item, Mapping):
-            continue
+            raise ValueError("top_factors items must be strings or factor objects")
         dimension = item.get("dimension") or item.get("feature_cn") or item.get("feature")
         if not isinstance(dimension, str) or not dimension:
-            continue
+            raise ValueError("top_factors items must be strings or factor objects")
         importance = item.get("importance")
         if not isinstance(importance, (int, float)):
-            continue
+            raise ValueError("top_factors items must be strings or factor objects")
         entries.append({"dimension": dimension, "importance": float(importance)})
     return entries
 
