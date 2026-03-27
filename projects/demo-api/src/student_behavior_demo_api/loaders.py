@@ -18,7 +18,14 @@ STUDENT_RESULTS_REQUIRED_COLUMNS = {
     "dimension_scores_json",
 }
 
-OVERVIEW_REQUIRED_KEYS = {"term_buckets"}
+OVERVIEW_REQUIRED_KEYS = {
+    "term_buckets",
+    "student_count",
+    "risk_distribution",
+    "quadrant_distribution",
+    "major_risk_summary",
+    "trend_summary",
+}
 MODEL_SUMMARY_REQUIRED_KEYS = {
     "cluster_method",
     "risk_model",
@@ -88,6 +95,7 @@ def load_json_records(path: Path) -> list[dict[str, Any]]:
 
 
 def validate_overview_payload(payload: Mapping[str, Any]) -> Mapping[str, Any]:
+    # Overview payloads are expected to include the key summary blocks used by the API.
     _ensure_required_keys(payload, OVERVIEW_REQUIRED_KEYS)
     return payload
 
