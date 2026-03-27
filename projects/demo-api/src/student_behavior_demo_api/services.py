@@ -47,7 +47,9 @@ class DemoApiStore:
         return dict(self._model_summary_payload)
 
     def get_student_profile(self, *, student_id: str, term: str) -> dict[str, Any]:
-        student_rows = _load_student_result_rows(self._repo_root)
+        student_rows = _load_student_result_rows(
+            self._repo_root, self._warnings_path
+        )
         student_rows = [row for row in student_rows if row.get("student_id") == student_id]
         if not student_rows:
             raise KeyError((student_id, term))
@@ -182,8 +184,8 @@ def _load_student_report_rows(repo_root: Path) -> list[dict[str, Any]]:
     return load_json_records(report_path)
 
 
-def _load_student_result_rows(repo_root: Path) -> list[dict[str, Any]]:
-    results_path = _resolve_artifact_path(repo_root, "v1_student_results.csv")
+def _load_student_result_rows(repo_root: Path, warnings_path: Path | None) -> list[dict[str, Any]]:
+    results_path = _resolve_student_results_artifact_path(repo_root, warnings_path)
     frame = load_student_results(results_path)
     frame = frame.copy()
     frame["student_id"] = frame["student_id"].astype(str)
@@ -214,6 +216,12 @@ def _resolve_warning_artifact_path(repo_root: Path) -> Path:
     if artifact_path.exists():
         return artifact_path
     raise FileNotFoundError(artifact_path)
+
+
+def _resolve_student_results_artifact_path(repo_root: Path, warnings_path: Path | None) -> Path:
+    if warnings_path is not None:
+        return warnings_path
+    return _resolve_warning_artifact_path(repo_root)
 
 
 def _infer_overview_term(payload: Mapping[str, Any]) -> str:

@@ -151,6 +151,66 @@ def test_get_student_report_returns_exact_term_record(sample_store) -> None:
     assert payload["intervention_advice"][0].startswith("优先")
 
 
+def test_get_student_profile_uses_injected_results_path(tmp_path: Path) -> None:
+    warnings_path = tmp_path / "custom" / "student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230001",
+                "term_key": "2022-2",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "quadrant_label": "被动守纪型",
+                "risk_probability": 0.55,
+                "risk_level": "low",
+                "dimension_scores_json": json.dumps(
+                    [{"dimension": "学业基础表现", "score": 82}],
+                    ensure_ascii=False,
+                ),
+            },
+            {
+                "student_id": "20230001",
+                "term_key": "2023-1",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "quadrant_label": "被动守纪型",
+                "risk_probability": 0.81,
+                "risk_level": "medium",
+                "dimension_scores_json": json.dumps(
+                    [{"dimension": "学业基础表现", "score": 88}],
+                    ensure_ascii=False,
+                ),
+            },
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+
+    store = DemoApiStore(
+        overview_path=(
+            Path(__file__).resolve().parents[4]
+            / "v1-model-stubs"
+            / "artifacts"
+            / "model_stubs"
+            / "v1_overview_by_term.json"
+        ),
+        model_summary_path=(
+            Path(__file__).resolve().parents[4]
+            / "v1-model-stubs"
+            / "artifacts"
+            / "model_stubs"
+            / "v1_model_summary.json"
+        ),
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    payload = store.get_student_profile(student_id="20230001", term="2023-1")
+
+    assert payload["dimension_scores"][0]["dimension"] == "学业基础表现"
+    assert [item["term"] for item in payload["trend"]] == ["2022-2", "2023-1"]
+
+
 def test_list_warnings_filters_by_term_and_risk_level(sample_store) -> None:
     payload = sample_store.list_warnings(term="2023-1", risk_level="high")
     assert payload["total"] == 1
