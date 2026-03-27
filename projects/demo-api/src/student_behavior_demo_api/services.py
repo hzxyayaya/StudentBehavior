@@ -55,6 +55,8 @@ class DemoApiStore:
         major_name: str | None = None,
     ) -> dict[str, Any]:
         warning_rows = _load_warning_rows(self._warnings_path or _resolve_warning_artifact_path(self._repo_root))
+        if term not in {row["term_key"] for row in warning_rows}:
+            raise KeyError(term)
         filtered_rows = [
             row
             for row in warning_rows
@@ -126,14 +128,10 @@ def _load_warning_rows(path: Path | None) -> list[dict[str, Any]]:
 
 
 def _resolve_warning_artifact_path(repo_root: Path) -> Path:
-    candidates = [
-        repo_root / "artifacts" / "model_stubs" / "v1_student_results.csv",
-        repo_root.parent / "v1-model-stubs" / "artifacts" / "model_stubs" / "v1_student_results.csv",
-    ]
-    for candidate in candidates:
-        if candidate.exists():
-            return candidate
-    raise FileNotFoundError(candidates[-1])
+    artifact_path = repo_root / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    if artifact_path.exists():
+        return artifact_path
+    raise FileNotFoundError(artifact_path)
 
 
 def _infer_overview_term(payload: Mapping[str, Any]) -> str:

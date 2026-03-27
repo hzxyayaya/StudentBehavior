@@ -50,9 +50,14 @@ def test_list_warnings_sorts_by_risk_probability_desc_then_student_id(sample_sto
     assert [item["student_id"] for item in payload["items"]] == ["20230002", "20230001"]
 
 
+def test_list_warnings_raises_for_unknown_term(sample_store) -> None:
+    with pytest.raises(KeyError, match="2099-1"):
+        sample_store.list_warnings(term="2099-1")
+
+
 def test_missing_default_artifact_resolution_only_uses_current_worktree(tmp_path: Path) -> None:
     current_artifact_root = tmp_path / "artifacts" / "model_stubs"
-    sibling_artifact_root = tmp_path.parent / "sibling-worktree" / "artifacts" / "model_stubs"
+    sibling_artifact_root = tmp_path.parent / "v1-model-stubs" / "artifacts" / "model_stubs"
     sibling_artifact_root.mkdir(parents=True)
     (sibling_artifact_root / "v1_overview_by_term.json").write_text("{}", encoding="utf-8")
     (sibling_artifact_root / "v1_model_summary.json").write_text("{}", encoding="utf-8")

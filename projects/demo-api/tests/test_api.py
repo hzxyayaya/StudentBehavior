@@ -12,17 +12,25 @@ app = main_module.app
 
 
 @pytest.fixture
-def client(monkeypatch) -> TestClient:
+def client(monkeypatch, tmp_path: Path) -> TestClient:
     artifact_root = (
         Path(__file__).resolve().parents[4]
         / "v1-model-stubs"
         / "artifacts"
         / "model_stubs"
     )
+    warnings_path = tmp_path / "v1_student_results.csv"
+    warnings_path.write_text(
+        "\ufeffstudent_id,term_key,student_name,major_name,quadrant_label,risk_probability,risk_level,dimension_scores_json\n"
+        '20230002,2023-1,Alice,软件工程,情绪驱动型,0.92,high,"[]"\n'
+        '20230001,2023-1,Bob,软件工程,被动守纪型,0.81,medium,"[]"\n',
+        encoding="utf-8",
+    )
     store = DemoApiStore(
         overview_path=artifact_root / "v1_overview_by_term.json",
         model_summary_path=artifact_root / "v1_model_summary.json",
         overview_term="2024-2",
+        warnings_path=warnings_path,
     )
     monkeypatch.setattr(main_module, "get_store", lambda: store)
     return TestClient(app)
@@ -76,6 +84,24 @@ def test_get_warnings_rejects_invalid_page(client) -> None:
 def test_get_warnings_rejects_invalid_page_size(client) -> None:
     response = client.get("/api/warnings", params={"term": "2023-1", "page_size": 0})
     assert response.status_code == 422
+
+
+def test_get_warnings_rejects_invalid_risk_level(client) -> None:
+    response = client.get("/api/warnings", params={"term": "2023-1", "risk_level": "urgent"})
+    assert response.status_code == 422
+
+
+def test_get_warnings_rejects_invalid_quadrant_label(client) -> None:
+    response = client.get("/api/warnings", params={"term": "2023-1", "quadrant_label": "other"})
+    assert response.status_code == 422
+
+
+def test_get_warnings_returns_404_for_unknown_term(client) -> None:
+    response = client.get("/api/warnings", params={"term": "2099-1"})
+    assert response.status_code == 404
+    payload = response.json()
+    assert payload["code"] == 404
+    assert payload["message"] == "term not found"
 
 
 def test_missing_artifacts_app_starts_and_fails_on_request(monkeypatch) -> None:

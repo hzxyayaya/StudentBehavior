@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Literal
 
 from fastapi import FastAPI
 from fastapi import Query
@@ -66,8 +67,8 @@ def get_warnings(
     term: str,
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=200),
-    risk_level: str | None = None,
-    quadrant_label: str | None = None,
+    risk_level: Literal["high", "medium", "low"] | None = None,
+    quadrant_label: Literal["自律共鸣型", "被动守纪型", "脱节离散型", "情绪驱动型"] | None = None,
     major_name: str | None = None,
 ) -> Envelope[dict]:
     try:
@@ -79,6 +80,8 @@ def get_warnings(
             quadrant_label=quadrant_label,
             major_name=major_name,
         )
+    except KeyError:
+        return _error_envelope(status_code=404, message="term not found", term=term)
     except (FileNotFoundError, ValueError):
         return _error_envelope(status_code=500, message="artifacts unavailable", term=term)
     return Envelope(
