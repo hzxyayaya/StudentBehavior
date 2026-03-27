@@ -285,14 +285,8 @@ def _extract_quadrant_factor_entries(
         importance = item.get("importance")
         if not isinstance(importance, (int, float)):
             continue
-        entries.append({"dimension": _canonicalize_dimension(dimension), "importance": float(importance)})
+        entries.append({"dimension": dimension, "importance": float(importance)})
     return entries
-
-
-def _canonicalize_dimension(dimension: str) -> str:
-    return {
-        "课堂参与表现": "课堂学习投入",
-    }.get(dimension, dimension)
 
 
 def _sort_term_key(row: Mapping[str, Any]) -> tuple[int, int, str]:
