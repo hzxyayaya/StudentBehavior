@@ -90,7 +90,10 @@ def sample_store(tmp_path: Path) -> DemoApiStore:
                     "term_key": "2022-2",
                     "student_name": "Bob",
                     "major_name": "软件工程",
-                    "top_factors": ["作业完成度偏低"],
+                    "top_factors": [
+                        {"dimension": "作业完成度", "importance": 0.4},
+                        {"dimension": "课堂学习投入", "importance": 0.9},
+                    ],
                     "intervention_advice": ["继续保持稳定节奏"],
                     "report_text": "2022-2 report",
                 },
@@ -99,7 +102,9 @@ def sample_store(tmp_path: Path) -> DemoApiStore:
                     "term_key": "2023-1",
                     "student_name": "Bob",
                     "major_name": "软件工程",
-                    "top_factors": ["课堂互动不足"],
+                    "top_factors": [
+                        {"dimension": "课堂学习投入", "importance": 0.8},
+                    ],
                     "intervention_advice": ["优先关注课程作业完成质量"],
                     "report_text": "2023-1 report",
                 },
@@ -108,7 +113,9 @@ def sample_store(tmp_path: Path) -> DemoApiStore:
                     "term_key": "2023-1",
                     "student_name": "Alice",
                     "major_name": "软件工程",
-                    "top_factors": ["课堂参与活跃"],
+                    "top_factors": [
+                        {"dimension": "课堂学习投入", "importance": 0.7},
+                    ],
                     "intervention_advice": ["优先补齐课堂互动"],
                     "report_text": "2023-1 report for Alice",
                 },
@@ -153,13 +160,19 @@ def test_get_student_report_returns_exact_term_record(sample_store) -> None:
 
 def test_get_quadrants_groups_students_by_quadrant(sample_store) -> None:
     payload = sample_store.get_quadrants(term="2023-1")
-    assert payload["quadrants"][0]["quadrant_label"] == "脱节离散型"
+    assert {item["quadrant_label"] for item in payload["quadrants"]} == {
+        "被动守纪型",
+        "情绪驱动型",
+    }
+    assert all("avg_risk_probability" in item for item in payload["quadrants"])
+    passive = next(item for item in payload["quadrants"] if item["quadrant_label"] == "被动守纪型")
+    assert passive["avg_risk_probability"] == pytest.approx(0.81)
 
 
 def test_get_quadrants_aggregates_top_factors_from_reports(sample_store) -> None:
     payload = sample_store.get_quadrants(term="2023-1")
-    first = payload["quadrants"][0]
-    assert first["top_factors"][0]["dimension"] == "课堂学习投入"
+    passive = next(item for item in payload["quadrants"] if item["quadrant_label"] == "被动守纪型")
+    assert passive["top_factors"][0]["dimension"] == "课堂学习投入"
 
 
 def test_get_student_profile_uses_injected_results_path(tmp_path: Path) -> None:
