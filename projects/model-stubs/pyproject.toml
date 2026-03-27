@@ -1,0 +1,22 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "student-behavior-model-stubs"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+  "pandas>=2.2",
+]
+
+[project.scripts]
+student-behavior-stubs = "student_behavior_model_stubs.cli:main"
+
+[dependency-groups]
+dev = [
+  "pytest>=8.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/student_behavior_model_stubs"]
