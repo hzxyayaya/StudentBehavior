@@ -47,6 +47,14 @@ def test_build_student_term_features_outputs_expected_columns_and_metrics():
                     "term_key": "2024-1",
                     "attendance_status": "absent",
                     "attended_at": "2024-09-03 08:00:00",
+                    "source_row_hash": "att-2",
+                },
+                {
+                    "student_id": "stu-1",
+                    "term_key": "2024-1",
+                    "attendance_status": "absent",
+                    "attended_at": "2024-09-03 08:00:00",
+                    "source_row_hash": "att-2",
                 },
             ]
         ),
@@ -54,17 +62,20 @@ def test_build_student_term_features_outputs_expected_columns_and_metrics():
             [
                 {"student_id": "stu-1", "term_key": "2024-1", "course_id": "C-1"},
                 {"student_id": "stu-1", "term_key": "2024-1", "course_id": "C-2"},
+                {"student_id": "stu-1", "term_key": "2024-1", "course_id": "C-2"},
             ]
         ),
         signins=pd.DataFrame(
             [
                 {"student_id": "stu-1", "term_key": "2024-1", "signed_in_at": "2024-09-02 08:00:00"},
                 {"student_id": "stu-1", "term_key": "2024-1", "signed_in_at": "2024-09-03 08:00:00"},
+                {"student_id": "stu-1", "term_key": "2024-1", "signed_in_at": "2024-09-03 08:00:00"},
             ]
         ),
         assignments=pd.DataFrame(
             [
                 {"student_id": "stu-1", "term_key": "2024-1", "work_id": 1},
+                {"student_id": "stu-1", "term_key": "2024-1", "work_id": 2},
                 {"student_id": "stu-1", "term_key": "2024-1", "work_id": 2},
             ]
         ),
@@ -80,21 +91,24 @@ def test_build_student_term_features_outputs_expected_columns_and_metrics():
         ),
         discussions=pd.DataFrame(
             [
-                {"student_id": "stu-1", "term_key": "2024-1", "reply_content": "hello"},
-                {"student_id": "stu-1", "term_key": "2024-1", "reply_content": "world"},
+                {"student_id": "stu-1", "term_key": "2024-1", "reply_content": "hello", "source_row_hash": "d-1"},
+                {"student_id": "stu-1", "term_key": "2024-1", "reply_content": "world", "source_row_hash": "d-2"},
+                {"student_id": "stu-1", "term_key": "2024-1", "reply_content": "world", "source_row_hash": "d-2"},
             ]
         ),
         library=pd.DataFrame(
             [
-                {"student_id": "stu-1", "term_key": "2024-1", "visited_at": "2024-09-02 08:00:00", "visit_date": "2024-09-02"},
-                {"student_id": "stu-1", "term_key": "2024-1", "visited_at": "2024-09-02 09:00:00", "visit_date": "2024-09-02"},
-                {"student_id": "stu-1", "term_key": "2024-1", "visited_at": "2024-09-03 10:00:00", "visit_date": "2024-09-03"},
+                {"student_id": "stu-1", "term_key": "2024-1", "visited_at": "2024-09-02 08:00:00", "visit_date": "2024-09-02", "source_row_hash": "l-1"},
+                {"student_id": "stu-1", "term_key": "2024-1", "visited_at": "2024-09-02 09:00:00", "visit_date": "2024-09-02", "source_row_hash": "l-2"},
+                {"student_id": "stu-1", "term_key": "2024-1", "visited_at": "2024-09-03 10:00:00", "visit_date": "2024-09-03", "source_row_hash": "l-3"},
+                {"student_id": "stu-1", "term_key": "2024-1", "visited_at": "2024-09-03 10:00:00", "visit_date": "2024-09-03", "source_row_hash": "l-3"},
             ]
         ),
         running=pd.DataFrame(
             [
-                {"student_id": "stu-1", "term_key": "2024-1", "ran_at": "2024-09-02 06:30:00", "run_date": "2024-09-02"},
-                {"student_id": "stu-1", "term_key": "2024-1", "ran_at": "2024-09-02 07:30:00", "run_date": "2024-09-02"},
+                {"student_id": "stu-1", "term_key": "2024-1", "ran_at": "2024-09-02 06:30:00", "run_date": "2024-09-02", "source_row_hash": "r-1"},
+                {"student_id": "stu-1", "term_key": "2024-1", "ran_at": "2024-09-02 07:30:00", "run_date": "2024-09-02", "source_row_hash": "r-2"},
+                {"student_id": "stu-1", "term_key": "2024-1", "ran_at": "2024-09-02 07:30:00", "run_date": "2024-09-02", "source_row_hash": "r-2"},
             ]
         ),
     )
@@ -177,7 +191,6 @@ def test_build_student_term_features_keeps_draft_source_metrics_null_when_inputs
                 {
                     "student_id": "stu-1",
                     "term_key": "2024-1",
-                    "attendance_status": "present",
                     "attended_at": "2024-09-02 08:00:00",
                 }
             ]
@@ -208,7 +221,7 @@ def test_build_student_term_features_keeps_draft_source_metrics_null_when_inputs
             "major_rank_pct": None,
             "risk_label": None,
             "attendance_record_count": 1,
-            "attendance_normal_rate": 1.0,
+            "attendance_normal_rate": None,
             "selected_course_count": 1,
             "sign_event_count": None,
             "assignment_submit_count": None,

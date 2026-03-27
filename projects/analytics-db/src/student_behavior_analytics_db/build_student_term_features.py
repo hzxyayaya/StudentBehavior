@@ -80,13 +80,13 @@ def build_student_term_features(
     features = _merge_metrics(features, attendance_metrics)
 
     simple_counts = [
-        _aggregate_count(enrollments, "selected_course_count"),
-        _aggregate_count(signins, "sign_event_count"),
-        _aggregate_count(assignments, "assignment_submit_count"),
-        _aggregate_count(exams, "exam_submit_count"),
-        _aggregate_count(discussions, "discussion_reply_count"),
-        _aggregate_count(library, "library_visit_count"),
-        _aggregate_count(running, "running_punch_count"),
+        _aggregate_count(enrollments, "selected_course_count", ["course_id", "course_code", "source_row_hash"]),
+        _aggregate_count(signins, "sign_event_count", ["signed_in_at", "source_row_hash"]),
+        _aggregate_count(assignments, "assignment_submit_count", ["work_id", "source_row_hash"]),
+        _aggregate_count(exams, "exam_submit_count", ["work_id", "source_row_hash"]),
+        _aggregate_count(discussions, "discussion_reply_count", ["source_row_hash", "topic_id", "created_at"]),
+        _aggregate_count(library, "library_visit_count", ["source_row_hash", "visited_at"]),
+        _aggregate_count(running, "running_punch_count", ["source_row_hash", "ran_at"]),
     ]
     for metric_frame in simple_counts:
         features = _merge_metrics(features, metric_frame)
@@ -201,27 +201,66 @@ def _aggregate_attendance(frame: pd.DataFrame | None) -> pd.DataFrame:
     if subset.empty:
         return pd.DataFrame(columns=["student_id", "term_key", "attendance_record_count", "attendance_normal_rate"])
 
-    subset["attendance_status"] = subset.get("attendance_status").map(_normalize_text)
+    dedupe_columns = ["student_id", "term_key"]
+    if "source_row_hash" in frame.columns:
+        subset["source_row_hash"] = frame.loc[subset.index, "source_row_hash"]
+        if subset["source_row_hash"].notna().any():
+            dedupe_columns.append("source_row_hash")
+    elif "attended_at" in frame.columns:
+        subset["attended_at"] = frame.loc[subset.index, "attended_at"]
+        dedupe_columns.append("attended_at")
+        if "attendance_status" in subset.columns:
+            dedupe_columns.append("attendance_status")
+    subset = subset.drop_duplicates(subset=dedupe_columns, ignore_index=True)
+
+    if "attendance_status" in subset.columns:
+        subset["attendance_status"] = subset["attendance_status"].map(_normalize_text)
+        has_status = True
+    else:
+        subset["attendance_status"] = None
+        has_status = False
     grouped = subset.groupby(["student_id", "term_key"], dropna=False)
     totals = grouped.size().reset_index(name="attendance_record_count")
-    normal = grouped["attendance_status"].apply(lambda values: sum(_is_present_status(value) for value in values)).reset_index(
-        name="_normal_count"
-    )
-    metrics = totals.merge(normal, on=["student_id", "term_key"], how="left")
-    metrics["attendance_normal_rate"] = metrics.apply(
-        lambda row: None if row["attendance_record_count"] == 0 else row["_normal_count"] / row["attendance_record_count"],
-        axis=1,
-    )
+    if has_status:
+        normal = grouped["attendance_status"].apply(
+            lambda values: sum(_is_present_status(value) for value in values)
+        ).reset_index(name="_normal_count")
+        metrics = totals.merge(normal, on=["student_id", "term_key"], how="left")
+        metrics["attendance_normal_rate"] = metrics.apply(
+            lambda row: None if row["attendance_record_count"] == 0 else row["_normal_count"] / row["attendance_record_count"],
+            axis=1,
+        )
+    else:
+        metrics = totals.copy()
+        metrics["attendance_normal_rate"] = None
     return metrics.loc[:, ["student_id", "term_key", "attendance_record_count", "attendance_normal_rate"]]
 
 
-def _aggregate_count(frame: pd.DataFrame | None, metric_name: str) -> pd.DataFrame:
+def _aggregate_count(
+    frame: pd.DataFrame | None,
+    metric_name: str,
+    dedupe_candidates: list[str] | None = None,
+) -> pd.DataFrame:
     if frame is None or frame.empty or "student_id" not in frame.columns or "term_key" not in frame.columns:
         return pd.DataFrame(columns=["student_id", "term_key", metric_name])
 
-    subset = frame.loc[:, ["student_id", "term_key"]].dropna(subset=["student_id", "term_key"])
+    selected_columns = ["student_id", "term_key"]
+    if dedupe_candidates:
+        selected_columns.extend([column for column in dedupe_candidates if column in frame.columns])
+
+    subset = frame.loc[:, selected_columns].dropna(subset=["student_id", "term_key"])
     if subset.empty:
         return pd.DataFrame(columns=["student_id", "term_key", metric_name])
+
+    dedupe_columns = [
+        column
+        for column in (dedupe_candidates or [])
+        if column in subset.columns and subset[column].notna().any()
+    ]
+    if dedupe_columns:
+        subset = subset.drop_duplicates(subset=["student_id", "term_key", *dedupe_columns], ignore_index=True)
+    else:
+        subset = subset.drop_duplicates(ignore_index=True)
 
     grouped = subset.groupby(["student_id", "term_key"], dropna=False).size().reset_index(name=metric_name)
     return grouped
@@ -283,6 +322,13 @@ def _aggregate_morning_activity(frame: pd.DataFrame | None) -> pd.DataFrame:
     subset = frame.loc[:, ["student_id", "term_key", "ran_at"]].dropna(subset=["student_id", "term_key"])
     if subset.empty:
         return pd.DataFrame(columns=["student_id", "term_key", "morning_activity_rate"])
+
+    dedupe_columns = ["student_id", "term_key", "ran_at"]
+    if "source_row_hash" in frame.columns:
+        subset["source_row_hash"] = frame.loc[subset.index, "source_row_hash"]
+        if subset["source_row_hash"].notna().any():
+            dedupe_columns = ["student_id", "term_key", "source_row_hash"]
+    subset = subset.drop_duplicates(subset=dedupe_columns, ignore_index=True)
 
     subset["ran_at"] = pd.to_datetime(subset["ran_at"], errors="coerce")
     subset = subset.dropna(subset=["ran_at"])
