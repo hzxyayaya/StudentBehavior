@@ -14,85 +14,13 @@ app = main_module.app
 
 
 @pytest.fixture
-def client(monkeypatch, tmp_path: Path) -> TestClient:
-    artifact_root = (
-        Path(__file__).resolve().parents[4]
-        / "v1-model-stubs"
-        / "artifacts"
-        / "model_stubs"
-    )
-    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
-    warnings_path.parent.mkdir(parents=True, exist_ok=True)
-    pd.DataFrame(
-        [
-            {
-                "student_id": "20230002",
-                "term_key": "2023-1",
-                "student_name": "Alice",
-                "major_name": "软件工程",
-                "quadrant_label": "情绪驱动型",
-                "risk_probability": 0.92,
-                "risk_level": "high",
-                "dimension_scores_json": json.dumps([], ensure_ascii=False),
-            },
-            {
-                "student_id": "20230001",
-                "term_key": "2023-1",
-                "student_name": "Bob",
-                "major_name": "软件工程",
-                "quadrant_label": "被动守纪型",
-                "risk_probability": 0.81,
-                "risk_level": "medium",
-                "dimension_scores_json": json.dumps(
-                    [{"dimension": "学业基础表现", "score": 88}],
-                    ensure_ascii=False,
-                ),
-            },
-        ]
-    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
-    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
-    reports_path.parent.mkdir(parents=True, exist_ok=True)
-    reports_path.write_text(
-        "\n".join(
-            json.dumps(record, ensure_ascii=False)
-            for record in [
-                {
-                    "student_id": "20230001",
-                    "term_key": "2022-2",
-                    "student_name": "Bob",
-                    "major_name": "软件工程",
-                    "top_factors": ["作业完成度偏低"],
-                    "intervention_advice": ["继续保持稳定节奏"],
-                    "report_text": "2022-2 report",
-                },
-                {
-                    "student_id": "20230001",
-                    "term_key": "2023-1",
-                    "student_name": "Bob",
-                    "major_name": "软件工程",
-                    "top_factors": ["课堂互动不足"],
-                    "intervention_advice": ["优先关注课程作业完成质量"],
-                    "report_text": "2023-1 report",
-                },
-                {
-                    "student_id": "20230002",
-                    "term_key": "2023-1",
-                    "student_name": "Alice",
-                    "major_name": "软件工程",
-                    "top_factors": ["课堂参与活跃"],
-                    "intervention_advice": ["优先补齐课堂互动"],
-                    "report_text": "2023-1 report for Alice",
-                },
-            ]
-        ),
-        encoding="utf-8",
-    )
+def client(monkeypatch, sample_artifacts_dir: Path) -> TestClient:
     store = DemoApiStore(
-        overview_path=artifact_root / "v1_overview_by_term.json",
-        model_summary_path=artifact_root / "v1_model_summary.json",
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
         overview_term="2024-2",
-        warnings_path=warnings_path,
-        repo_root=tmp_path,
+        warnings_path=sample_artifacts_dir / "v1_student_results.csv",
+        repo_root=sample_artifacts_dir.parent.parent,
     )
     monkeypatch.setattr(main_module, "get_store", lambda: store)
     return TestClient(app)
@@ -126,6 +54,18 @@ def test_get_overview_returns_404_for_unknown_term(client) -> None:
     assert payload["message"] == "term not found"
     assert payload["data"] == {}
     assert payload["meta"]["term"] == "2099-1"
+
+
+def test_api_returns_500_when_artifacts_missing(app_without_artifacts) -> None:
+    client = TestClient(app_without_artifacts)
+    response = client.get("/api/analytics/overview", params={"term": "2023-1"})
+    assert response.status_code == 500
+
+
+def test_error_responses_keep_envelope_shape(client) -> None:
+    response = client.get("/api/analytics/overview", params={"term": "2099-1"})
+    payload = response.json()
+    assert set(payload) == {"code", "message", "data", "meta"}
 
 
 def test_get_quadrants_returns_404_for_unknown_term(client) -> None:

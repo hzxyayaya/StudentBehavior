@@ -3,6 +3,7 @@ from typing import Literal
 
 from fastapi import FastAPI
 from fastapi import Query
+from fastapi import Request
 from fastapi.responses import JSONResponse
 
 from student_behavior_demo_api.models import (
@@ -20,6 +21,25 @@ app = FastAPI(title="Student Behavior Demo API")
 @lru_cache(maxsize=1)
 def get_store() -> DemoApiStore:
     return DemoApiStore()
+
+
+@app.exception_handler(FileNotFoundError)
+async def handle_file_not_found(request: Request, _exc: FileNotFoundError) -> JSONResponse:
+    return _error_envelope(
+        status_code=500,
+        message="artifacts unavailable",
+        term=request.query_params.get("term"),
+    )
+
+
+@app.exception_handler(LookupError)
+async def handle_lookup_error(request: Request, _exc: LookupError) -> JSONResponse:
+    message = "student not found" if request.url.path.startswith("/api/students/") else "term not found"
+    return _error_envelope(
+        status_code=404,
+        message=message,
+        term=request.query_params.get("term"),
+    )
 
 
 @app.post("/api/auth/demo-login")
