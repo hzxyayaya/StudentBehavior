@@ -1,6 +1,7 @@
 from functools import lru_cache
 
 from fastapi import FastAPI
+from fastapi import Query
 from fastapi.responses import JSONResponse
 
 from student_behavior_demo_api.models import (
@@ -50,6 +51,34 @@ def get_overview(term: str) -> Envelope[dict]:
 def get_models_summary(term: str | None = None) -> Envelope[dict]:
     try:
         data = get_store().get_model_summary(term=term)
+    except (FileNotFoundError, ValueError):
+        return _error_envelope(status_code=500, message="artifacts unavailable", term=term)
+    return Envelope(
+        code=200,
+        message="OK",
+        data=data,
+        meta=MetaModel(request_id="demo-request", term=term),
+    )
+
+
+@app.get("/api/warnings")
+def get_warnings(
+    term: str,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=200),
+    risk_level: str | None = None,
+    quadrant_label: str | None = None,
+    major_name: str | None = None,
+) -> Envelope[dict]:
+    try:
+        data = get_store().list_warnings(
+            term=term,
+            page=page,
+            page_size=page_size,
+            risk_level=risk_level,
+            quadrant_label=quadrant_label,
+            major_name=major_name,
+        )
     except (FileNotFoundError, ValueError):
         return _error_envelope(status_code=500, message="artifacts unavailable", term=term)
     return Envelope(
