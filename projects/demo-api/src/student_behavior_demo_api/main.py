@@ -1,3 +1,5 @@
+from functools import lru_cache
+
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
@@ -11,7 +13,11 @@ from student_behavior_demo_api.services import DemoApiStore
 
 
 app = FastAPI(title="Student Behavior Demo API")
-store = DemoApiStore()
+
+
+@lru_cache(maxsize=1)
+def get_store() -> DemoApiStore:
+    return DemoApiStore()
 
 
 @app.post("/api/auth/demo-login")
@@ -27,9 +33,11 @@ def demo_login(payload: DemoLoginRequest) -> Envelope[DemoLoginResponse]:
 @app.get("/api/analytics/overview")
 def get_overview(term: str) -> Envelope[dict]:
     try:
-        data = store.get_overview(term)
+        data = get_store().get_overview(term)
     except KeyError:
         return _error_envelope(status_code=404, message="term not found", term=term)
+    except (FileNotFoundError, ValueError):
+        return _error_envelope(status_code=500, message="artifacts unavailable", term=term)
     return Envelope(
         code=200,
         message="OK",
@@ -40,10 +48,14 @@ def get_overview(term: str) -> Envelope[dict]:
 
 @app.get("/api/models/summary")
 def get_models_summary(term: str | None = None) -> Envelope[dict]:
+    try:
+        data = get_store().get_model_summary(term=term)
+    except (FileNotFoundError, ValueError):
+        return _error_envelope(status_code=500, message="artifacts unavailable", term=term)
     return Envelope(
         code=200,
         message="OK",
-        data=store.get_model_summary(term=term),
+        data=data,
         meta=MetaModel(request_id="demo-request", term=term),
     )
 

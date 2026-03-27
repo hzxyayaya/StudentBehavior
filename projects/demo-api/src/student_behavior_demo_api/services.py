@@ -42,27 +42,10 @@ class DemoApiStore:
 
 
 def _resolve_artifact_path(repo_root: Path, artifact_name: str) -> Path:
-    for artifact_root in _iter_artifact_roots(repo_root):
-        artifact_path = artifact_root / artifact_name
-        if artifact_path.exists():
-            return artifact_path
-    raise FileNotFoundError(artifact_name)
-
-
-def _iter_artifact_roots(repo_root: Path):
-    yield repo_root / "artifacts" / "model_stubs"
-
-    shared_repo_root = repo_root.parent.parent
-    yield shared_repo_root / "artifacts" / "model_stubs"
-
-    worktrees_root = repo_root.parent
-    if not worktrees_root.exists():
-        return
-
-    for sibling_worktree in worktrees_root.iterdir():
-        if sibling_worktree == repo_root or not sibling_worktree.is_dir():
-            continue
-        yield sibling_worktree / "artifacts" / "model_stubs"
+    artifact_path = repo_root / "artifacts" / "model_stubs" / artifact_name
+    if artifact_path.exists():
+        return artifact_path
+    raise FileNotFoundError(artifact_path)
 
 
 def _load_single_record(path: Path) -> Mapping[str, Any]:
