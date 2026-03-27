@@ -55,7 +55,7 @@ def get_quadrants(term: str) -> Envelope[dict]:
     except KeyError as exc:
         if _is_unknown_term_error(exc, term):
             return _error_envelope(status_code=404, message="term not found", term=term)
-        raise
+        return _error_envelope(status_code=500, message="artifacts unavailable", term=term)
     except (FileNotFoundError, ValueError):
         return _error_envelope(status_code=500, message="artifacts unavailable", term=term)
     return Envelope(

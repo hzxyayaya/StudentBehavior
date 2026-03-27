@@ -143,6 +143,12 @@ def test_get_quadrants_returns_500_for_bad_schema(monkeypatch) -> None:
 
     response = client.get("/api/analytics/quadrants", params={"term": "2023-1"})
     assert response.status_code == 500
+    payload = response.json()
+    assert set(payload) == {"code", "message", "data", "meta"}
+    assert payload["code"] == 500
+    assert payload["message"] == "artifacts unavailable"
+    assert payload["data"] == {}
+    assert payload["meta"]["term"] == "2023-1"
 
 
 def test_get_models_summary_returns_envelope_payload(client) -> None:
