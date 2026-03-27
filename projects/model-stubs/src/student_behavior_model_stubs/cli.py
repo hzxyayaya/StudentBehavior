@@ -37,7 +37,12 @@ def _write_jsonl(path: Path, records: list[dict[str, object]]) -> None:
     path.write_text(text, encoding="utf-8")
 
 
-def run_build(features_csv: Path, output_dir: Path | None = None) -> dict[str, object]:
+def run_build(
+    features_csv: Path,
+    output_dir: Path | None = None,
+    *,
+    warnings_now: datetime | None = None,
+) -> dict[str, object]:
     features = read_features(features_csv)
     paths = _build_paths(output_dir) if output_dir is not None else build_default_paths(Path.cwd())
 
@@ -50,6 +55,7 @@ def run_build(features_csv: Path, output_dir: Path | None = None) -> dict[str, o
         output_row_count=int(len(student_results)),
         dropped_row_count=int(len(features) - len(student_results)),
         notes=["build completed"],
+        now=warnings_now,
     )
 
     paths.output_dir.mkdir(parents=True, exist_ok=True)

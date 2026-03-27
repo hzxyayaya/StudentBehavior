@@ -1,29 +1,42 @@
 from __future__ import annotations
 
 import json
-import re
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
-from student_behavior_model_stubs.cli import main
+import student_behavior_model_stubs.cli as cli_module
 from student_behavior_model_stubs.reporting import build_warnings_payload
 
 
 def test_build_warnings_payload_uses_runtime_generated_at() -> None:
+    fixed_now = datetime(2024, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
     payload = build_warnings_payload(
         input_row_count=1,
         output_row_count=1,
         dropped_row_count=0,
         null_metric_summary={"avg_course_score": 0, "failed_course_count": 1},
         notes=["build completed"],
+        now=fixed_now,
     )
 
-    assert re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", payload["generated_at"])
-    assert payload["generated_at"] not in {"", "TBD", "PLACEHOLDER", "generated_at"}
+    assert payload["generated_at"] == "2024-01-02T03:04:05Z"
+    assert payload["generated_at"] != "generated_at"
+    assert payload["null_metric_summary"] == {
+        "avg_course_score": 0,
+        "failed_course_count": 1,
+        "attendance_normal_rate": 0,
+        "sign_event_count": 0,
+        "selected_course_count": 0,
+        "library_visit_count": 0,
+    }
 
 
-def test_main_build_writes_all_expected_artifacts(tmp_path: Path) -> None:
+def test_main_build_writes_all_expected_artifacts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     input_csv = tmp_path / "features.csv"
     output_dir = tmp_path / "artifacts" / "model_stubs"
 
@@ -44,7 +57,21 @@ def test_main_build_writes_all_expected_artifacts(tmp_path: Path) -> None:
         ]
     ).to_csv(input_csv, index=False, encoding="utf-8")
 
-    exit_code = main(["build", str(input_csv), "--output-dir", str(output_dir)])
+    fixed_now = datetime(2024, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
+    original_run_build = cli_module.run_build
+
+    def _fixed_run_build(
+        features_csv: Path,
+        output_dir: Path | None = None,
+        *,
+        warnings_now: datetime | None = None,
+    ) -> dict[str, object]:
+        del warnings_now
+        return original_run_build(features_csv, output_dir, warnings_now=fixed_now)
+
+    monkeypatch.setattr(cli_module, "run_build", _fixed_run_build)
+
+    exit_code = cli_module.main(["build", str(input_csv), "--output-dir", str(output_dir)])
 
     assert exit_code == 0
 
@@ -125,8 +152,7 @@ def test_main_build_writes_all_expected_artifacts(tmp_path: Path) -> None:
         "auc": 0.8347,
         "updated_at": model_summary["updated_at"],
     }
-    assert re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", warnings["generated_at"])
-    assert warnings["generated_at"] not in {"", "TBD", "PLACEHOLDER", "generated_at"}
+    assert warnings["generated_at"] == "2024-01-02T03:04:05Z"
     assert warnings["input_row_count"] == 1
     assert warnings["output_row_count"] == 1
     assert warnings["dropped_row_count"] == 0

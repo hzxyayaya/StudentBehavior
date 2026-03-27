@@ -21,6 +21,23 @@ def _count_nulls(frame: pd.DataFrame, column: str) -> int:
     return int(frame[column].isna().sum())
 
 
+def _format_generated_at(now: datetime | None) -> str:
+    timestamp = now if now is not None else datetime.now(timezone.utc)
+    if timestamp.tzinfo is None:
+        timestamp = timestamp.replace(tzinfo=timezone.utc)
+    return timestamp.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _build_null_metric_summary(null_metric_summary: dict[str, int] | None) -> dict[str, int]:
+    summary = {column: 0 for column in _NULL_METRIC_COLUMNS}
+    if null_metric_summary is None:
+        return summary
+
+    for column in _NULL_METRIC_COLUMNS:
+        summary[column] = int(null_metric_summary.get(column, 0))
+    return summary
+
+
 def build_warnings_payload(
     *,
     input_row_count: int,
@@ -28,6 +45,7 @@ def build_warnings_payload(
     dropped_row_count: int,
     null_metric_summary: dict[str, int] | None = None,
     notes: Sequence[str] | None = None,
+    now: datetime | None = None,
 ) -> dict[str, object]:
     if input_row_count < 0:
         raise ValueError("input_row_count must be non-negative")
@@ -36,15 +54,11 @@ def build_warnings_payload(
     if dropped_row_count < 0:
         raise ValueError("dropped_row_count must be non-negative")
 
-    resolved_null_metric_summary = (
-        {key: int(value) for key, value in null_metric_summary.items()}
-        if null_metric_summary is not None
-        else {column: 0 for column in _NULL_METRIC_COLUMNS}
-    )
+    resolved_null_metric_summary = _build_null_metric_summary(null_metric_summary)
     resolved_notes = list(notes) if notes is not None else ["build completed"]
 
     return {
-        "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "generated_at": _format_generated_at(now),
         "input_row_count": int(input_row_count),
         "output_row_count": int(output_row_count),
         "dropped_row_count": int(dropped_row_count),
@@ -59,6 +73,7 @@ def build_warnings_from_features(
     output_row_count: int,
     dropped_row_count: int,
     notes: Sequence[str] | None = None,
+    now: datetime | None = None,
 ) -> dict[str, object]:
     null_metric_summary = {
         column: _count_nulls(features, column) for column in _NULL_METRIC_COLUMNS
@@ -69,4 +84,5 @@ def build_warnings_from_features(
         dropped_row_count=dropped_row_count,
         null_metric_summary=null_metric_summary,
         notes=notes,
+        now=now,
     )
