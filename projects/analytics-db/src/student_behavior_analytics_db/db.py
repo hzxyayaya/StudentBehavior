@@ -13,7 +13,7 @@ SCHEMA_SQL_FILENAMES = (
 
 
 def build_database_path(project_root: Path) -> Path:
-    return project_root / "data" / "analytics.db"
+    return project_root / "data"
 
 
 def get_schema_sql_files(project_root: Path) -> tuple[Path, ...]:
