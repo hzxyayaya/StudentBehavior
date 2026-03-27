@@ -1,5 +1,9 @@
+from datetime import datetime
+
 import pandas as pd
 
+from student_behavior_model_stubs.build_outputs import build_model_summary
+from student_behavior_model_stubs.build_outputs import build_overview_by_term
 from student_behavior_model_stubs.build_outputs import build_student_reports
 from student_behavior_model_stubs.build_outputs import build_student_results
 
@@ -228,3 +232,71 @@ def test_build_student_reports_sorts_by_student_id_and_term_key() -> None:
 
     assert [record["student_id"] for record in reports] == ["20230002", "20230010"]
     assert [record["term_key"] for record in reports] == ["2023-1", "2023-2"]
+
+
+def test_build_overview_by_term_includes_required_sections() -> None:
+    student_results = pd.DataFrame(
+        [
+            {
+                "student_id": "20230001",
+                "term_key": "2023-1",
+                "student_name": "20230001",
+                "major_name": "软件工程",
+                "quadrant_label": "脱节离散型",
+                "risk_probability": 0.68,
+                "risk_level": "medium",
+                "dimension_scores_json": "[]",
+            },
+            {
+                "student_id": "20230002",
+                "term_key": "2023-1",
+                "student_name": "20230002",
+                "major_name": "软件工程",
+                "quadrant_label": "自律共鸣型",
+                "risk_probability": 0.22,
+                "risk_level": "low",
+                "dimension_scores_json": "[]",
+            },
+            {
+                "student_id": "20230003",
+                "term_key": "2023-2",
+                "student_name": "20230003",
+                "major_name": "数据科学",
+                "quadrant_label": "情绪驱动型",
+                "risk_probability": 0.81,
+                "risk_level": "high",
+                "dimension_scores_json": "[]",
+            },
+        ]
+    )
+
+    overview = build_overview_by_term(student_results)
+
+    assert {
+        "student_count",
+        "risk_distribution",
+        "quadrant_distribution",
+        "major_risk_summary",
+        "trend_summary",
+    }.issubset(overview)
+    assert isinstance(overview["trend_summary"], dict)
+
+
+def test_build_model_summary_uses_fixed_now_for_updated_at_and_stub_fields() -> None:
+    fixed_now = datetime(2024, 1, 2, 3, 4, 5)
+
+    summary = build_model_summary(now=fixed_now)
+
+    assert summary == {
+        "cluster_method": "stub-quadrant-rules",
+        "risk_model": "stub-risk-rules",
+        "target_label": "综合测评低等级风险",
+        "auc": 0.8347,
+        "updated_at": "2024-01-02T03:04:05",
+    }
+
+
+def test_build_model_summary_updated_at_is_not_placeholder_text() -> None:
+    summary = build_model_summary(now=datetime(2024, 1, 2, 3, 4, 5))
+
+    assert summary["updated_at"] not in {"", "TBD", "PLACEHOLDER", "updated_at"}

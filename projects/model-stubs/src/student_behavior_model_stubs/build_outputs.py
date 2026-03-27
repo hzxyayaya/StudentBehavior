@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from collections.abc import Mapping, Sequence
 
 import pandas as pd
@@ -11,6 +12,7 @@ from student_behavior_model_stubs.scoring import compute_risk_probability
 from student_behavior_model_stubs.scoring import map_risk_level
 from student_behavior_model_stubs.templates import build_report_payload
 
+_MODEL_SUMMARY_AUC = 0.8347
 _RESULT_COLUMNS = [
     "student_id",
     "term_key",
@@ -21,6 +23,7 @@ _RESULT_COLUMNS = [
     "risk_level",
     "dimension_scores_json",
 ]
+_RISK_LEVEL_ORDER = ("high", "medium", "low")
 
 
 def _normalized_text(value: object) -> str | None:
@@ -49,6 +52,92 @@ def _student_name_map(students: pd.DataFrame | None) -> dict[str, str]:
 def _dimension_scores_json(row: Mapping[str, object]) -> str:
     dimension_scores = build_dimension_scores(row)
     return json.dumps(dimension_scores, ensure_ascii=False, separators=(",", ":"))
+
+
+def _count_distribution(values: pd.Series) -> dict[str, int]:
+    counts = values.fillna("").astype(str).value_counts(dropna=False)
+    return {str(key): int(counts[key]) for key in sorted(counts.index)}
+
+
+def _count_risk_distribution(values: pd.Series) -> dict[str, int]:
+    counts = values.fillna("").astype(str).value_counts(dropna=False)
+    return {level: int(counts.get(level, 0)) for level in _RISK_LEVEL_ORDER}
+
+
+def _term_sort_key(term_key: str) -> tuple[int, str]:
+    parts = term_key.split("-")
+    if len(parts) == 2 and all(part.isdigit() for part in parts):
+        return int(parts[0]), f"{int(parts[1]):04d}"
+    return 10**9, term_key
+
+
+def build_overview_by_term(student_results: pd.DataFrame) -> dict[str, object]:
+    if student_results.empty:
+        return {
+            "student_count": 0,
+            "risk_distribution": {level: 0 for level in _RISK_LEVEL_ORDER},
+            "quadrant_distribution": {},
+            "major_risk_summary": [],
+            "trend_summary": {"terms": []},
+        }
+
+    ordered_results = student_results.copy()
+    ordered_results["risk_level"] = ordered_results["risk_level"].fillna("").astype(str)
+    ordered_results["quadrant_label"] = ordered_results["quadrant_label"].fillna("").astype(str)
+    ordered_results["major_name"] = ordered_results["major_name"].fillna("").astype(str)
+    ordered_results["term_key"] = ordered_results["term_key"].fillna("").astype(str)
+    ordered_results["risk_probability"] = pd.to_numeric(
+        ordered_results["risk_probability"], errors="coerce"
+    ).fillna(0.0)
+
+    major_risk_summary: list[dict[str, object]] = []
+    major_groups = sorted(
+        ordered_results.groupby("major_name", sort=True),
+        key=lambda item: item[0],
+    )
+    for major_name, major_frame in major_groups:
+        major_risk_summary.append(
+            {
+                "major_name": major_name,
+                "student_count": int(len(major_frame)),
+                "high_risk_count": int((major_frame["risk_level"] == "high").sum()),
+                "average_risk_probability": round(float(major_frame["risk_probability"].mean()), 2),
+            }
+        )
+
+    trend_terms: list[dict[str, object]] = []
+    for term_key, term_frame in sorted(
+        ordered_results.groupby("term_key", sort=True), key=lambda item: _term_sort_key(item[0])
+    ):
+        risk_distribution = {
+            level: int((term_frame["risk_level"] == level).sum()) for level in _RISK_LEVEL_ORDER
+        }
+        trend_terms.append(
+            {
+                "term_key": term_key,
+                "student_count": int(len(term_frame)),
+                "average_risk_probability": round(float(term_frame["risk_probability"].mean()), 2),
+                "risk_distribution": risk_distribution,
+            }
+        )
+
+    return {
+        "student_count": int(len(ordered_results)),
+        "risk_distribution": _count_risk_distribution(ordered_results["risk_level"]),
+        "quadrant_distribution": _count_distribution(ordered_results["quadrant_label"]),
+        "major_risk_summary": major_risk_summary,
+        "trend_summary": {"terms": trend_terms},
+    }
+
+
+def build_model_summary(*, now: datetime) -> dict[str, object]:
+    return {
+        "cluster_method": "stub-quadrant-rules",
+        "risk_model": "stub-risk-rules",
+        "target_label": "综合测评低等级风险",
+        "auc": _MODEL_SUMMARY_AUC,
+        "updated_at": now.isoformat(timespec="seconds"),
+    }
 
 
 def _resolve_student_name(
