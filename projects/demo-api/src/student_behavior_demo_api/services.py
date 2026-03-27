@@ -119,25 +119,29 @@ class DemoApiStore:
             avg_risk_probability = round(
                 sum(row["risk_probability"] for row in rows) / len(rows), 4
             )
-            factor_scores: dict[str, list[float]] = defaultdict(list)
+            factor_stats: dict[str, dict[str, Any]] = {}
             for row in rows:
                 report_row = report_index.get((row.get("student_id"), row.get("term_key")))
                 factor_entries = _extract_quadrant_factor_entries(report_row)
                 for factor in factor_entries:
                     dimension = factor["dimension"]
-                    score = factor["score"]
-                    factor_scores[dimension].append(score)
+                    importance = factor["importance"]
+                    current = factor_stats.get(dimension)
+                    if current is None:
+                        factor_stats[dimension] = {
+                            "dimension": dimension,
+                            "importance": importance,
+                            "count": 1,
+                        }
+                        continue
+                    current["count"] += 1
+                    if importance > current["importance"]:
+                        current["importance"] = importance
 
-            top_factors = [
-                {
-                    "dimension": dimension,
-                    "score": round(sum(scores) / len(scores), 4),
-                }
-                for dimension, scores in sorted(
-                    factor_scores.items(),
-                    key=lambda item: (-sum(item[1]) / len(item[1]), item[0]),
-                )
-            ]
+            top_factors = sorted(
+                factor_stats.values(),
+                key=lambda item: (-item["count"], -item["importance"], item["dimension"]),
+            )
             quadrants.append(
                 {
                     "quadrant_label": quadrant_label,
@@ -281,7 +285,7 @@ def _extract_quadrant_factor_entries(
         importance = item.get("importance")
         if not isinstance(importance, (int, float)):
             continue
-        entries.append({"dimension": _canonicalize_dimension(dimension), "score": float(importance)})
+        entries.append({"dimension": _canonicalize_dimension(dimension), "importance": float(importance)})
     return entries
 
 

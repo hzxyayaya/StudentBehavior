@@ -65,6 +65,22 @@ def sample_store(tmp_path: Path) -> DemoApiStore:
                 ),
             },
             {
+                "student_id": "20230004",
+                "term_key": "2023-1",
+                "student_name": "Dora",
+                "major_name": "软件工程",
+                "quadrant_label": "被动守纪型",
+                "risk_probability": 0.77,
+                "risk_level": "medium",
+                "dimension_scores_json": json.dumps(
+                    [
+                        {"dimension": "学业基础表现", "score": 84},
+                        {"dimension": "课堂参与表现", "score": 71},
+                    ],
+                    ensure_ascii=False,
+                ),
+            },
+            {
                 "student_id": "20230003",
                 "term_key": "2024-1",
                 "student_name": "Carol",
@@ -91,8 +107,8 @@ def sample_store(tmp_path: Path) -> DemoApiStore:
                     "student_name": "Bob",
                     "major_name": "软件工程",
                     "top_factors": [
-                        {"dimension": "作业完成度", "importance": 0.4},
-                        {"dimension": "课堂学习投入", "importance": 0.9},
+                        {"dimension": "课堂学习投入", "importance": 0.4},
+                        {"dimension": "作业完成度", "importance": 0.95},
                     ],
                     "intervention_advice": ["继续保持稳定节奏"],
                     "report_text": "2022-2 report",
@@ -103,10 +119,22 @@ def sample_store(tmp_path: Path) -> DemoApiStore:
                     "student_name": "Bob",
                     "major_name": "软件工程",
                     "top_factors": [
-                        {"dimension": "课堂学习投入", "importance": 0.8},
+                        {"dimension": "课堂学习投入", "importance": 0.3},
                     ],
                     "intervention_advice": ["优先关注课程作业完成质量"],
                     "report_text": "2023-1 report",
+                },
+                {
+                    "student_id": "20230004",
+                    "term_key": "2023-1",
+                    "student_name": "Dora",
+                    "major_name": "软件工程",
+                    "top_factors": [
+                        {"dimension": "课堂学习投入", "importance": 0.2},
+                        {"dimension": "作业完成度", "importance": 0.99},
+                    ],
+                    "intervention_advice": ["优先关注课堂投入"],
+                    "report_text": "2023-1 report for Dora",
                 },
                 {
                     "student_id": "20230002",
@@ -114,7 +142,7 @@ def sample_store(tmp_path: Path) -> DemoApiStore:
                     "student_name": "Alice",
                     "major_name": "软件工程",
                     "top_factors": [
-                        {"dimension": "课堂学习投入", "importance": 0.7},
+                        {"dimension": "作业完成度", "importance": 0.99},
                     ],
                     "intervention_advice": ["优先补齐课堂互动"],
                     "report_text": "2023-1 report for Alice",
@@ -166,13 +194,16 @@ def test_get_quadrants_groups_students_by_quadrant(sample_store) -> None:
     }
     assert all("avg_risk_probability" in item for item in payload["quadrants"])
     passive = next(item for item in payload["quadrants"] if item["quadrant_label"] == "被动守纪型")
-    assert passive["avg_risk_probability"] == pytest.approx(0.81)
+    assert passive["avg_risk_probability"] == pytest.approx((0.81 + 0.77) / 2)
 
 
 def test_get_quadrants_aggregates_top_factors_from_reports(sample_store) -> None:
     payload = sample_store.get_quadrants(term="2023-1")
     passive = next(item for item in payload["quadrants"] if item["quadrant_label"] == "被动守纪型")
     assert passive["top_factors"][0]["dimension"] == "课堂学习投入"
+    assert passive["top_factors"][0]["count"] == 2
+    assert "importance" in passive["top_factors"][0]
+    assert "score" not in passive["top_factors"][0]
 
 
 def test_get_student_profile_uses_injected_results_path(tmp_path: Path) -> None:
