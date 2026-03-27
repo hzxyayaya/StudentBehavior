@@ -127,17 +127,24 @@ def test_dimension_scores_are_clamped_and_rounded() -> None:
         assert item["score"] == round(item["score"], 2)
 
 
-def test_compute_quadrant_label_handles_missing_library_metrics() -> None:
-    label = compute_quadrant_label(
+def test_build_dimension_scores_handles_missing_library_metrics() -> None:
+    scores = build_dimension_scores(
         {
             "student_id": "20230003",
             "term_key": "2023-1",
             "attendance_normal_rate": 0.74,
-            "sign_event_count": 12,
+            "sign_event_count": None,
             "selected_course_count": 7,
             "avg_course_score": 77,
             "failed_course_count": 1,
+            "library_visit_count": None,
         }
     )
 
-    assert label in {"自律共鸣型", "被动守纪型", "脱节离散型", "情绪驱动型"}
+    assert len(scores) == 4
+    assert [item["dimension"] for item in scores] == [
+        "学业基础表现",
+        "课堂学习投入",
+        "学习行为活跃度",
+        "生活规律与资源使用",
+    ]
