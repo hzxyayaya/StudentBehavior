@@ -7,8 +7,7 @@ def test_load_enrollments_normalizes_student_id_and_term_key():
         [
             {
                 "XH": " pjxyqxbj337 ",
-                "XN": "2024-2025",
-                "XQ": "1",
+                "term_key": "2024-1",
                 "course_id": "C-101",
                 "course_code": "CS101",
                 "course_name": "Data Structures",
@@ -36,8 +35,7 @@ def test_load_grade_records_preserves_score_and_gpa_fields():
         [
             {
                 "student_id": " pjxyqxbj337 ",
-                "XN": "2024-2025",
-                "XQ": 2,
+                "term_key": "2024-2",
                 "course_id": "C-201",
                 "course_name": "Algorithms",
                 "score": 86.5,

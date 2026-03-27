@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
@@ -32,6 +33,7 @@ _STUDENT_ID_KEYS = (
 _TERM_YEAR_KEYS = ("XN", "xn", "school_year", "学年", "学年度", "开课学年")
 _TERM_NO_KEYS = ("XQ", "xq", "term_no", "学期", "学期序号", "开课学期")
 _COMBINED_TERM_KEYS = ("term_key", "学年学期", "学年学期名称", "学期名称", "xnxq", "XNXQ")
+_STANDARD_TERM_KEY_RE = re.compile(r"^\d{4}-[12]$")
 
 
 def load_fact_evaluation_labels(rows: list[dict[str, Any]]) -> pd.DataFrame:
@@ -69,6 +71,18 @@ def load_fact_evaluation_labels(rows: list[dict[str, Any]]) -> pd.DataFrame:
 def _term_key_and_source(row: dict[str, Any], cpxq: str) -> tuple[str | None, str | None]:
     if cpxq == "9":
         return "annual_or_unknown_term", "annual_or_unknown_term"
+
+    direct_term_key = _normalize_term_key_value(_first_value(row, "term_key"))
+    if direct_term_key is not None:
+        return direct_term_key, f"supervised_term_{cpxq}"
+
+    for key in _COMBINED_TERM_KEYS:
+        if key == "term_key":
+            continue
+        if key in row:
+            direct_term_key = _normalize_term_key_value(row.get(key))
+            if direct_term_key is not None:
+                return direct_term_key, f"supervised_term_{cpxq}"
 
     raw_year = _first_value(row, *_TERM_YEAR_KEYS)
     raw_term = _first_value(row, *_TERM_NO_KEYS)
@@ -124,6 +138,17 @@ def _normalize_text(raw: Any) -> str | None:
         return None
     text = str(raw).strip()
     return text or None
+
+
+def _normalize_term_key_value(raw: Any) -> str | None:
+    if raw is None or isinstance(raw, bool):
+        return None
+    text = str(raw).strip()
+    if not text:
+        return None
+    if _STANDARD_TERM_KEY_RE.fullmatch(text):
+        return text
+    return normalize_term_key(text, None)
 
 
 def _normalize_decimal(raw: Any) -> Decimal | None:

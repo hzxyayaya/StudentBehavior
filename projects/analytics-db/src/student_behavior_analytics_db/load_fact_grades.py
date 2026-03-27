@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 import pandas as pd
@@ -34,6 +35,7 @@ _STUDENT_ID_KEYS = (
 _TERM_YEAR_KEYS = ("XN", "xn", "school_year", "学年", "学年度", "开课学年")
 _TERM_NO_KEYS = ("XQ", "xq", "term_no", "学期", "学期序号", "开课学期")
 _COMBINED_TERM_KEYS = ("term_key", "学年学期", "学年学期名称", "学期名称", "xnxq", "XNXQ")
+_STANDARD_TERM_KEY_RE = re.compile(r"^\d{4}-[12]$")
 
 
 def load_fact_grades(rows: list[dict[str, Any]]) -> pd.DataFrame:
@@ -74,7 +76,7 @@ def _pick_student_id(row: dict[str, Any]) -> str | None:
 def _pick_term_key(row: dict[str, Any]) -> str | None:
     for key in _COMBINED_TERM_KEYS:
         if key in row:
-            term_key = normalize_term_key(row.get(key), None)
+            term_key = _normalize_term_key_value(row.get(key))
             if term_key is not None:
                 return term_key
 
@@ -83,6 +85,17 @@ def _pick_term_key(row: dict[str, Any]) -> str | None:
     if raw_year is None or raw_term is None:
         return None
     return normalize_term_key(raw_year, raw_term)
+
+
+def _normalize_term_key_value(raw: Any) -> str | None:
+    if raw is None or isinstance(raw, bool):
+        return None
+    text = str(raw).strip()
+    if not text:
+        return None
+    if _STANDARD_TERM_KEY_RE.fullmatch(text):
+        return text
+    return normalize_term_key(text, None)
 
 
 def _first_value(row: dict[str, Any], *keys: str) -> Any:

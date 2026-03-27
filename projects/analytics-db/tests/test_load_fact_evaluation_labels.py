@@ -8,8 +8,7 @@ def test_load_evaluation_labels_builds_risk_label_from_frozen_rule():
         [
             {
                 "XH": " pjxyqxbj337 ",
-                "XN": "2024-2025",
-                "XQ": "1",
+                "term_key": "2024-1",
                 "CPXQ": "1",
                 "ZYNJPM": 80,
                 "ZYNJRS": 100,
@@ -18,8 +17,7 @@ def test_load_evaluation_labels_builds_risk_label_from_frozen_rule():
             },
             {
                 "XH": "stu-2",
-                "XN": "2024-2025",
-                "XQ": "2",
+                "term_key": "2024-2",
                 "CPXQ": "2",
                 "ZYNJPM": 79,
                 "ZYNJRS": 100,
@@ -28,7 +26,7 @@ def test_load_evaluation_labels_builds_risk_label_from_frozen_rule():
             },
             {
                 "XH": "stu-3",
-                "XN": "2024-2025",
+                "term_key": "2024-1",
                 "CPXQ": "9",
                 "ZYNJPM": 90,
                 "ZYNJRS": 100,
