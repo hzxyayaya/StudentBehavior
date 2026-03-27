@@ -32,3 +32,18 @@ def test_demo_login_returns_fixed_demo_session() -> None:
 def test_get_overview_returns_404_for_unknown_term(client) -> None:
     response = client.get("/api/analytics/overview", params={"term": "2099-1"})
     assert response.status_code == 404
+    payload = response.json()
+    assert payload["code"] == 404
+    assert payload["message"] == "term not found"
+    assert payload["data"] == {}
+    assert payload["meta"]["term"] == "2099-1"
+
+
+def test_get_models_summary_returns_envelope_payload(client) -> None:
+    response = client.get("/api/models/summary", params={"term": "2024-2"})
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["code"] == 200
+    assert payload["data"]["cluster_method"] == "stub-quadrant-rules"
+    assert payload["data"]["risk_model"] == "stub-risk-rules"
+    assert payload["meta"]["term"] == "2024-2"

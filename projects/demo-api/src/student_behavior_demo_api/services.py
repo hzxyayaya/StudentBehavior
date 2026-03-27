@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Any
 
+from student_behavior_demo_api.loaders import load_json_records
 from student_behavior_demo_api.loaders import validate_model_summary_payload
 from student_behavior_demo_api.loaders import validate_overview_payload
 
@@ -10,40 +12,80 @@ from student_behavior_demo_api.loaders import validate_overview_payload
 class DemoApiStore:
     def __init__(
         self,
-        overview_payload: Mapping[str, Any] | None = None,
-        model_summary_payload: Mapping[str, Any] | None = None,
+        overview_path: Path | None = None,
+        model_summary_path: Path | None = None,
+        overview_term: str | None = None,
+        repo_root: Path | None = None,
     ) -> None:
-        default_overview_payload = {
-            "term_buckets": {
-                "2023-1": {
-                    "student_count": 3,
-                    "risk_distribution": {},
-                    "quadrant_distribution": {},
-                    "major_risk_summary": [],
-                    "trend_summary": [],
-                }
-            }
-        }
-        default_model_summary_payload = {
-            "cluster_method": "stub-cluster",
-            "risk_model": "stub-risk-rules",
-            "target_label": "risk_flag",
-            "auc": 0.5,
-            "updated_at": "2024-01-01T00:00:00Z",
-        }
-
-        self._overview_payload = validate_overview_payload(
-            overview_payload or default_overview_payload
+        resolved_repo_root = repo_root or Path(__file__).resolve().parents[4]
+        resolved_overview_path = overview_path or _resolve_artifact_path(
+            resolved_repo_root, "v1_overview_by_term.json"
         )
-        self._model_summary_payload = validate_model_summary_payload(
-            model_summary_payload or default_model_summary_payload
+        resolved_model_summary_path = model_summary_path or _resolve_artifact_path(
+            resolved_repo_root, "v1_model_summary.json"
+        )
+        overview_record = _load_single_record(resolved_overview_path)
+        self._overview_term = overview_term or _infer_overview_term(overview_record)
+        validate_overview_payload({"term_buckets": {self._overview_term: overview_record}})
+        self._overview_payload = dict(overview_record)
+        self._model_summary_payload = dict(
+            validate_model_summary_payload(_load_single_record(resolved_model_summary_path))
         )
 
     def get_overview(self, term: str) -> dict[str, Any]:
-        term_buckets = self._overview_payload["term_buckets"]
-        if term not in term_buckets:
+        if term != self._overview_term:
             raise KeyError(term)
-        return dict(term_buckets[term])
+        return dict(self._overview_payload)
 
     def get_model_summary(self, term: str | None = None) -> dict[str, Any]:
         return dict(self._model_summary_payload)
+
+
+def _resolve_artifact_path(repo_root: Path, artifact_name: str) -> Path:
+    for artifact_root in _iter_artifact_roots(repo_root):
+        artifact_path = artifact_root / artifact_name
+        if artifact_path.exists():
+            return artifact_path
+    raise FileNotFoundError(artifact_name)
+
+
+def _iter_artifact_roots(repo_root: Path):
+    yield repo_root / "artifacts" / "model_stubs"
+
+    shared_repo_root = repo_root.parent.parent
+    yield shared_repo_root / "artifacts" / "model_stubs"
+
+    worktrees_root = repo_root.parent
+    if not worktrees_root.exists():
+        return
+
+    for sibling_worktree in worktrees_root.iterdir():
+        if sibling_worktree == repo_root or not sibling_worktree.is_dir():
+            continue
+        yield sibling_worktree / "artifacts" / "model_stubs"
+
+
+def _load_single_record(path: Path) -> Mapping[str, Any]:
+    records = load_json_records(path)
+    if len(records) != 1:
+        raise ValueError(f"expected exactly one record in {path}")
+    return records[0]
+
+
+def _infer_overview_term(payload: Mapping[str, Any]) -> str:
+    trend_summary = payload.get("trend_summary")
+    if not isinstance(trend_summary, Mapping):
+        raise ValueError("trend_summary must be a mapping")
+
+    terms = trend_summary.get("terms")
+    if not isinstance(terms, list) or not terms:
+        raise ValueError("trend_summary.terms must be a non-empty list")
+
+    latest_term = terms[-1]
+    if not isinstance(latest_term, Mapping):
+        raise ValueError("trend_summary.terms entries must be mappings")
+
+    term_key = latest_term.get("term_key")
+    if not isinstance(term_key, str) or not term_key:
+        raise ValueError("trend_summary.terms entries must include term_key")
+    return term_key
