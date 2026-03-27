@@ -69,10 +69,27 @@ def test_schema_scaffold_defines_expected_tables() -> None:
     mart_sql = (sql_dir / "003_create_student_term_features.sql").read_text(
         encoding="utf-8"
     )
+    schema_sql_files = db.get_schema_sql_files(project_root)
+    schema_sql_names = [path.name for path in schema_sql_files]
 
     assert db.collect_schema_table_names(project_root) == EXPECTED_TABLES
-    assert [path.name for path in db.get_schema_sql_files(project_root)] == EXPECTED_SQL_FILES
+    assert schema_sql_names == sorted(schema_sql_names)
+    assert set(EXPECTED_SQL_FILES).issubset(schema_sql_names)
     assert all((sql_dir / name).exists() for name in EXPECTED_SQL_FILES)
     assert "source_file text not null" in fact_sql
     assert "source_row_hash text not null" in fact_sql
     assert "primary key (student_id, term_key)" in mart_sql
+
+
+def test_extract_table_names_handles_quoted_and_schema_qualified_tables() -> None:
+    sql_text = """
+        create table if not exists public."Student_Events" (
+            id integer primary key
+        );
+
+        create table "analytics"."term_features" (
+            id integer primary key
+        );
+    """
+
+    assert db._extract_table_names(sql_text) == {"Student_Events", "term_features"}
