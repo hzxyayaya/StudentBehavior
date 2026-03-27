@@ -3,10 +3,7 @@ from __future__ import annotations
 from math import isnan
 from typing import Any
 
-try:  # pragma: no cover - pandas is not installed in the project test env
-    import pandas as pd
-except ModuleNotFoundError:  # pragma: no cover
-    pd = None
+import pandas as pd
 
 _MAJOR_COLUMNS = (
     "major_id",
@@ -15,7 +12,7 @@ _MAJOR_COLUMNS = (
 )
 
 
-def load_majors(rows: list[dict[str, Any]]) -> object:
+def load_majors(rows: list[dict[str, Any]]) -> pd.DataFrame:
     records = []
     for row in rows:
         major_id = _clean_text(row.get("major_id") or row.get("major_code") or row.get("major_name"))
@@ -29,7 +26,7 @@ def load_majors(rows: list[dict[str, Any]]) -> object:
                 "college_name": _clean_text(row.get("college_name")),
             }
         )
-    return _make_frame(records)
+    return pd.DataFrame(records, columns=_MAJOR_COLUMNS)
 
 
 def _clean_text(raw: Any) -> str | None:
@@ -39,27 +36,3 @@ def _clean_text(raw: Any) -> str | None:
         return None
     text = str(raw).strip()
     return text or None
-
-
-def _make_frame(records: list[dict[str, Any]]) -> object:
-    if pd is not None:
-        return pd.DataFrame(records, columns=_MAJOR_COLUMNS)
-    return _MiniDataFrame(records, _MAJOR_COLUMNS)
-
-
-class _MiniDataFrame:
-    def __init__(self, records: list[dict[str, Any]], columns: tuple[str, ...]) -> None:
-        self._records = [
-            {column: record.get(column) for column in columns} for record in records
-        ]
-        self._columns = list(columns)
-
-    @property
-    def columns(self) -> list[str]:
-        return list(self._columns)
-
-    def to_dict(self, orient: str = "dict") -> list[dict[str, Any]]:
-        if orient != "records":
-            raise ValueError("MiniDataFrame only supports orient='records'")
-        return [dict(record) for record in self._records]
-

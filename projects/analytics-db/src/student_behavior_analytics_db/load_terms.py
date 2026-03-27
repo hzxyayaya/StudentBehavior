@@ -4,12 +4,9 @@ import re
 from datetime import date, datetime
 from typing import Any
 
-from .normalize_terms import normalize_term_key
+import pandas as pd
 
-try:  # pragma: no cover - pandas is not installed in the project test env
-    import pandas as pd
-except ModuleNotFoundError:  # pragma: no cover
-    pd = None
+from .normalize_terms import normalize_term_key
 
 _TERM_COLUMNS = (
     "term_key",
@@ -22,13 +19,13 @@ _TERM_COLUMNS = (
 )
 
 
-def load_terms(rows: list[dict[str, Any]]) -> object:
+def load_terms(rows: list[dict[str, Any]]) -> pd.DataFrame:
     records = []
     for row in rows:
         record = _build_term_record(row)
         if record is not None:
             records.append(record)
-    return _make_frame(records)
+    return pd.DataFrame(records, columns=_TERM_COLUMNS)
 
 
 def _build_term_record(row: dict[str, Any]) -> dict[str, Any] | None:
@@ -116,27 +113,3 @@ def _normalize_bool(raw: Any, default: bool) -> bool:
     if text in {"0", "false", "no", "n", "否"}:
         return False
     return default
-
-
-def _make_frame(records: list[dict[str, Any]]) -> object:
-    if pd is not None:
-        return pd.DataFrame(records, columns=_TERM_COLUMNS)
-    return _MiniDataFrame(records, _TERM_COLUMNS)
-
-
-class _MiniDataFrame:
-    def __init__(self, records: list[dict[str, Any]], columns: tuple[str, ...]) -> None:
-        self._records = [
-            {column: record.get(column) for column in columns} for record in records
-        ]
-        self._columns = list(columns)
-
-    @property
-    def columns(self) -> list[str]:
-        return list(self._columns)
-
-    def to_dict(self, orient: str = "dict") -> list[dict[str, Any]]:
-        if orient != "records":
-            raise ValueError("MiniDataFrame only supports orient='records'")
-        return [dict(record) for record in self._records]
-

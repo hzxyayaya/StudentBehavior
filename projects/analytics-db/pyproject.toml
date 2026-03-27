@@ -6,6 +6,9 @@ build-backend = "hatchling.build"
 name = "student-behavior-analytics-db"
 version = "0.0.0"
 requires-python = ">=3.12"
+dependencies = [
+  "pandas",
+]
 
 [project.scripts]
 analytics-db = "student_behavior_analytics_db.cli:main"
