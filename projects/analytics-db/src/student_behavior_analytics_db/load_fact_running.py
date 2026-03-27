@@ -20,7 +20,6 @@ _RUNNING_COLUMNS = (
 )
 
 _STUDENT_ID_KEYS = ("student_id", "USERNUM", "LOGIN_NAME", "XH", "XSBH", "SID")
-_TERM_ID_KEYS = ("TERM_ID", "term_id")
 _COMBINED_TERM_KEYS = ("term_key", "学年学期", "学年学期名称", "学期名称", "xnxq", "XNXQ")
 _TERM_YEAR_KEYS = ("XN", "xn", "school_year", "学年", "学年度", "开课学年")
 _TERM_NO_KEYS = ("XQ", "xq", "term_no", "学期", "学期序号", "开课学期")
@@ -31,13 +30,12 @@ def load_fact_running(
     rows: list[dict[str, Any]], terms: Iterable[dict[str, Any]] | pd.DataFrame | None = None
 ) -> pd.DataFrame:
     term_calendar = _build_term_calendar(terms)
-    term_id_map = _build_term_id_map(terms)
     records = []
     for row in rows:
         student_id = _pick_student_id(row)
         run_date = _normalize_date(_first_value(row, "PUNCH_DAY", "punch_day"))
         ran_at = _combine_date_and_time(run_date, _first_value(row, "PUNCH_TIME", "punch_time"))
-        term_key = _pick_term_key(row, run_date, term_calendar, term_id_map)
+        term_key = _pick_term_key(row, run_date, term_calendar)
         source_file = _normalize_text(_first_value(row, "source_file", "源文件"))
         source_row_hash = _normalize_text(_first_value(row, "source_row_hash", "row_hash"))
         if (
@@ -77,7 +75,6 @@ def _pick_term_key(
     row: dict[str, Any],
     run_date: str | None,
     term_calendar: list[dict[str, Any]],
-    term_id_map: dict[str, str],
 ) -> str | None:
     direct_term_key = _normalize_term_key_value(_first_value(row, "term_key"))
     if direct_term_key is not None:
@@ -98,10 +95,9 @@ def _pick_term_key(
         if term_key is not None:
             return term_key
 
-    raw_term_id = _normalize_text(_first_value(row, *_TERM_ID_KEYS))
-    if raw_term_id is not None and raw_term_id in term_id_map:
-        return term_id_map[raw_term_id]
-
+    # TERM_ID exists in the raw running source, but there is no frozen in-repo
+    # TERM_ID -> term_key mapping yet, so this loader currently relies on the
+    # caller's explicit term calendar instead of inventing an unsupported mapping.
     return _term_key_from_calendar(run_date, term_calendar)
 
 
@@ -137,26 +133,6 @@ def _build_term_calendar(
             continue
         calendar.append({"term_key": term_key, "start_date": start_date, "end_date": end_date})
     return calendar
-
-
-def _build_term_id_map(
-    terms: Iterable[dict[str, Any]] | pd.DataFrame | None,
-) -> dict[str, str]:
-    if terms is None:
-        return {}
-    if isinstance(terms, pd.DataFrame):
-        rows = terms.to_dict(orient="records")
-    else:
-        rows = list(terms)
-
-    mapping: dict[str, str] = {}
-    for row in rows:
-        term_key = _normalize_term_key_value(_first_value(row, "term_key"))
-        term_id = _normalize_text(_first_value(row, *_TERM_ID_KEYS))
-        if term_key is None or term_id is None:
-            continue
-        mapping[term_id] = term_key
-    return mapping
 
 
 def _term_key_from_calendar(run_date: str | None, term_calendar: list[dict[str, Any]]) -> str | None:
