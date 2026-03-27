@@ -277,6 +277,10 @@ def _extract_quadrant_factor_entries(
 
     entries = []
     for item in report_factors:
+        if isinstance(item, str):
+            if item:
+                entries.append({"dimension": item, "importance": 1.0})
+            continue
         if not isinstance(item, Mapping):
             continue
         dimension = item.get("dimension") or item.get("feature_cn") or item.get("feature")

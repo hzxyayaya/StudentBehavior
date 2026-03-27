@@ -133,6 +133,18 @@ def test_get_quadrants_returns_404_for_unknown_term(client) -> None:
     assert response.status_code == 404
 
 
+def test_get_quadrants_returns_500_for_bad_schema(monkeypatch) -> None:
+    class BrokenQuadrantsStore:
+        def get_quadrants(self, term: str) -> dict:
+            raise KeyError("top_factors")
+
+    monkeypatch.setattr(main_module, "get_store", lambda: BrokenQuadrantsStore())
+    client = TestClient(app, raise_server_exceptions=False)
+
+    response = client.get("/api/analytics/quadrants", params={"term": "2023-1"})
+    assert response.status_code == 500
+
+
 def test_get_models_summary_returns_envelope_payload(client) -> None:
     response = client.get("/api/models/summary", params={"term": "2024-2"})
     assert response.status_code == 200

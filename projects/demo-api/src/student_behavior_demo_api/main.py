@@ -52,8 +52,10 @@ def get_overview(term: str) -> Envelope[dict]:
 def get_quadrants(term: str) -> Envelope[dict]:
     try:
         data = get_store().get_quadrants(term=term)
-    except KeyError:
-        return _error_envelope(status_code=404, message="term not found", term=term)
+    except KeyError as exc:
+        if _is_unknown_term_error(exc, term):
+            return _error_envelope(status_code=404, message="term not found", term=term)
+        raise
     except (FileNotFoundError, ValueError):
         return _error_envelope(status_code=500, message="artifacts unavailable", term=term)
     return Envelope(
@@ -148,3 +150,7 @@ def _error_envelope(status_code: int, message: str, term: str | None = None) -> 
         meta=MetaModel(request_id="demo-request", term=term),
     )
     return JSONResponse(status_code=status_code, content=payload.model_dump())
+
+
+def _is_unknown_term_error(exc: KeyError, term: str) -> bool:
+    return len(exc.args) == 1 and exc.args[0] == term
