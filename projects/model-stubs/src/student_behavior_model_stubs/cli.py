@@ -15,6 +15,13 @@ from student_behavior_model_stubs.io import read_features
 from student_behavior_model_stubs.reporting import build_warnings_from_features
 
 
+def resolve_checkout_root() -> Path:
+    for parent in Path(__file__).resolve().parents:
+        if (parent / ".git").exists():
+            return parent
+    raise RuntimeError("unable to locate checkout root")
+
+
 def _build_paths(output_dir: Path) -> DefaultPaths:
     return DefaultPaths(
         output_dir=output_dir,
@@ -44,7 +51,11 @@ def run_build(
     warnings_now: datetime | None = None,
 ) -> dict[str, object]:
     features = read_features(features_csv)
-    paths = _build_paths(output_dir) if output_dir is not None else build_default_paths(Path.cwd())
+    paths = (
+        _build_paths(output_dir)
+        if output_dir is not None
+        else build_default_paths(resolve_checkout_root())
+    )
 
     student_results = build_student_results(features)
     student_reports = build_student_reports(student_results)

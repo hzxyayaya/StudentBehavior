@@ -11,6 +11,13 @@ import student_behavior_model_stubs.cli as cli_module
 from student_behavior_model_stubs.reporting import build_warnings_payload
 
 
+def _find_checkout_root(path: Path) -> Path:
+    for parent in path.resolve().parents:
+        if (parent / ".git").exists():
+            return parent
+    raise AssertionError("checkout root not found")
+
+
 def test_build_warnings_payload_uses_runtime_generated_at() -> None:
     fixed_now = datetime(2024, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
     payload = build_warnings_payload(
@@ -32,6 +39,42 @@ def test_build_warnings_payload_uses_runtime_generated_at() -> None:
         "selected_course_count": 0,
         "library_visit_count": 0,
     }
+
+
+def test_run_build_defaults_to_checkout_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    input_csv = tmp_path / "features.csv"
+    input_csv.write_text(
+        "student_id,term_key,major_name,risk_label,avg_course_score,failed_course_count,"
+        "attendance_normal_rate,sign_event_count,selected_course_count,library_visit_count\n"
+        "20230001,2023-1,软件工程,1,61,2,0.42,3,4,1\n",
+        encoding="utf-8",
+    )
+    outside_dir = tmp_path / "outside"
+    outside_dir.mkdir()
+    monkeypatch.chdir(outside_dir)
+
+    captured: dict[str, Path] = {}
+
+    def fake_build_default_paths(repo_root: Path):
+        captured["repo_root"] = repo_root
+        return cli_module.DefaultPaths(
+            output_dir=tmp_path / "artifacts" / "model_stubs",
+            student_results_csv=tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv",
+            student_reports_jsonl=tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl",
+            overview_json=tmp_path / "artifacts" / "model_stubs" / "v1_overview_by_term.json",
+            model_summary_json=tmp_path / "artifacts" / "model_stubs" / "v1_model_summary.json",
+            warnings_json=tmp_path / "artifacts" / "model_stubs" / "v1_warnings.json",
+        )
+
+    monkeypatch.setattr(cli_module, "build_default_paths", fake_build_default_paths)
+
+    cli_module.run_build(input_csv)
+
+    expected_root = _find_checkout_root(Path(cli_module.__file__))
+    assert captured["repo_root"] == expected_root
+    assert captured["repo_root"] != Path.cwd()
 
 
 def test_main_build_writes_all_expected_artifacts(
