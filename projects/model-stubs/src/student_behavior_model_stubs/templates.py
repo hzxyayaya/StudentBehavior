@@ -8,6 +8,12 @@ _DIMENSION_TEMPLATES = [
     ("生活规律与资源使用", "routine_resource_use"),
 ]
 
+_RISK_LABELS = {
+    "high": "高风险",
+    "medium": "中风险",
+    "low": "低风险",
+}
+
 _RISK_ADVICE = {
     "high": [
         "优先安排一次一对一沟通，确认深夜在线和课堂投入偏低的原因。",
@@ -52,6 +58,10 @@ def _dimension_score_map(dimension_scores: Iterable[Mapping[str, object]]) -> di
     return scores
 
 
+def _format_risk_label(risk_level: str) -> str:
+    return _RISK_LABELS.get(risk_level, "未知风险")
+
+
 def build_top_factors(
     *,
     risk_level: str,
@@ -65,9 +75,20 @@ def build_top_factors(
 
     for dimension_name, feature_name in sorted(
         _DIMENSION_TEMPLATES,
-        key=lambda item: score_map.get(item[0], 0.5),
+        key=lambda item: (item[0] not in score_map, score_map.get(item[0], 0.0)),
     )[:3]:
-        score = score_map.get(dimension_name, 0.5)
+        if dimension_name not in score_map:
+            factors.append(
+                {
+                    "feature": feature_name,
+                    "feature_cn": dimension_name,
+                    "effect": "neutral",
+                    "importance": 0.0,
+                }
+            )
+            continue
+
+        score = score_map[dimension_name]
         factors.append(
             {
                 "feature": feature_name,
@@ -89,23 +110,27 @@ def _build_report_text(
     intervention_advice: list[str],
 ) -> str:
     score_map = _dimension_score_map(dimension_scores)
+    risk_label = _format_risk_label(risk_level)
     lines = [
         "## 学生群体画像",
-        f"该学生被系统归类为「{quadrant_label}」群体，当前风险等级为 {risk_level}。",
+        f"该学生被系统归类为「{quadrant_label}」群体，当前风险等级为 {risk_label}。",
         "",
         "## 核心风险指标解读",
     ]
 
     for index, factor in enumerate(top_factors, start=1):
         dimension_name = str(factor["feature_cn"])
-        score = score_map.get(dimension_name, 0.5)
-        if score < 0.5:
+        score = score_map.get(dimension_name)
+        if score is None:
+            suffix = "暂无有效数据，建议继续补充观察。"
+            score_text = "暂无"
+        elif score < 0.5:
             suffix = "属于需要优先关注的弱项。"
+            score_text = f"{score:.2f}"
         else:
             suffix = "保持观察即可。"
-        lines.append(
-            f"{index}. **{dimension_name}**: 当前维度得分为 {score:.2f}，{suffix}"
-        )
+            score_text = f"{score:.2f}"
+        lines.append(f"{index}. **{dimension_name}**: 当前维度得分为 {score_text}，{suffix}")
 
     lines.extend(
         [
@@ -125,6 +150,7 @@ def build_report_payload(
     quadrant_label: str,
     dimension_scores: Iterable[Mapping[str, object]],
 ) -> dict[str, object]:
+    dimension_scores = list(dimension_scores)
     top_factors = build_top_factors(
         risk_level=risk_level,
         quadrant_label=quadrant_label,
