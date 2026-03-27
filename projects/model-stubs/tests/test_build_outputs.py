@@ -58,20 +58,20 @@ def test_build_student_reports_outputs_jsonl_ready_records() -> None:
             {
                 "student_id": "20230002",
                 "term_key": "2023-2",
-                    "student_name": "20230002",
-                    "major_name": "软件工程",
-                    "quadrant_label": "脱节离散型",
-                    "risk_probability": 0.68,
-                    "risk_level": "medium",
-                    "dimension_scores_json": (
-                        '[{"dimension":"学业基础表现","score":0.58},'
-                        '{"dimension":"课堂学习投入","score":0.4},'
-                        '{"dimension":"学习行为活跃度","score":0.12},'
-                        '{"dimension":"生活规律与资源使用","score":0.23}]'
-                    ),
-                }
-            ]
-        )
+                "student_name": "20230002",
+                "major_name": "软件工程",
+                "quadrant_label": "脱节离散型",
+                "risk_probability": 0.68,
+                "risk_level": "medium",
+                "dimension_scores_json": (
+                    '[{"dimension":"学业基础表现","score":0.58},'
+                    '{"dimension":"课堂学习投入","score":0.4},'
+                    '{"dimension":"学习行为活跃度","score":0.12},'
+                    '{"dimension":"生活规律与资源使用","score":0.23}]'
+                ),
+            }
+        ]
+    )
 
     reports = build_student_reports(results)
 
@@ -186,3 +186,45 @@ def test_build_student_results_sorts_by_student_id_and_term_key() -> None:
 
     assert list(results["student_id"]) == ["20230002", "20230002", "20230010"]
     assert list(results["term_key"]) == ["2023-1", "2023-2", "2023-2"]
+
+
+def test_build_student_reports_sorts_by_student_id_and_term_key() -> None:
+    student_results = pd.DataFrame(
+        [
+            {
+                "student_id": "20230010",
+                "term_key": "2023-2",
+                "student_name": "20230010",
+                "major_name": "软件工程",
+                "quadrant_label": "脱节离散型",
+                "risk_probability": 0.68,
+                "risk_level": "medium",
+                "dimension_scores_json": (
+                    '[{"dimension":"学业基础表现","score":0.58},'
+                    '{"dimension":"课堂学习投入","score":0.4},'
+                    '{"dimension":"学习行为活跃度","score":0.12},'
+                    '{"dimension":"生活规律与资源使用","score":0.23}]'
+                ),
+            },
+            {
+                "student_id": "20230002",
+                "term_key": "2023-1",
+                "student_name": "20230002",
+                "major_name": "软件工程",
+                "quadrant_label": "脱节离散型",
+                "risk_probability": 0.68,
+                "risk_level": "medium",
+                "dimension_scores_json": (
+                    '[{"dimension":"学业基础表现","score":0.58},'
+                    '{"dimension":"课堂学习投入","score":0.4},'
+                    '{"dimension":"学习行为活跃度","score":0.12},'
+                    '{"dimension":"生活规律与资源使用","score":0.23}]'
+                ),
+            },
+        ]
+    )
+
+    reports = build_student_reports(student_results)
+
+    assert [record["student_id"] for record in reports] == ["20230002", "20230010"]
+    assert [record["term_key"] for record in reports] == ["2023-1", "2023-2"]

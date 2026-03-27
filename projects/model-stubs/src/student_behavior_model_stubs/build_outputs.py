@@ -117,8 +117,15 @@ def _coerce_dimension_scores(value: object) -> list[dict[str, object]]:
 
 
 def build_student_reports(student_results: pd.DataFrame) -> list[dict[str, object]]:
+    if student_results.empty:
+        return []
+
+    ordered_results = student_results.sort_values(
+        by=["student_id", "term_key"], kind="stable"
+    ).reset_index(drop=True)
+
     records: list[dict[str, object]] = []
-    for row in student_results.to_dict(orient="records"):
+    for row in ordered_results.to_dict(orient="records"):
         payload = build_report_payload(
             risk_level=str(row["risk_level"]),
             quadrant_label=str(row["quadrant_label"]),
