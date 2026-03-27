@@ -1,3 +1,5 @@
+from datetime import time
+
 from student_behavior_analytics_db.load_fact_tasks import load_fact_tasks
 
 
@@ -116,3 +118,19 @@ def test_load_tasks_keeps_learning_activity_metrics():
             "source_row_hash": "task-1",
         }
     ]
+
+
+def test_load_tasks_drops_raw_time_only_source_rows():
+    df = load_fact_tasks(
+        [
+            {
+                "LOGIN_NAME": "pjxxxxbj986",
+                "CREATE_TIME": time(0, 47, 32),
+                "INSERT_TIME": time(0, 41, 31),
+                "source_file": "课堂任务参与.xlsx",
+                "source_row_hash": "task-raw-1",
+            }
+        ]
+    )
+
+    assert df.to_dict(orient="records") == []

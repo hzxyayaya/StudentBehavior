@@ -1,3 +1,5 @@
+from datetime import time
+
 from student_behavior_analytics_db.load_fact_assignments import load_fact_assignments
 
 
@@ -48,3 +50,19 @@ def test_load_assignments_keeps_submit_events():
                 "source_row_hash": "assignment-1",
             }
     ]
+
+
+def test_load_assignments_drops_raw_time_only_source_rows():
+    df = load_fact_assignments(
+        [
+            {
+                "CREATER_LOGIN_NAME": "pjxyqwbk736",
+                "ANSWER_TIME": time(0, 52, 1),
+                "INSERT_TIME": time(0, 34, 39),
+                "source_file": "学生作业提交记录.xlsx",
+                "source_row_hash": "assignment-raw-1",
+            }
+        ]
+    )
+
+    assert df.to_dict(orient="records") == []

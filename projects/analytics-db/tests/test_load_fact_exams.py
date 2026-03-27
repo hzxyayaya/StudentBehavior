@@ -1,3 +1,5 @@
+from datetime import time
+
 from student_behavior_analytics_db.load_fact_exams import load_fact_exams
 
 
@@ -48,3 +50,19 @@ def test_load_exams_keeps_submission_events_and_term_alias():
                 "source_row_hash": "exam-1",
             }
     ]
+
+
+def test_load_exams_drops_raw_time_only_source_rows():
+    df = load_fact_exams(
+        [
+            {
+                "CREATER_LOGIN_NAME": "pjxuqwbj750",
+                "ANSWER_TIME": time(0, 10, 32),
+                "INSERT_TIME": time(0, 5, 25),
+                "source_file": "考试提交记录.xlsx",
+                "source_row_hash": "exam-raw-1",
+            }
+        ]
+    )
+
+    assert df.to_dict(orient="records") == []

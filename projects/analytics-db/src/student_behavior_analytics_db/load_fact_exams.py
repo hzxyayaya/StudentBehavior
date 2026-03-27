@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, time
 import re
 from typing import Any, Iterable
 
@@ -48,6 +48,8 @@ _STANDARD_TERM_KEY_RE = re.compile(r"^\d{4}-[12]$")
 def load_fact_exams(
     rows: list[dict[str, Any]], terms: Iterable[dict[str, Any]] | pd.DataFrame | None = None
 ) -> pd.DataFrame:
+    # Draft source: raw workbook event times are currently time-only, so this loader
+    # only guarantees staged rows with an explicit term key or a caller-supplied term calendar.
     term_calendar = _build_term_calendar(terms)
     records = []
     for row in rows:
@@ -186,6 +188,8 @@ def _term_key_from_calendar(submitted_at: str | None, term_calendar: list[dict[s
 
 def _normalize_timestamp(raw: Any) -> str | None:
     if raw is None or isinstance(raw, bool):
+        return None
+    if isinstance(raw, time):
         return None
     if isinstance(raw, float) and raw != raw:
         return None

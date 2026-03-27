@@ -1,3 +1,5 @@
+from datetime import time
+
 from student_behavior_analytics_db.load_fact_discussions import load_fact_discussions
 
 
@@ -52,3 +54,19 @@ def test_load_discussions_keeps_reply_events():
             "source_row_hash": "discussion-1",
         }
     ]
+
+
+def test_load_discussions_drops_raw_time_only_source_rows():
+    df = load_fact_discussions(
+        [
+            {
+                "REPLY_LOGIN_NAME": "pjxuqxbj759",
+                "CREATE_TIME": time(0, 58, 1),
+                "INSERT_TIME": time(0, 2, 0),
+                "source_file": "讨论记录.xlsx",
+                "source_row_hash": "discussion-raw-1",
+            }
+        ]
+    )
+
+    assert df.to_dict(orient="records") == []
