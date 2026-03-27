@@ -62,6 +62,38 @@ def get_models_summary(term: str | None = None) -> Envelope[dict]:
     )
 
 
+@app.get("/api/students/{student_id}/profile")
+def get_student_profile(student_id: str, term: str) -> Envelope[dict]:
+    try:
+        data = get_store().get_student_profile(student_id=student_id, term=term)
+    except KeyError:
+        return _error_envelope(status_code=404, message="student not found", term=term)
+    except (FileNotFoundError, ValueError):
+        return _error_envelope(status_code=500, message="artifacts unavailable", term=term)
+    return Envelope(
+        code=200,
+        message="OK",
+        data=data,
+        meta=MetaModel(request_id="demo-request", term=term),
+    )
+
+
+@app.get("/api/students/{student_id}/report")
+def get_student_report(student_id: str, term: str) -> Envelope[dict]:
+    try:
+        data = get_store().get_student_report(student_id=student_id, term=term)
+    except KeyError:
+        return _error_envelope(status_code=404, message="student not found", term=term)
+    except (FileNotFoundError, ValueError):
+        return _error_envelope(status_code=500, message="artifacts unavailable", term=term)
+    return Envelope(
+        code=200,
+        message="OK",
+        data=data,
+        meta=MetaModel(request_id="demo-request", term=term),
+    )
+
+
 @app.get("/api/warnings")
 def get_warnings(
     term: str,

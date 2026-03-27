@@ -1,4 +1,5 @@
 import importlib
+import json
 from pathlib import Path
 
 import pytest
@@ -26,11 +27,44 @@ def client(monkeypatch, tmp_path: Path) -> TestClient:
         '20230001,2023-1,Bob,软件工程,被动守纪型,0.81,medium,"[]"\n',
         encoding="utf-8",
     )
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.parent.mkdir(parents=True, exist_ok=True)
+    reports_path.write_text(
+        "\n".join(
+            json.dumps(record, ensure_ascii=False)
+            for record in [
+                {
+                    "student_id": "20230001",
+                    "term_key": "2022-2",
+                    "student_name": "Bob",
+                    "major_name": "软件工程",
+                    "dimension_scores_json": json.dumps(
+                        [{"dimension": "学业基础表现", "score": 82}],
+                        ensure_ascii=False,
+                    ),
+                    "intervention_advice": ["继续保持稳定节奏"],
+                },
+                {
+                    "student_id": "20230001",
+                    "term_key": "2023-1",
+                    "student_name": "Bob",
+                    "major_name": "软件工程",
+                    "dimension_scores_json": json.dumps(
+                        [{"dimension": "学业基础表现", "score": 88}],
+                        ensure_ascii=False,
+                    ),
+                    "intervention_advice": ["优先关注课程作业完成质量"],
+                },
+            ]
+        ),
+        encoding="utf-8",
+    )
     store = DemoApiStore(
         overview_path=artifact_root / "v1_overview_by_term.json",
         model_summary_path=artifact_root / "v1_model_summary.json",
         overview_term="2024-2",
         warnings_path=warnings_path,
+        repo_root=tmp_path,
     )
     monkeypatch.setattr(main_module, "get_store", lambda: store)
     return TestClient(app)
@@ -102,6 +136,11 @@ def test_get_warnings_returns_404_for_unknown_term(client) -> None:
     payload = response.json()
     assert payload["code"] == 404
     assert payload["message"] == "term not found"
+
+
+def test_get_student_profile_returns_404_for_unknown_student(client) -> None:
+    response = client.get("/api/students/404/profile", params={"term": "2023-1"})
+    assert response.status_code == 404
 
 
 def test_missing_artifacts_app_starts_and_fails_on_request(monkeypatch) -> None:

@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import pytest
@@ -21,11 +22,61 @@ def sample_store(tmp_path: Path) -> DemoApiStore:
         '20230003,2024-1,Carol,软件工程,自律共鸣型,0.65,low,"[]"\n',
         encoding="utf-8",
     )
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.parent.mkdir(parents=True, exist_ok=True)
+    reports_path.write_text(
+        "\n".join(
+            json.dumps(record, ensure_ascii=False)
+            for record in [
+                {
+                    "student_id": "20230001",
+                    "term_key": "2022-2",
+                    "student_name": "Bob",
+                    "major_name": "软件工程",
+                    "dimension_scores_json": json.dumps(
+                        [
+                            {"dimension": "学业基础表现", "score": 82},
+                            {"dimension": "课堂参与表现", "score": 74},
+                        ],
+                        ensure_ascii=False,
+                    ),
+                    "intervention_advice": ["继续保持稳定节奏"],
+                },
+                {
+                    "student_id": "20230001",
+                    "term_key": "2023-1",
+                    "student_name": "Bob",
+                    "major_name": "软件工程",
+                    "dimension_scores_json": json.dumps(
+                        [
+                            {"dimension": "学业基础表现", "score": 88},
+                            {"dimension": "课堂参与表现", "score": 79},
+                        ],
+                        ensure_ascii=False,
+                    ),
+                    "intervention_advice": ["优先关注课程作业完成质量"],
+                },
+                {
+                    "student_id": "20230002",
+                    "term_key": "2023-1",
+                    "student_name": "Alice",
+                    "major_name": "软件工程",
+                    "dimension_scores_json": json.dumps(
+                        [{"dimension": "学业基础表现", "score": 91}],
+                        ensure_ascii=False,
+                    ),
+                    "intervention_advice": ["优先补齐课堂互动"],
+                },
+            ]
+        ),
+        encoding="utf-8",
+    )
     return DemoApiStore(
         overview_path=artifact_root / "v1_overview_by_term.json",
         model_summary_path=artifact_root / "v1_model_summary.json",
         overview_term="2024-2",
         warnings_path=warnings_path,
+        repo_root=tmp_path,
     )
 
 
@@ -37,6 +88,21 @@ def test_get_overview_by_term_returns_single_term_payload(sample_store) -> None:
 def test_get_model_summary_returns_stub_summary(sample_store) -> None:
     payload = sample_store.get_model_summary(term="2024-2")
     assert payload["risk_model"] == "stub-risk-rules"
+
+
+def test_get_student_profile_expands_dimension_scores(sample_store) -> None:
+    payload = sample_store.get_student_profile(student_id="20230001", term="2023-1")
+    assert payload["dimension_scores"][0]["dimension"] == "学业基础表现"
+
+
+def test_get_student_profile_builds_sorted_trend(sample_store) -> None:
+    payload = sample_store.get_student_profile(student_id="20230001", term="2023-1")
+    assert [item["term"] for item in payload["trend"]] == ["2022-2", "2023-1"]
+
+
+def test_get_student_report_returns_exact_term_record(sample_store) -> None:
+    payload = sample_store.get_student_report(student_id="20230001", term="2023-1")
+    assert payload["intervention_advice"][0].startswith("优先")
 
 
 def test_list_warnings_filters_by_term_and_risk_level(sample_store) -> None:

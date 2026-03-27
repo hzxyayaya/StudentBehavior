@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import json
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -43,6 +44,50 @@ class DemoApiStore:
 
     def get_model_summary(self, term: str | None = None) -> dict[str, Any]:
         return dict(self._model_summary_payload)
+
+    def get_student_profile(self, *, student_id: str, term: str) -> dict[str, Any]:
+        report_rows = _load_student_report_rows(self._repo_root)
+        student_rows = [row for row in report_rows if row.get("student_id") == student_id]
+        if not student_rows:
+            raise KeyError((student_id, term))
+
+        current_row = next((row for row in student_rows if row.get("term_key") == term), None)
+        if current_row is None:
+            raise KeyError((student_id, term))
+
+        return {
+            "student_id": current_row.get("student_id"),
+            "student_name": current_row.get("student_name"),
+            "major_name": current_row.get("major_name"),
+            "quadrant_label": current_row.get("quadrant_label"),
+            "risk_level": current_row.get("risk_level"),
+            "risk_probability": current_row.get("risk_probability"),
+            "dimension_scores": _parse_json_field(current_row.get("dimension_scores_json"), field_name="dimension_scores_json"),
+            "trend": [
+                {
+                    "term": row.get("term_key"),
+                    "dimension_scores": _parse_json_field(
+                        row.get("dimension_scores_json"), field_name="dimension_scores_json"
+                    ),
+                }
+                for row in sorted(student_rows, key=_sort_term_key)
+            ],
+        }
+
+    def get_student_report(self, *, student_id: str, term: str) -> dict[str, Any]:
+        report_rows = _load_student_report_rows(self._repo_root)
+        current_row = next(
+            (row for row in report_rows if row.get("student_id") == student_id and row.get("term_key") == term),
+            None,
+        )
+        if current_row is None:
+            raise KeyError((student_id, term))
+
+        payload = dict(current_row)
+        payload["intervention_advice"] = _parse_json_field(
+            current_row.get("intervention_advice"), field_name="intervention_advice"
+        )
+        return payload
 
     def list_warnings(
         self,
@@ -125,6 +170,29 @@ def _load_warning_rows(path: Path | None) -> list[dict[str, Any]]:
             row["risk_probability"] = float(risk_probability_raw)
             rows.append(row)
         return rows
+
+
+def _load_student_report_rows(repo_root: Path) -> list[dict[str, Any]]:
+    report_path = _resolve_artifact_path(repo_root, "v1_student_reports.jsonl")
+    return load_json_records(report_path)
+
+
+def _parse_json_field(raw_value: Any, *, field_name: str) -> Any:
+    if isinstance(raw_value, str):
+        try:
+            return json.loads(raw_value)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"{field_name} must contain valid JSON") from exc
+    return raw_value
+
+
+def _sort_term_key(row: Mapping[str, Any]) -> tuple[int, int, str]:
+    term_key = row.get("term_key")
+    if isinstance(term_key, str):
+        parts = term_key.split("-")
+        if len(parts) == 2 and all(part.isdigit() for part in parts):
+            return (int(parts[0]), int(parts[1]), term_key)
+    return (0, 0, str(term_key))
 
 
 def _resolve_warning_artifact_path(repo_root: Path) -> Path:
