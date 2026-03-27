@@ -20,6 +20,8 @@ STUDENT_RESULTS_REQUIRED_COLUMNS = {
 
 OVERVIEW_REQUIRED_KEYS = {
     "term_buckets",
+}
+OVERVIEW_TERM_SUMMARY_REQUIRED_KEYS = {
     "student_count",
     "risk_distribution",
     "quadrant_distribution",
@@ -95,8 +97,15 @@ def load_json_records(path: Path) -> list[dict[str, Any]]:
 
 
 def validate_overview_payload(payload: Mapping[str, Any]) -> Mapping[str, Any]:
-    # Overview payloads are expected to include the key summary blocks used by the API.
     _ensure_required_keys(payload, OVERVIEW_REQUIRED_KEYS)
+    term_buckets = payload.get("term_buckets")
+    if not isinstance(term_buckets, Mapping):
+        raise ValueError("term_buckets must be a mapping")
+
+    for term_key, term_summary in term_buckets.items():
+        if not isinstance(term_summary, Mapping):
+            raise ValueError(f"term bucket {term_key!r} must be a mapping")
+        _ensure_required_keys(term_summary, OVERVIEW_TERM_SUMMARY_REQUIRED_KEYS)
     return payload
 
 

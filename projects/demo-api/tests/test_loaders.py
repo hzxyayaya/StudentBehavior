@@ -24,7 +24,6 @@ def test_load_student_results_raises_when_file_missing(tmp_path: Path) -> None:
 
 def test_validate_overview_requires_term_buckets() -> None:
     payload = {
-        "term_buckets": {"2023-1": {}},
         "student_count": 10,
         "risk_distribution": {},
         "quadrant_distribution": {},
@@ -33,14 +32,31 @@ def test_validate_overview_requires_term_buckets() -> None:
         validate_overview_payload(payload)
 
 
+def test_validate_overview_requires_term_summary_fields() -> None:
+    payload = {
+        "term_buckets": {
+            "2023-1": {
+                "student_count": 10,
+                "risk_distribution": {},
+                "quadrant_distribution": {},
+            }
+        }
+    }
+    with pytest.raises(ValueError, match="missing required keys"):
+        validate_overview_payload(payload)
+
+
 def test_validate_overview_accepts_complete_payload() -> None:
     payload = {
-        "term_buckets": {"2023-1": {}},
-        "student_count": 10,
-        "risk_distribution": {},
-        "quadrant_distribution": {},
-        "major_risk_summary": [],
-        "trend_summary": [],
+        "term_buckets": {
+            "2023-1": {
+                "student_count": 10,
+                "risk_distribution": {},
+                "quadrant_distribution": {},
+                "major_risk_summary": [],
+                "trend_summary": [],
+            }
+        }
     }
     assert validate_overview_payload(payload) == payload
 
@@ -77,12 +93,15 @@ def test_load_student_results_reads_csv(tmp_path: Path) -> None:
 def test_load_json_records_reads_json(tmp_path: Path) -> None:
     path = tmp_path / "overview.json"
     payload = {
-        "term_buckets": {"2023-1": {}},
-        "student_count": 10,
-        "risk_distribution": {},
-        "quadrant_distribution": {},
-        "major_risk_summary": [],
-        "trend_summary": [],
+        "term_buckets": {
+            "2023-1": {
+                "student_count": 10,
+                "risk_distribution": {},
+                "quadrant_distribution": {},
+                "major_risk_summary": [],
+                "trend_summary": [],
+            }
+        }
     }
     path.write_text(json.dumps(payload), encoding="utf-8")
 
