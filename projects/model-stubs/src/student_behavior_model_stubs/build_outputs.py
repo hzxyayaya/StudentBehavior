@@ -131,6 +131,9 @@ def build_overview_by_term(student_results: pd.DataFrame) -> dict[str, object]:
 
 
 def build_model_summary(*, now: datetime) -> dict[str, object]:
+    if not isinstance(now, datetime):
+        raise TypeError("now must be a datetime")
+
     return {
         "cluster_method": "stub-quadrant-rules",
         "risk_model": "stub-risk-rules",

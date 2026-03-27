@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import pandas as pd
+import pytest
 
 from student_behavior_model_stubs.build_outputs import build_model_summary
 from student_behavior_model_stubs.build_outputs import build_overview_by_term
@@ -300,3 +301,8 @@ def test_build_model_summary_updated_at_is_not_placeholder_text() -> None:
     summary = build_model_summary(now=datetime(2024, 1, 2, 3, 4, 5))
 
     assert summary["updated_at"] not in {"", "TBD", "PLACEHOLDER", "updated_at"}
+
+
+def test_build_model_summary_rejects_placeholder_like_now() -> None:
+    with pytest.raises(TypeError, match="now must be a datetime"):
+        build_model_summary(now="PLACEHOLDER")
