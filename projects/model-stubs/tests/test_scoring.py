@@ -79,7 +79,7 @@ def test_compute_quadrant_label_returns_frozen_enum() -> None:
             "library_visit_count": 25,
         }
     )
-    assert label in {"自律共鸣型", "被动守纪型", "脱节离散型", "情绪驱动型"}
+    assert label == "自律共鸣型"
 
 
 def test_build_dimension_scores_returns_four_dimensions() -> None:
@@ -103,6 +103,12 @@ def test_build_dimension_scores_returns_four_dimensions() -> None:
         "生活规律与资源使用",
     ]
     assert len(scores) == 4
+    assert scores == [
+        {"dimension": "学业基础表现", "score": 0.89},
+        {"dimension": "课堂学习投入", "score": 0.83},
+        {"dimension": "学习行为活跃度", "score": 1.0},
+        {"dimension": "生活规律与资源使用", "score": 0.94},
+    ]
     for item in scores:
         assert 0.0 <= item["score"] <= 1.0
 
@@ -142,6 +148,11 @@ def test_build_dimension_scores_handles_missing_library_metrics() -> None:
     )
 
     assert len(scores) == 4
+    assert next(
+        item["score"]
+        for item in scores
+        if item["dimension"] == "生活规律与资源使用"
+    ) == 0.37
     assert [item["dimension"] for item in scores] == [
         "学业基础表现",
         "课堂学习投入",
