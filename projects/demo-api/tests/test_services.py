@@ -151,6 +151,17 @@ def test_get_student_report_returns_exact_term_record(sample_store) -> None:
     assert payload["intervention_advice"][0].startswith("优先")
 
 
+def test_get_quadrants_groups_students_by_quadrant(sample_store) -> None:
+    payload = sample_store.get_quadrants(term="2023-1")
+    assert payload["quadrants"][0]["quadrant_label"] == "脱节离散型"
+
+
+def test_get_quadrants_aggregates_top_factors_from_reports(sample_store) -> None:
+    payload = sample_store.get_quadrants(term="2023-1")
+    first = payload["quadrants"][0]
+    assert first["top_factors"][0]["dimension"] == "课堂学习投入"
+
+
 def test_get_student_profile_uses_injected_results_path(tmp_path: Path) -> None:
     warnings_path = tmp_path / "custom" / "student_results.csv"
     warnings_path.parent.mkdir(parents=True, exist_ok=True)

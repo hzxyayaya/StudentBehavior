@@ -48,6 +48,22 @@ def get_overview(term: str) -> Envelope[dict]:
     )
 
 
+@app.get("/api/analytics/quadrants")
+def get_quadrants(term: str) -> Envelope[dict]:
+    try:
+        data = get_store().get_quadrants(term=term)
+    except KeyError:
+        return _error_envelope(status_code=404, message="term not found", term=term)
+    except (FileNotFoundError, ValueError):
+        return _error_envelope(status_code=500, message="artifacts unavailable", term=term)
+    return Envelope(
+        code=200,
+        message="OK",
+        data=data,
+        meta=MetaModel(request_id="demo-request", term=term),
+    )
+
+
 @app.get("/api/models/summary")
 def get_models_summary(term: str | None = None) -> Envelope[dict]:
     try:

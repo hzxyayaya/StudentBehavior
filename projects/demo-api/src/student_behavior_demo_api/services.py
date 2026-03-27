@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+from collections import defaultdict
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -95,6 +96,60 @@ class DemoApiStore:
             ),
             "report_text": current_row.get("report_text"),
         }
+
+    def get_quadrants(self, *, term: str) -> dict[str, Any]:
+        warning_rows = _load_warning_rows(self._warnings_path or _resolve_warning_artifact_path(self._repo_root))
+        term_rows = [row for row in warning_rows if row["term_key"] == term]
+        if not term_rows:
+            raise KeyError(term)
+
+        report_rows = _load_student_report_rows(self._repo_root)
+        report_index = {
+            (row.get("student_id"), row.get("term_key")): row
+            for row in report_rows
+            if isinstance(row.get("student_id"), str) and isinstance(row.get("term_key"), str)
+        }
+
+        grouped_rows: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        for row in term_rows:
+            grouped_rows[_canonicalize_quadrant_label(row["quadrant_label"])].append(row)
+
+        quadrants: list[dict[str, Any]] = []
+        for quadrant_label, rows in grouped_rows.items():
+            factor_scores: dict[str, list[float]] = defaultdict(list)
+            for row in rows:
+                report_row = report_index.get((row.get("student_id"), row.get("term_key")))
+                factor_entries = _extract_quadrant_factor_entries(row, report_row)
+                for factor in factor_entries:
+                    dimension = factor["dimension"]
+                    score = factor["score"]
+                    factor_scores[dimension].append(score)
+
+            top_factors = [
+                {
+                    "dimension": dimension,
+                    "score": round(sum(scores) / len(scores), 4),
+                }
+                for dimension, scores in sorted(
+                    factor_scores.items(),
+                    key=lambda item: (-sum(item[1]) / len(item[1]), item[0]),
+                )
+            ]
+            quadrants.append(
+                {
+                    "quadrant_label": quadrant_label,
+                    "student_count": len(rows),
+                    "top_factors": top_factors,
+                }
+            )
+
+        quadrants.sort(
+            key=lambda item: (
+                -item["top_factors"][0]["score"] if item["top_factors"] else 0.0,
+                item["quadrant_label"],
+            )
+        )
+        return {"quadrants": quadrants}
 
     def list_warnings(
         self,
@@ -200,6 +255,59 @@ def _parse_json_field(raw_value: Any, *, field_name: str) -> Any:
         except json.JSONDecodeError as exc:
             raise ValueError(f"{field_name} must contain valid JSON") from exc
     return raw_value
+
+
+def _extract_quadrant_factor_entries(
+    warning_row: Mapping[str, Any],
+    report_row: Mapping[str, Any] | None,
+) -> list[dict[str, Any]]:
+    report_factors = _parse_json_field(report_row.get("top_factors"), field_name="top_factors") if report_row else None
+    if isinstance(report_factors, list) and report_factors and all(isinstance(item, Mapping) for item in report_factors):
+        entries: list[dict[str, Any]] = []
+        for item in report_factors:
+            dimension = item.get("dimension") or item.get("feature_cn") or item.get("feature")
+            if not isinstance(dimension, str) or not dimension:
+                continue
+            importance = item.get("importance")
+            if not isinstance(importance, (int, float)):
+                continue
+            entries.append({"dimension": _canonicalize_dimension(dimension), "score": float(importance)})
+        if entries:
+            return entries
+
+    dimension_scores = _parse_json_field(warning_row.get("dimension_scores_json"), field_name="dimension_scores_json")
+    if not isinstance(dimension_scores, list):
+        return []
+
+    entries = []
+    for item in dimension_scores:
+        if not isinstance(item, Mapping):
+            continue
+        dimension = item.get("dimension")
+        score = item.get("score")
+        if not isinstance(dimension, str) or not dimension or not isinstance(score, (int, float)):
+            continue
+        entries.append({"dimension": _canonicalize_dimension(dimension), "score": _severity_from_score(float(score))})
+    return entries
+
+
+def _canonicalize_dimension(dimension: str) -> str:
+    return {
+        "课堂参与表现": "课堂学习投入",
+    }.get(dimension, dimension)
+
+
+def _canonicalize_quadrant_label(quadrant_label: str) -> str:
+    return {
+        "被动守纪型": "脱节离散型",
+        "自律共鸣型": "情绪驱动型",
+    }.get(quadrant_label, quadrant_label)
+
+
+def _severity_from_score(score: float) -> float:
+    if score > 1:
+        return max(0.0, 1.0 - (score / 100.0))
+    return max(0.0, 1.0 - score)
 
 
 def _sort_term_key(row: Mapping[str, Any]) -> tuple[int, int, str]:

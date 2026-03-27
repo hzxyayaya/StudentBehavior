@@ -128,6 +128,11 @@ def test_get_overview_returns_404_for_unknown_term(client) -> None:
     assert payload["meta"]["term"] == "2099-1"
 
 
+def test_get_quadrants_returns_404_for_unknown_term(client) -> None:
+    response = client.get("/api/analytics/quadrants", params={"term": "2099-1"})
+    assert response.status_code == 404
+
+
 def test_get_models_summary_returns_envelope_payload(client) -> None:
     response = client.get("/api/models/summary", params={"term": "2024-2"})
     assert response.status_code == 200
