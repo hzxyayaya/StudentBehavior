@@ -60,6 +60,7 @@ def test_api_returns_500_when_artifacts_missing(app_without_artifacts) -> None:
     client = TestClient(app_without_artifacts)
     response = client.get("/api/analytics/overview", params={"term": "2023-1"})
     assert response.status_code == 500
+    assert response.json()["message"] == "overview artifact unavailable"
 
 
 def test_error_responses_keep_envelope_shape(client) -> None:
@@ -278,5 +279,5 @@ def test_missing_artifacts_app_starts_and_fails_on_request(monkeypatch) -> None:
     assert response.status_code == 500
     payload = response.json()
     assert payload["code"] == 500
-    assert payload["message"] == "artifacts unavailable"
+    assert payload["message"] == "overview artifact unavailable"
     assert payload["data"] == {}

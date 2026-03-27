@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pathlib import Path
 from typing import Literal
 
 from fastapi import FastAPI
@@ -24,10 +25,10 @@ def get_store() -> DemoApiStore:
 
 
 @app.exception_handler(FileNotFoundError)
-async def handle_file_not_found(request: Request, _exc: FileNotFoundError) -> JSONResponse:
+async def handle_file_not_found(request: Request, exc: FileNotFoundError) -> JSONResponse:
     return _error_envelope(
         status_code=500,
-        message="artifacts unavailable",
+        message=_missing_artifact_message(exc),
         term=request.query_params.get("term"),
     )
 
@@ -58,7 +59,9 @@ def get_overview(term: str) -> Envelope[dict]:
         data = get_store().get_overview(term)
     except KeyError:
         return _error_envelope(status_code=404, message="term not found", term=term)
-    except (FileNotFoundError, ValueError):
+    except FileNotFoundError as exc:
+        return _error_envelope(status_code=500, message=_missing_artifact_message(exc), term=term)
+    except ValueError:
         return _error_envelope(status_code=500, message="artifacts unavailable", term=term)
     return Envelope(
         code=200,
@@ -76,7 +79,9 @@ def get_quadrants(term: str) -> Envelope[dict]:
         if _is_unknown_term_error(exc, term):
             return _error_envelope(status_code=404, message="term not found", term=term)
         return _error_envelope(status_code=500, message="artifacts unavailable", term=term)
-    except (FileNotFoundError, ValueError):
+    except FileNotFoundError as exc:
+        return _error_envelope(status_code=500, message=_missing_artifact_message(exc), term=term)
+    except ValueError:
         return _error_envelope(status_code=500, message="artifacts unavailable", term=term)
     return Envelope(
         code=200,
@@ -90,7 +95,9 @@ def get_quadrants(term: str) -> Envelope[dict]:
 def get_models_summary(term: str | None = None) -> Envelope[dict]:
     try:
         data = get_store().get_model_summary(term=term)
-    except (FileNotFoundError, ValueError):
+    except FileNotFoundError as exc:
+        return _error_envelope(status_code=500, message=_missing_artifact_message(exc), term=term)
+    except ValueError:
         return _error_envelope(status_code=500, message="artifacts unavailable", term=term)
     return Envelope(
         code=200,
@@ -106,7 +113,9 @@ def get_student_profile(student_id: str, term: str) -> Envelope[dict]:
         data = get_store().get_student_profile(student_id=student_id, term=term)
     except KeyError:
         return _error_envelope(status_code=404, message="student not found", term=term)
-    except (FileNotFoundError, ValueError):
+    except FileNotFoundError as exc:
+        return _error_envelope(status_code=500, message=_missing_artifact_message(exc), term=term)
+    except ValueError:
         return _error_envelope(status_code=500, message="artifacts unavailable", term=term)
     return Envelope(
         code=200,
@@ -122,7 +131,9 @@ def get_student_report(student_id: str, term: str) -> Envelope[dict]:
         data = get_store().get_student_report(student_id=student_id, term=term)
     except KeyError:
         return _error_envelope(status_code=404, message="student not found", term=term)
-    except (FileNotFoundError, ValueError):
+    except FileNotFoundError as exc:
+        return _error_envelope(status_code=500, message=_missing_artifact_message(exc), term=term)
+    except ValueError:
         return _error_envelope(status_code=500, message="artifacts unavailable", term=term)
     return Envelope(
         code=200,
@@ -152,7 +163,9 @@ def get_warnings(
         )
     except KeyError:
         return _error_envelope(status_code=404, message="term not found", term=term)
-    except (FileNotFoundError, ValueError):
+    except FileNotFoundError as exc:
+        return _error_envelope(status_code=500, message=_missing_artifact_message(exc), term=term)
+    except ValueError:
         return _error_envelope(status_code=500, message="artifacts unavailable", term=term)
     return Envelope(
         code=200,
@@ -170,6 +183,24 @@ def _error_envelope(status_code: int, message: str, term: str | None = None) -> 
         meta=MetaModel(request_id="demo-request", term=term),
     )
     return JSONResponse(status_code=status_code, content=payload.model_dump())
+
+
+def _missing_artifact_message(exc: FileNotFoundError) -> str:
+    if not exc.args:
+        return "artifacts unavailable"
+
+    artifact_name = Path(str(exc.args[0])).name
+    if artifact_name == "v1_overview_by_term.json":
+        return "overview artifact unavailable"
+    if artifact_name == "v1_model_summary.json":
+        return "model summary artifact unavailable"
+    if artifact_name == "v1_student_results.csv":
+        return "student results artifact unavailable"
+    if artifact_name == "v1_student_reports.jsonl":
+        return "student reports artifact unavailable"
+    if artifact_name:
+        return f"{artifact_name} unavailable"
+    return "artifacts unavailable"
 
 
 def _is_unknown_term_error(exc: KeyError, term: str) -> bool:
