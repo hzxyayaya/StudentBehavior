@@ -73,6 +73,11 @@ def test_get_warnings_rejects_invalid_page(client) -> None:
     assert response.status_code == 422
 
 
+def test_get_warnings_rejects_invalid_page_size(client) -> None:
+    response = client.get("/api/warnings", params={"term": "2023-1", "page_size": 0})
+    assert response.status_code == 422
+
+
 def test_missing_artifacts_app_starts_and_fails_on_request(monkeypatch) -> None:
     class MissingArtifactStore:
         def get_overview(self, term: str) -> dict:
