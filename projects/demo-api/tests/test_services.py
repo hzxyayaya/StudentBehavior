@@ -8,13 +8,8 @@ from student_behavior_demo_api.services import DemoApiStore
 
 
 @pytest.fixture
-def sample_store(tmp_path: Path) -> DemoApiStore:
-    artifact_root = (
-        Path(__file__).resolve().parents[4]
-        / "v1-model-stubs"
-        / "artifacts"
-        / "model_stubs"
-    )
+def sample_store(tmp_path: Path, sample_artifacts_dir: Path) -> DemoApiStore:
+    artifact_root = sample_artifacts_dir
     warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
     warnings_path.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(
@@ -241,13 +236,10 @@ def test_get_quadrants_aggregates_top_factors_from_reports(sample_store) -> None
     assert counts["课堂参与表现"] != counts["课堂学习投入"]
 
 
-def test_get_quadrants_raises_for_invalid_report_top_factors_schema(tmp_path: Path) -> None:
-    artifact_root = (
-        Path(__file__).resolve().parents[4]
-        / "v1-model-stubs"
-        / "artifacts"
-        / "model_stubs"
-    )
+def test_get_quadrants_raises_for_invalid_report_top_factors_schema(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    artifact_root = sample_artifacts_dir
     warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
     warnings_path.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(
@@ -292,13 +284,10 @@ def test_get_quadrants_raises_for_invalid_report_top_factors_schema(tmp_path: Pa
         store.get_quadrants(term="2023-1")
 
 
-def test_get_quadrants_raises_for_invalid_report_top_factors_item_schema(tmp_path: Path) -> None:
-    artifact_root = (
-        Path(__file__).resolve().parents[4]
-        / "v1-model-stubs"
-        / "artifacts"
-        / "model_stubs"
-    )
+def test_get_quadrants_raises_for_invalid_report_top_factors_item_schema(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    artifact_root = sample_artifacts_dir
     warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
     warnings_path.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(
@@ -343,7 +332,9 @@ def test_get_quadrants_raises_for_invalid_report_top_factors_item_schema(tmp_pat
         store.get_quadrants(term="2023-1")
 
 
-def test_get_student_profile_uses_injected_results_path(tmp_path: Path) -> None:
+def test_get_student_profile_uses_injected_results_path(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
     warnings_path = tmp_path / "custom" / "student_results.csv"
     warnings_path.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(
@@ -378,20 +369,8 @@ def test_get_student_profile_uses_injected_results_path(tmp_path: Path) -> None:
     ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
 
     store = DemoApiStore(
-        overview_path=(
-            Path(__file__).resolve().parents[4]
-            / "v1-model-stubs"
-            / "artifacts"
-            / "model_stubs"
-            / "v1_overview_by_term.json"
-        ),
-        model_summary_path=(
-            Path(__file__).resolve().parents[4]
-            / "v1-model-stubs"
-            / "artifacts"
-            / "model_stubs"
-            / "v1_model_summary.json"
-        ),
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
         overview_term="2024-2",
         warnings_path=warnings_path,
         repo_root=tmp_path,

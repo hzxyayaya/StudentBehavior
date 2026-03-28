@@ -103,14 +103,9 @@ def test_get_quadrants_returns_500_for_bad_schema(monkeypatch) -> None:
 
 
 def test_get_quadrants_returns_500_envelope_for_invalid_report_top_factors_schema(
-    monkeypatch, tmp_path: Path
+    monkeypatch, tmp_path: Path, sample_artifacts_dir: Path
 ) -> None:
-    artifact_root = (
-        Path(__file__).resolve().parents[4]
-        / "v1-model-stubs"
-        / "artifacts"
-        / "model_stubs"
-    )
+    artifact_root = sample_artifacts_dir
     warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
     warnings_path.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(
@@ -164,14 +159,9 @@ def test_get_quadrants_returns_500_envelope_for_invalid_report_top_factors_schem
 
 
 def test_get_quadrants_returns_500_envelope_for_invalid_report_top_factors_item_schema(
-    monkeypatch, tmp_path: Path
+    monkeypatch, tmp_path: Path, sample_artifacts_dir: Path
 ) -> None:
-    artifact_root = (
-        Path(__file__).resolve().parents[4]
-        / "v1-model-stubs"
-        / "artifacts"
-        / "model_stubs"
-    )
+    artifact_root = sample_artifacts_dir
     warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
     warnings_path.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(
