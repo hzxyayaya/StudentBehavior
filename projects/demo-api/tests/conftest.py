@@ -25,7 +25,8 @@ def sample_artifacts_dir(tmp_path: Path) -> Path:
         "major_risk_summary": [],
         "trend_summary": {
             "terms": [
-                {"term_key": "2023-1"},
+                {"term_key": "2023-2"},
+                {"term_key": "2024-1"},
                 {"term_key": "2024-2"},
             ]
         }

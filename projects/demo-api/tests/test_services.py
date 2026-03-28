@@ -194,6 +194,12 @@ def test_get_overview_by_term_returns_single_term_payload(sample_store) -> None:
     assert payload["student_count"] == 179
 
 
+@pytest.mark.parametrize("term_key", ["2023-2", "2024-1", "2024-2"])
+def test_get_overview_accepts_all_real_terms(sample_store, term_key: str) -> None:
+    payload = sample_store.get_overview(term_key)
+    assert payload["student_count"] == 179
+
+
 def test_get_model_summary_returns_stub_summary(sample_store) -> None:
     payload = sample_store.get_model_summary(term="2024-2")
     assert payload["risk_model"] == "stub-risk-rules"

@@ -56,6 +56,16 @@ def test_get_overview_returns_404_for_unknown_term(client) -> None:
     assert payload["meta"]["term"] == "2099-1"
 
 
+@pytest.mark.parametrize("term", ["2023-2", "2024-1", "2024-2"])
+def test_get_overview_accepts_all_real_terms(client, term: str) -> None:
+    response = client.get("/api/analytics/overview", params={"term": term})
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["code"] == 200
+    assert payload["meta"]["term"] == term
+    assert payload["data"]["student_count"] == 179
+
+
 def test_api_returns_500_when_artifacts_missing(app_without_artifacts) -> None:
     client = TestClient(app_without_artifacts)
     response = client.get("/api/analytics/overview", params={"term": "2023-1"})

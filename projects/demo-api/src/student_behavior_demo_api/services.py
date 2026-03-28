@@ -33,6 +33,7 @@ class DemoApiStore:
         self._warnings_path = warnings_path
         overview_record = _load_single_record(resolved_overview_path)
         self._overview_term = overview_term or _infer_overview_term(overview_record)
+        self._overview_terms = _infer_overview_terms(overview_record, self._overview_term)
         validate_overview_payload({"term_buckets": {self._overview_term: overview_record}})
         self._overview_payload = dict(overview_record)
         self._model_summary_payload = dict(
@@ -40,7 +41,7 @@ class DemoApiStore:
         )
 
     def get_overview(self, term: str) -> dict[str, Any]:
-        if term != self._overview_term:
+        if term not in self._overview_terms:
             raise KeyError(term)
         return dict(self._overview_payload)
 
@@ -334,3 +335,22 @@ def _infer_overview_term(payload: Mapping[str, Any]) -> str:
     if not isinstance(term_key, str) or not term_key:
         raise ValueError("trend_summary.terms entries must include term_key")
     return term_key
+
+
+def _infer_overview_terms(payload: Mapping[str, Any], fallback_term: str) -> set[str]:
+    terms = {fallback_term}
+    trend_summary = payload.get("trend_summary")
+    if not isinstance(trend_summary, Mapping):
+        return terms
+
+    term_entries = trend_summary.get("terms")
+    if not isinstance(term_entries, list):
+        return terms
+
+    for term_entry in term_entries:
+        if not isinstance(term_entry, Mapping):
+            continue
+        term_key = term_entry.get("term_key")
+        if isinstance(term_key, str) and term_key:
+            terms.add(term_key)
+    return terms
