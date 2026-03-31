@@ -79,20 +79,20 @@ def test_error_responses_keep_envelope_shape(client) -> None:
     assert set(payload) == {"code", "message", "data", "meta"}
 
 
-def test_get_quadrants_returns_404_for_unknown_term(client) -> None:
-    response = client.get("/api/analytics/quadrants", params={"term": "2099-1"})
+def test_get_groups_returns_404_for_unknown_term(client) -> None:
+    response = client.get("/api/analytics/groups", params={"term": "2099-1"})
     assert response.status_code == 404
 
 
-def test_get_quadrants_returns_500_for_bad_schema(monkeypatch) -> None:
-    class BrokenQuadrantsStore:
-        def get_quadrants(self, term: str) -> dict:
+def test_get_groups_returns_500_for_bad_schema(monkeypatch) -> None:
+    class BrokenGroupsStore:
+        def get_groups(self, term: str) -> dict:
             raise KeyError("top_factors")
 
-    monkeypatch.setattr(main_module, "get_store", lambda: BrokenQuadrantsStore())
+    monkeypatch.setattr(main_module, "get_store", lambda: BrokenGroupsStore())
     client = TestClient(app, raise_server_exceptions=False)
 
-    response = client.get("/api/analytics/quadrants", params={"term": "2023-1"})
+    response = client.get("/api/analytics/groups", params={"term": "2023-1"})
     assert response.status_code == 500
     payload = response.json()
     assert set(payload) == {"code", "message", "data", "meta"}
@@ -102,7 +102,7 @@ def test_get_quadrants_returns_500_for_bad_schema(monkeypatch) -> None:
     assert payload["meta"]["term"] == "2023-1"
 
 
-def test_get_quadrants_returns_500_envelope_for_invalid_report_top_factors_schema(
+def test_get_groups_returns_500_envelope_for_invalid_report_top_factors_schema(
     monkeypatch, tmp_path: Path, sample_artifacts_dir: Path
 ) -> None:
     artifact_root = sample_artifacts_dir
@@ -115,7 +115,7 @@ def test_get_quadrants_returns_500_envelope_for_invalid_report_top_factors_schem
                 "term_key": "2023-1",
                 "student_name": "Bob",
                 "major_name": "软件工程",
-                "quadrant_label": "被动守纪型",
+                "group_segment": "综合发展优势组",
                 "risk_probability": 0.81,
                 "risk_level": "medium",
                 "dimension_scores_json": json.dumps([], ensure_ascii=False),
@@ -148,7 +148,7 @@ def test_get_quadrants_returns_500_envelope_for_invalid_report_top_factors_schem
     monkeypatch.setattr(main_module, "get_store", lambda: store)
     client = TestClient(app)
 
-    response = client.get("/api/analytics/quadrants", params={"term": "2023-1"})
+    response = client.get("/api/analytics/groups", params={"term": "2023-1"})
     assert response.status_code == 500
     payload = response.json()
     assert set(payload) == {"code", "message", "data", "meta"}
@@ -158,7 +158,7 @@ def test_get_quadrants_returns_500_envelope_for_invalid_report_top_factors_schem
     assert payload["meta"]["term"] == "2023-1"
 
 
-def test_get_quadrants_returns_500_envelope_for_invalid_report_top_factors_item_schema(
+def test_get_groups_returns_500_envelope_for_invalid_report_top_factors_item_schema(
     monkeypatch, tmp_path: Path, sample_artifacts_dir: Path
 ) -> None:
     artifact_root = sample_artifacts_dir
@@ -171,7 +171,7 @@ def test_get_quadrants_returns_500_envelope_for_invalid_report_top_factors_item_
                 "term_key": "2023-1",
                 "student_name": "Bob",
                 "major_name": "软件工程",
-                "quadrant_label": "被动守纪型",
+                "group_segment": "综合发展优势组",
                 "risk_probability": 0.81,
                 "risk_level": "medium",
                 "dimension_scores_json": json.dumps([], ensure_ascii=False),
@@ -204,7 +204,7 @@ def test_get_quadrants_returns_500_envelope_for_invalid_report_top_factors_item_
     monkeypatch.setattr(main_module, "get_store", lambda: store)
     client = TestClient(app)
 
-    response = client.get("/api/analytics/quadrants", params={"term": "2023-1"})
+    response = client.get("/api/analytics/groups", params={"term": "2023-1"})
     assert response.status_code == 500
     payload = response.json()
     assert set(payload) == {"code", "message", "data", "meta"}
@@ -219,7 +219,7 @@ def test_get_models_summary_returns_envelope_payload(client) -> None:
     assert response.status_code == 200
     payload = response.json()
     assert payload["code"] == 200
-    assert payload["data"]["cluster_method"] == "stub-quadrant-rules"
+    assert payload["data"]["cluster_method"] == "stub-group-rules"
     assert payload["data"]["risk_model"] == "stub-risk-rules"
     assert payload["meta"]["term"] == "2024-2"
 
@@ -239,8 +239,8 @@ def test_get_warnings_rejects_invalid_risk_level(client) -> None:
     assert response.status_code == 422
 
 
-def test_get_warnings_rejects_invalid_quadrant_label(client) -> None:
-    response = client.get("/api/warnings", params={"term": "2023-1", "quadrant_label": "other"})
+def test_get_warnings_rejects_invalid_group_segment(client) -> None:
+    response = client.get("/api/warnings", params={"term": "2023-1", "group_segment": ""})
     assert response.status_code == 422
 
 

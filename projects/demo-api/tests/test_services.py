@@ -19,7 +19,7 @@ def sample_store(tmp_path: Path, sample_artifacts_dir: Path) -> DemoApiStore:
                 "term_key": "2022-2",
                 "student_name": "Bob",
                 "major_name": "软件工程",
-                "quadrant_label": "被动守纪型",
+                "group_segment": "综合发展优势组",
                 "risk_probability": 0.55,
                 "risk_level": "low",
                 "dimension_scores_json": json.dumps(
@@ -35,7 +35,7 @@ def sample_store(tmp_path: Path, sample_artifacts_dir: Path) -> DemoApiStore:
                 "term_key": "2023-1",
                 "student_name": "Alice",
                 "major_name": "软件工程",
-                "quadrant_label": "情绪驱动型",
+                "group_segment": "课堂参与薄弱组",
                 "risk_probability": 0.92,
                 "risk_level": "high",
                 "dimension_scores_json": json.dumps(
@@ -48,7 +48,7 @@ def sample_store(tmp_path: Path, sample_artifacts_dir: Path) -> DemoApiStore:
                 "term_key": "2023-1",
                 "student_name": "Bob",
                 "major_name": "软件工程",
-                "quadrant_label": "被动守纪型",
+                "group_segment": "综合发展优势组",
                 "risk_probability": 0.81,
                 "risk_level": "medium",
                 "dimension_scores_json": json.dumps(
@@ -64,7 +64,7 @@ def sample_store(tmp_path: Path, sample_artifacts_dir: Path) -> DemoApiStore:
                 "term_key": "2023-1",
                 "student_name": "Dora",
                 "major_name": "软件工程",
-                "quadrant_label": "被动守纪型",
+                "group_segment": "综合发展优势组",
                 "risk_probability": 0.77,
                 "risk_level": "medium",
                 "dimension_scores_json": json.dumps(
@@ -80,7 +80,7 @@ def sample_store(tmp_path: Path, sample_artifacts_dir: Path) -> DemoApiStore:
                 "term_key": "2023-1",
                 "student_name": "Evan",
                 "major_name": "软件工程",
-                "quadrant_label": "被动守纪型",
+                "group_segment": "综合发展优势组",
                 "risk_probability": 0.73,
                 "risk_level": "medium",
                 "dimension_scores_json": json.dumps(
@@ -96,7 +96,7 @@ def sample_store(tmp_path: Path, sample_artifacts_dir: Path) -> DemoApiStore:
                 "term_key": "2024-1",
                 "student_name": "Carol",
                 "major_name": "软件工程",
-                "quadrant_label": "自律共鸣型",
+                "group_segment": "学习投入稳定组",
                 "risk_probability": 0.65,
                 "risk_level": "low",
                 "dimension_scores_json": json.dumps(
@@ -203,6 +203,7 @@ def test_get_model_summary_returns_stub_summary(sample_store) -> None:
 def test_get_student_profile_expands_dimension_scores(sample_store) -> None:
     payload = sample_store.get_student_profile(student_id="20230001", term="2023-1")
     assert payload["dimension_scores"][0]["dimension"] == "学业基础表现"
+    assert payload["group_segment"] == "综合发展优势组"
 
 
 def test_get_student_profile_builds_sorted_trend(sample_store) -> None:
@@ -216,27 +217,27 @@ def test_get_student_report_returns_exact_term_record(sample_store) -> None:
     assert payload["intervention_advice"][0].startswith("优先")
 
 
-def test_get_quadrants_groups_students_by_quadrant(sample_store) -> None:
-    payload = sample_store.get_quadrants(term="2023-1")
-    assert {item["quadrant_label"] for item in payload["quadrants"]} == {
-        "被动守纪型",
-        "情绪驱动型",
+def test_get_groups_groups_students_by_group_segment(sample_store) -> None:
+    payload = sample_store.get_groups(term="2023-1")
+    assert {item["group_segment"] for item in payload["groups"]} == {
+        "综合发展优势组",
+        "课堂参与薄弱组",
     }
-    assert all("avg_risk_probability" in item for item in payload["quadrants"])
-    passive = next(item for item in payload["quadrants"] if item["quadrant_label"] == "被动守纪型")
-    assert passive["avg_risk_probability"] == pytest.approx((0.81 + 0.77 + 0.73) / 3)
+    assert all("avg_risk_probability" in item for item in payload["groups"])
+    dominant = next(item for item in payload["groups"] if item["group_segment"] == "综合发展优势组")
+    assert dominant["avg_risk_probability"] == pytest.approx((0.81 + 0.77 + 0.73) / 3)
 
 
-def test_get_quadrants_aggregates_top_factors_from_reports(sample_store) -> None:
-    payload = sample_store.get_quadrants(term="2023-1")
-    passive = next(item for item in payload["quadrants"] if item["quadrant_label"] == "被动守纪型")
-    counts = {item["dimension"]: item["count"] for item in passive["top_factors"]}
+def test_get_groups_aggregates_top_factors_from_reports(sample_store) -> None:
+    payload = sample_store.get_groups(term="2023-1")
+    dominant = next(item for item in payload["groups"] if item["group_segment"] == "综合发展优势组")
+    counts = {item["dimension"]: item["count"] for item in dominant["top_factors"]}
     assert counts["课堂参与表现"] == 2
     assert counts["课堂学习投入"] == 3
     assert counts["课堂参与表现"] != counts["课堂学习投入"]
 
 
-def test_get_quadrants_raises_for_invalid_report_top_factors_schema(
+def test_get_groups_raises_for_invalid_report_top_factors_schema(
     tmp_path: Path, sample_artifacts_dir: Path
 ) -> None:
     artifact_root = sample_artifacts_dir
@@ -249,7 +250,7 @@ def test_get_quadrants_raises_for_invalid_report_top_factors_schema(
                 "term_key": "2023-1",
                 "student_name": "Bob",
                 "major_name": "软件工程",
-                "quadrant_label": "被动守纪型",
+                "group_segment": "综合发展优势组",
                 "risk_probability": 0.81,
                 "risk_level": "medium",
                 "dimension_scores_json": json.dumps([], ensure_ascii=False),
@@ -281,10 +282,10 @@ def test_get_quadrants_raises_for_invalid_report_top_factors_schema(
     )
 
     with pytest.raises(ValueError, match="top_factors must be a list"):
-        store.get_quadrants(term="2023-1")
+        store.get_groups(term="2023-1")
 
 
-def test_get_quadrants_raises_for_invalid_report_top_factors_item_schema(
+def test_get_groups_raises_for_invalid_report_top_factors_item_schema(
     tmp_path: Path, sample_artifacts_dir: Path
 ) -> None:
     artifact_root = sample_artifacts_dir
@@ -297,7 +298,7 @@ def test_get_quadrants_raises_for_invalid_report_top_factors_item_schema(
                 "term_key": "2023-1",
                 "student_name": "Bob",
                 "major_name": "软件工程",
-                "quadrant_label": "被动守纪型",
+                "group_segment": "综合发展优势组",
                 "risk_probability": 0.81,
                 "risk_level": "medium",
                 "dimension_scores_json": json.dumps([], ensure_ascii=False),
@@ -329,7 +330,7 @@ def test_get_quadrants_raises_for_invalid_report_top_factors_item_schema(
     )
 
     with pytest.raises(ValueError, match="top_factors items must be strings or factor objects"):
-        store.get_quadrants(term="2023-1")
+        store.get_groups(term="2023-1")
 
 
 def test_get_student_profile_uses_injected_results_path(
@@ -344,7 +345,7 @@ def test_get_student_profile_uses_injected_results_path(
                 "term_key": "2022-2",
                 "student_name": "Bob",
                 "major_name": "软件工程",
-                "quadrant_label": "被动守纪型",
+                "group_segment": "综合发展优势组",
                 "risk_probability": 0.55,
                 "risk_level": "low",
                 "dimension_scores_json": json.dumps(
@@ -357,7 +358,7 @@ def test_get_student_profile_uses_injected_results_path(
                 "term_key": "2023-1",
                 "student_name": "Bob",
                 "major_name": "软件工程",
-                "quadrant_label": "被动守纪型",
+                "group_segment": "综合发展优势组",
                 "risk_probability": 0.81,
                 "risk_level": "medium",
                 "dimension_scores_json": json.dumps(
@@ -386,6 +387,12 @@ def test_list_warnings_filters_by_term_and_risk_level(sample_store) -> None:
     payload = sample_store.list_warnings(term="2023-1", risk_level="high")
     assert payload["total"] == 1
     assert payload["items"][0]["risk_level"] == "high"
+
+
+def test_list_warnings_filters_by_group_segment(sample_store) -> None:
+    payload = sample_store.list_warnings(term="2023-1", group_segment="综合发展优势组")
+    assert payload["total"] == 3
+    assert all(item["group_segment"] == "综合发展优势组" for item in payload["items"])
 
 
 def test_list_warnings_sorts_by_risk_probability_desc_then_student_id(sample_store) -> None:

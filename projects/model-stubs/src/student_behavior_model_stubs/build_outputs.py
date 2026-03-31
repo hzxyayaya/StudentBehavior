@@ -7,7 +7,7 @@ from collections.abc import Mapping, Sequence
 import pandas as pd
 
 from student_behavior_model_stubs.scoring import build_dimension_scores
-from student_behavior_model_stubs.scoring import compute_quadrant_label
+from student_behavior_model_stubs.scoring import compute_group_segment
 from student_behavior_model_stubs.scoring import compute_risk_probability
 from student_behavior_model_stubs.scoring import map_risk_level
 from student_behavior_model_stubs.templates import build_report_payload
@@ -18,7 +18,7 @@ _RESULT_COLUMNS = [
     "term_key",
     "student_name",
     "major_name",
-    "quadrant_label",
+    "group_segment",
     "risk_probability",
     "risk_level",
     "dimension_scores_json",
@@ -76,14 +76,14 @@ def build_overview_by_term(student_results: pd.DataFrame) -> dict[str, object]:
         return {
             "student_count": 0,
             "risk_distribution": {level: 0 for level in _RISK_LEVEL_ORDER},
-            "quadrant_distribution": {},
+            "group_distribution": {},
             "major_risk_summary": [],
             "trend_summary": {"terms": []},
         }
 
     ordered_results = student_results.copy()
     ordered_results["risk_level"] = ordered_results["risk_level"].fillna("").astype(str)
-    ordered_results["quadrant_label"] = ordered_results["quadrant_label"].fillna("").astype(str)
+    ordered_results["group_segment"] = ordered_results["group_segment"].fillna("").astype(str)
     ordered_results["major_name"] = ordered_results["major_name"].fillna("").astype(str)
     ordered_results["term_key"] = ordered_results["term_key"].fillna("").astype(str)
     ordered_results["risk_probability"] = pd.to_numeric(
@@ -124,7 +124,7 @@ def build_overview_by_term(student_results: pd.DataFrame) -> dict[str, object]:
     return {
         "student_count": int(len(ordered_results)),
         "risk_distribution": _count_risk_distribution(ordered_results["risk_level"]),
-        "quadrant_distribution": _count_distribution(ordered_results["quadrant_label"]),
+        "group_distribution": _count_distribution(ordered_results["group_segment"]),
         "major_risk_summary": major_risk_summary,
         "trend_summary": {"terms": trend_terms},
     }
@@ -135,7 +135,7 @@ def build_model_summary(*, now: datetime) -> dict[str, object]:
         raise TypeError("now must be a datetime")
 
     return {
-        "cluster_method": "stub-quadrant-rules",
+        "cluster_method": "stub-group-rules",
         "risk_model": "stub-risk-rules",
         "target_label": "综合测评低等级风险",
         "auc": _MODEL_SUMMARY_AUC,
@@ -179,7 +179,7 @@ def build_student_results(
             "term_key": term_key,
             "student_name": _resolve_student_name(row, name_map),
             "major_name": _normalized_text(row.get("major_name")) or "",
-            "quadrant_label": compute_quadrant_label(row),
+            "group_segment": compute_group_segment(row),
             "risk_probability": risk_probability,
             "risk_level": map_risk_level(risk_probability),
             "dimension_scores_json": _dimension_scores_json(row),
@@ -220,7 +220,7 @@ def build_student_reports(student_results: pd.DataFrame) -> list[dict[str, objec
     for row in ordered_results.to_dict(orient="records"):
         payload = build_report_payload(
             risk_level=str(row["risk_level"]),
-            quadrant_label=str(row["quadrant_label"]),
+            group_segment=str(row["group_segment"]),
             dimension_scores=_coerce_dimension_scores(row["dimension_scores_json"]),
         )
         records.append(

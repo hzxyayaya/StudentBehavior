@@ -3,11 +3,11 @@ import math
 
 _MIN_PROBABILITY = 0.05
 _MAX_PROBABILITY = 0.95
-_QUADRANT_LABELS = {
-    "self_resonant": "自律共鸣型",
-    "passive_disciplined": "被动守纪型",
-    "disconnected": "脱节离散型",
-    "emotion_driven": "情绪驱动型",
+_GROUP_SEGMENTS = {
+    "self_resonant": "学习投入稳定组",
+    "passive_disciplined": "综合发展优势组",
+    "disconnected": "作息失衡风险组",
+    "emotion_driven": "课堂参与薄弱组",
 }
 
 _DIMENSION_NAMES = [
@@ -66,7 +66,7 @@ def map_risk_level(probability: float) -> str:
     return "low"
 
 
-def compute_quadrant_label(row: Mapping[str, object]) -> str:
+def compute_group_segment(row: Mapping[str, object]) -> str:
     attendance_normal_rate = _clamp(
         _coerce_float(row.get("attendance_normal_rate"), 0.0), 0.0, 1.0
     )
@@ -89,12 +89,12 @@ def compute_quadrant_label(row: Mapping[str, object]) -> str:
     )
 
     if academic_score >= 0.75 and engagement_score >= 0.75:
-        return _QUADRANT_LABELS["self_resonant"]
+        return _GROUP_SEGMENTS["self_resonant"]
     if academic_score >= 0.6 and engagement_score >= 0.45:
-        return _QUADRANT_LABELS["passive_disciplined"]
+        return _GROUP_SEGMENTS["passive_disciplined"]
     if academic_score < 0.6 and engagement_score < 0.45:
-        return _QUADRANT_LABELS["disconnected"]
-    return _QUADRANT_LABELS["emotion_driven"]
+        return _GROUP_SEGMENTS["disconnected"]
+    return _GROUP_SEGMENTS["emotion_driven"]
 
 
 def build_dimension_scores(row: Mapping[str, object]) -> list[dict[str, object]]:

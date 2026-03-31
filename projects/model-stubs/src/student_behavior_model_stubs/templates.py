@@ -65,10 +65,10 @@ def _format_risk_label(risk_level: str) -> str:
 def build_top_factors(
     *,
     risk_level: str,
-    quadrant_label: str,
+    group_segment: str,
     dimension_scores: Iterable[Mapping[str, object]],
 ) -> list[dict[str, object]]:
-    del risk_level, quadrant_label
+    del risk_level, group_segment
 
     score_map = _dimension_score_map(dimension_scores)
     factors: list[dict[str, object]] = []
@@ -104,7 +104,7 @@ def build_top_factors(
 def _build_report_text(
     *,
     risk_level: str,
-    quadrant_label: str,
+    group_segment: str,
     top_factors: list[dict[str, object]],
     dimension_scores: Iterable[Mapping[str, object]],
     intervention_advice: list[str],
@@ -113,7 +113,7 @@ def _build_report_text(
     risk_label = _format_risk_label(risk_level)
     lines = [
         "## 学生群体画像",
-        f"该学生被系统归类为「{quadrant_label}」群体，当前风险等级为 {risk_label}。",
+        f"该学生当前属于「{group_segment}」，当前风险等级为 {risk_label}。",
         "",
         "## 核心风险指标解读",
     ]
@@ -147,19 +147,19 @@ def _build_report_text(
 def build_report_payload(
     *,
     risk_level: str,
-    quadrant_label: str,
+    group_segment: str,
     dimension_scores: Iterable[Mapping[str, object]],
 ) -> dict[str, object]:
     dimension_scores = list(dimension_scores)
     top_factors = build_top_factors(
         risk_level=risk_level,
-        quadrant_label=quadrant_label,
+        group_segment=group_segment,
         dimension_scores=dimension_scores,
     )
     intervention_advice = list(_RISK_ADVICE.get(risk_level, _RISK_ADVICE["medium"]))
     report_text = _build_report_text(
         risk_level=risk_level,
-        quadrant_label=quadrant_label,
+        group_segment=group_segment,
         top_factors=top_factors,
         dimension_scores=dimension_scores,
         intervention_advice=intervention_advice,

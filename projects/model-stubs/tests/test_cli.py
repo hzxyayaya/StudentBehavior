@@ -175,7 +175,7 @@ def test_main_build_writes_all_expected_artifacts(
             ],
             "report_text": (
                 "## 学生群体画像\n"
-                "该学生被系统归类为「情绪驱动型」群体，当前风险等级为 中风险。\n\n"
+                "该学生当前属于「课堂参与薄弱组」，当前风险等级为 中风险。\n\n"
                 "## 核心风险指标解读\n"
                 "1. **学习行为活跃度**: 当前维度得分为 0.12，属于需要优先关注的弱项。\n"
                 "2. **生活规律与资源使用**: 当前维度得分为 0.23，属于需要优先关注的弱项。\n"
@@ -189,7 +189,7 @@ def test_main_build_writes_all_expected_artifacts(
     ]
     assert overview["student_count"] == 1
     assert model_summary == {
-        "cluster_method": "stub-quadrant-rules",
+        "cluster_method": "stub-group-rules",
         "risk_model": "stub-risk-rules",
         "target_label": "综合测评低等级风险",
         "auc": 0.8347,

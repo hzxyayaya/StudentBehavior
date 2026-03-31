@@ -12,7 +12,7 @@ STUDENT_RESULTS_REQUIRED_COLUMNS = {
     "term_key",
     "student_name",
     "major_name",
-    "quadrant_label",
+    "group_segment",
     "risk_probability",
     "risk_level",
     "dimension_scores_json",
@@ -24,7 +24,7 @@ OVERVIEW_REQUIRED_KEYS = {
 OVERVIEW_TERM_SUMMARY_REQUIRED_KEYS = {
     "student_count",
     "risk_distribution",
-    "quadrant_distribution",
+    "group_distribution",
     "major_risk_summary",
     "trend_summary",
 }

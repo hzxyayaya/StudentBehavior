@@ -16,11 +16,11 @@ def sample_artifacts_dir(tmp_path: Path) -> Path:
     overview_payload = {
         "student_count": 179,
         "risk_distribution": {"high": 12, "medium": 64, "low": 103},
-        "quadrant_distribution": {
-            "自律共鸣型": 58,
-            "被动守纪型": 73,
-            "脱节离散型": 21,
-            "情绪驱动型": 27,
+        "group_distribution": {
+            "学习投入稳定组": 58,
+            "综合发展优势组": 73,
+            "作息失衡风险组": 21,
+            "课堂参与薄弱组": 27,
         },
         "major_risk_summary": [],
         "trend_summary": {
@@ -37,7 +37,7 @@ def sample_artifacts_dir(tmp_path: Path) -> Path:
     )
 
     model_summary_payload = {
-        "cluster_method": "stub-quadrant-rules",
+        "cluster_method": "stub-group-rules",
         "risk_model": "stub-risk-rules",
         "target_label": "risk_level",
         "auc": 0.91,
@@ -56,7 +56,7 @@ def sample_artifacts_dir(tmp_path: Path) -> Path:
                 "term_key": "2023-1",
                 "student_name": "Alice",
                 "major_name": "软件工程",
-                "quadrant_label": "情绪驱动型",
+                "group_segment": "课堂参与薄弱组",
                 "risk_probability": 0.92,
                 "risk_level": "high",
                 "dimension_scores_json": json.dumps([], ensure_ascii=False),
@@ -66,7 +66,7 @@ def sample_artifacts_dir(tmp_path: Path) -> Path:
                 "term_key": "2023-1",
                 "student_name": "Bob",
                 "major_name": "软件工程",
-                "quadrant_label": "被动守纪型",
+                "group_segment": "综合发展优势组",
                 "risk_probability": 0.81,
                 "risk_level": "medium",
                 "dimension_scores_json": json.dumps(
@@ -126,7 +126,7 @@ def app_without_artifacts(monkeypatch: pytest.MonkeyPatch):
         def get_model_summary(self, term: str | None = None) -> dict:
             raise FileNotFoundError("v1_model_summary.json")
 
-        def get_quadrants(self, term: str) -> dict:
+        def get_groups(self, term: str) -> dict:
             raise FileNotFoundError("v1_student_results.csv")
 
         def get_student_profile(self, *, student_id: str, term: str) -> dict:

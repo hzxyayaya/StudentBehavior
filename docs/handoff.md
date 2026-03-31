@@ -1,17 +1,45 @@
 # 项目交接说明
 
-Last Updated: 2026-03-28
+Last Updated: 2026-03-31
+
+## 0. 2026-03-28 Real-Data Update
+
+当前仓库已经不再只依赖极简 `semester-etl` 产物来驱动 Demo。
+
+- `projects/analytics-db` 新增了 `analytics-db build-demo-features`
+- 该命令会从仓库根目录下的真实 Excel 数据源生成 `artifacts/semester_features/v1_semester_features.csv`
+- 默认纳入的真实源是：
+  - `学生基本信息.xlsx`
+  - `学生成绩.xlsx`
+  - `考勤汇总.xlsx`
+  - `本科生综合测评.xlsx`
+  - `学生选课信息.xlsx`
+- 为了控制构建时间，`学生签到记录.xlsx`、`课堂任务参与.xlsx`、`跑步打卡.xlsx`、`图书馆打卡记录.xlsx`、`学生作业提交记录.xlsx`、`考试提交记录.xlsx`、`讨论记录.xlsx` 当前没有作为默认输入
+
+当前仓库内已经重建好的真实特征产物：
+
+- `artifacts/semester_features/v1_semester_features.csv`
+- 行数：`2905`
+- 学期分布：
+  - `2023-2`: `2440`
+  - `2024-1`: `290`
+  - `2024-2`: `175`
+
+注意：
+
+- “输入特征”已经主要来自真实 Excel
+- 但 `risk_probability`、`risk_level`、`group_segment`、`top_factors`、`intervention_advice`、`report_text` 仍然是 `model-stubs` 的规则版输出，不是正式模型
 
 ## 1. 文档目的
 
-本文档用于帮助新的开发者、协作者或 AI 代理快速接手本项目，明确当前项目状态、代码边界、GitHub 管理流程和推荐协作方式。
+本文档用于帮助新的开发者、协作者或 AI 代理快速接手本项目，明确当前项目状态、代码边界、推荐阅读顺序和后续协作方式。
 
-本文档优先解决 4 个问题：
+本文档优先回答 4 个问题：
 
-1. 这个项目当前做到哪里了
-2. 哪些内容已经稳定，哪些内容仍在分支或草稿阶段
-3. 新接手者应该先看什么、先跑什么、先做什么
-4. 如何用 GitHub 管理后续工作，避免继续混乱开发
+1. 当前项目已经推进到哪里
+2. 哪些能力已经稳定，哪些内容仍在独立分支或待合并状态
+3. 新接手者应该先看什么、先跑什么、先确认什么
+4. 当前最合理的后续工作是什么
 
 ## 2. 项目目标
 
@@ -26,7 +54,7 @@ Last Updated: 2026-03-28
 
 - 学业风险动态感知与预警
 
-其他任务在 V1 中主要通过趋势、分层、画像等方式提供支撑，不要求在当前阶段都做成完整独立系统。
+其余任务在 V1 中主要作为支撑能力出现，通过趋势、分层、画像和摘要帮助解释主演示任务，不要求在当前阶段都做成完整独立系统。
 
 ## 3. 建议优先阅读的文档
 
@@ -35,7 +63,7 @@ Last Updated: 2026-03-28
 1. `.worktrees/p0-foundation/docs/v1-delivery-board.md`
 2. `.worktrees/p0-foundation/docs/v1-risk-label-freeze.md`
 3. `.worktrees/p0-foundation/docs/v1-semester-feature-schema.md`
-4. `.worktrees/p0-foundation/docs/v1-api-contract.md`
+4. `docs/v1-api-contract.md`
 5. `docs/analysis-task-priority.md`
 6. `docs/v1-demo-runbook.md`
 
@@ -49,31 +77,26 @@ Last Updated: 2026-03-28
 
 ## 4. 当前项目结构
 
-当前仓库按独立子项目组织，不建议再把后续功能直接堆到根目录。
+当前仓库按独立子项目组织，不建议把后续功能重新堆回根目录。
 
-已存在子项目：
+主工作区中的子项目：
 
 - `projects/semester-etl`
   - 作用：从原始 Excel 读取数据，生成学期宽表
 - `projects/analytics-db`
-  - 作用：构建分析中台型数据库底座与 `student_term_features`
+  - 作用：构建分析数据库底座与 `student_term_features`
 - `projects/model-stubs`
-  - 作用：从 `student_term_features` 生成离线结果文件
+  - 作用：基于 `student_term_features` 生成离线结果文件
 - `projects/demo-api`
   - 作用：读取离线结果文件，对外提供只读 API
 
-额外在开发中的前端分支：
+当前尚未合并到 `main` 的前端实现：
 
-- `.worktrees/v1-demo-web`
-  - 分支：`codex/v1-demo-web`
-  - 最近提交：`b86c64d`
-  - 作用：Vue 3 前端 Demo 子项目 `projects/demo-web`
+- 分支：`codex/v1-demo-web`
+- 在当前 Codex 工作区中，对应目录为 `.worktrees/v1-demo-web/projects/demo-web`
+- 作用：Vue 3 前端 Demo 子项目 `projects/demo-web`
 
 ## 5. 当前主线状态
-
-当前 `main` 分支最近稳定提交为：
-
-- `1945b36 Merge branch 'codex/v1-model-stubs'`
 
 当前 `main` 上已经稳定的内容：
 
@@ -90,13 +113,14 @@ Last Updated: 2026-03-28
 当前不在 `main` 的内容：
 
 - Vue 3 前端 `projects/demo-web`
-- 它目前在分支 `codex/v1-demo-web` 上，不应假设已经合并回主线
+- 它目前仍在分支 `codex/v1-demo-web` 上，不应假设已经合并回主线
 
 ## 6. 当前已知真实口径
 
 V1 Demo 当前真实可用的联调值：
 
 - `term`：`2023-2`、`2024-1`、`2024-2`
+- 默认学期：`2024-2`
 - 示例学生：`pjwrqxbj901`
 
 以下旧示例值当前不要继续使用：
@@ -104,20 +128,58 @@ V1 Demo 当前真实可用的联调值：
 - `2023-1`
 - `20230001`
 
+真实 API 契约请以 `docs/v1-api-contract.md` 为准，不再沿用旧的 `code = 0` 或旧登录返回结构。
+
 ## 7. 当前仍然是 Stub 的内容
 
 以下结果仍然是 stub 或规则版，不要在页面文案、汇报材料或 PR 描述中误称为正式模型结果：
 
 - `risk_probability`
 - `risk_level`
-- `quadrant_label`
+- `group_segment`
 - `top_factors`
 - `intervention_advice`
 - `report_text`
 - `cluster_method`
 - `risk_model`
+- `target_label`
 
-## 8. 当前推荐运行顺序
+补充说明：
+
+- 当前历史命名里仍可能出现 `quadrant_label` 或 `/quadrants`
+- 但新的推荐口径已经统一为“行为模式识别 / 群体分层”
+- 当前主线实现应优先使用 `group_segment` 和 `/api/analytics/groups`
+
+## 8. 当前前端分支状态
+
+`codex/v1-demo-web` 分支已经完成的能力：
+
+- 演示登录与真实 `demo-login` 返回结构对齐
+- 总览、群体分层、风险预警、学生个体 4 个主页面
+- 总览页到预警页、群体页到预警页、预警页到学生页的主链路下钻
+- 预警页筛选条件写回 URL，并在刷新后恢复
+- 学生页返回预警列表时保留筛选上下文
+- 全局 `DemoStatusBar` 统一提示真实 API / 演示口径 / stub 边界
+- 前端测试与构建已跑通
+- 前端已切换为 `/groups` 页面和 `group_segment` 筛选语义，`/quadrants` 仅保留兼容跳转
+
+当前前端边界：
+
+- 前端只消费 `demo-api`
+- 不直接读取 `artifacts/`
+- 不直接读取 Excel
+- 不直接连接数据库
+- 页面可以展示 stub 字段，但不能把它们写成正式模型结论
+
+当前推荐的前端业务表达是：
+
+- 4 类分析任务
+- 10 个系统输出
+- 群体分析采用“行为模式识别 / 群体分层”
+
+不再建议把“四象限”作为系统对外主表达。
+
+## 9. 当前推荐运行顺序
 
 整条 Demo 主链路按以下顺序理解：
 
@@ -125,7 +187,7 @@ V1 Demo 当前真实可用的联调值：
 2. `projects/analytics-db`
 3. `projects/model-stubs`
 4. `projects/demo-api`
-5. `projects/demo-web`（当前在单独分支开发）
+5. `projects/demo-web`（当前在独立分支）
 
 推荐最小验证命令：
 
@@ -142,21 +204,25 @@ uv run --project projects/demo-api pytest projects/demo-api/tests -q
 uv run --project projects/demo-api uvicorn student_behavior_demo_api.main:app --reload
 ```
 
-## 9. GitHub 管理建议
+如果需要联调前端：
+
+```powershell
+cd .worktrees/v1-demo-web/projects/demo-web
+npm install
+npm run test
+npm run build
+npm run dev
+```
+
+## 10. GitHub 管理建议
 
 后续协作建议固定为以下流程：
 
 1. `main` 只保留已验证通过的稳定实现
-2. 每个独立任务必须先开 issue
-3. 每个独立任务必须有单独分支
+2. 每个独立任务先开 issue
+3. 每个独立任务使用单独分支
 4. 先有 spec，再有 implementation plan，再开始开发
 5. 开发完成后走 PR，再合并到 `main`
-
-推荐分支命名：
-
-- `codex/v1-demo-web`
-- `codex/fix-overview-filter`
-- `codex/revisit-learning-sources`
 
 推荐 GitHub labels：
 
@@ -174,20 +240,20 @@ uv run --project projects/demo-api uvicorn student_behavior_demo_api.main:app --
 - `Post-Demo Hardening`
 - `Model Upgrade`
 
-## 10. 新接手者的工作流程
+## 11. 新接手者的工作流程
 
 不要让新接手者一上来直接写代码。推荐流程如下：
 
 1. 先阅读第 3 节列出的冻结文档和 runbook
-2. 再跑现有测试
+2. 再跑现有测试或构建
 3. 再确认当前主线与分支状态
-4. 再输出“项目理解报告”
-5. 确认下一个具体任务
-6. 针对该任务写 spec
+4. 输出“项目理解报告”
+5. 明确本轮要做的单一任务
+6. 针对该任务补或更新 spec
 7. 再写 implementation plan
 8. 最后才进入编码
 
-## 11. 接手时必须先回答的问题
+## 12. 接手时必须先回答的问题
 
 新接手者在开始开发前，必须先回答这些问题：
 
@@ -197,23 +263,26 @@ uv run --project projects/demo-api uvicorn student_behavior_demo_api.main:app --
 4. 当前前端是否已经在主线
 5. `demo-api` 是否直接连数据库
 6. `model-stubs` 的输入来源是什么
-7. 当前下一步最合理的任务是什么
+7. 当前最准确的 API 契约写在哪里
+8. 当前下一步最合理的任务是什么
 
 如果这些问题答不清楚，不应该直接开始改代码。
 
-## 12. 推荐下一步任务
+## 13. 推荐下一步任务
 
-当前最合理的下一步开发任务是：
+当前最合理的下一步不是继续大幅扩功能，而是先完成收口工作：
 
-- 继续推进 `codex/v1-demo-web` 分支上的 Vue 3 前端 Demo
+- 同步交接文档、runbook、前端 spec/plan 与真实实现
+- 以 PR 审查视角复查 `codex/v1-demo-web`
+- 决定是否将前端分支整理后合并
 
-当前不建议优先做的事：
+如果继续做前端编码，优先级更高的是：
 
-- 继续扩更多原始数据表
-- 把 stub 全部替换成正式模型再做页面
-- 先做复杂权限系统
+- 补页面级交互测试
+- 统一整理提交说明与演示说明
+- 修正文档中的历史 API 口径，避免后续接手者误用
 
-## 13. 可以直接发给接手者的 Prompt
+## 14. 可以直接发给接手者的 Prompt
 
 ### Prompt A：先理解项目，不写代码
 
@@ -229,7 +298,7 @@ uv run --project projects/demo-api uvicorn student_behavior_demo_api.main:app --
 - .worktrees/p0-foundation/docs/v1-delivery-board.md
 - .worktrees/p0-foundation/docs/v1-risk-label-freeze.md
 - .worktrees/p0-foundation/docs/v1-semester-feature-schema.md
-- .worktrees/p0-foundation/docs/v1-api-contract.md
+- docs/v1-api-contract.md
 - docs/analysis-task-priority.md
 - docs/v1-demo-runbook.md
 - docs/handoff.md
@@ -240,13 +309,13 @@ uv run --project projects/demo-api uvicorn student_behavior_demo_api.main:app --
 - projects/model-stubs
 - projects/demo-api
 
-3. 再查看当前 git 状态与最近提交，理解最近完成了什么。
+3. 如果要接前端，再确认 `codex/v1-demo-web` 分支或对应 worktree 的状态。
 
 4. 最后用中文输出：
 - 项目在解决什么问题
 - 当前 V1 已完成什么
 - 当前还没完成什么
-- 现有 4 个子项目各自职责是什么
+- 现有子项目各自职责是什么
 - 当前主线 Demo 是怎么跑通的
 - 哪些字段/结果仍然是 stub
 - 下一步最合理的开发任务是什么
@@ -311,7 +380,7 @@ uv run --project projects/demo-api uvicorn student_behavior_demo_api.main:app --
 1. 阅读：
 - docs/handoff.md
 - docs/v1-demo-runbook.md
-- .worktrees/p0-foundation/docs/v1-api-contract.md
+- docs/v1-api-contract.md
 - docs/superpowers/specs/2026-03-28-v1-demo-web-design.md
 - docs/superpowers/plans/2026-03-28-v1-demo-web.md
 
@@ -329,16 +398,16 @@ uv run --project projects/demo-api uvicorn student_behavior_demo_api.main:app --
 4. 然后再进入实现。
 ```
 
-## 14. 交接前建议补的最后一步
+## 15. 交接前建议补的最后一步
 
 如果要正式把仓库交给别人，建议先做一次仓库收口：
 
 1. 处理当前未跟踪文档
 2. 决定是否把 `projects/demo-api/uv.lock` 纳入版本管理
 3. 决定 `codex/v1-demo-web` 是否继续保留独立分支，还是整理后合并
-4. 把 `docs/handoff.md` 和 `docs/v1-demo-runbook.md` 一起提交
+4. 把 `docs/handoff.md`、`docs/v1-demo-runbook.md` 和 `docs/v1-api-contract.md` 一起提交
 
-## 15. 当前结论
+## 16. 当前结论
 
 这个项目现在已经不是“只有一堆文档和零散脚本”的状态，而是已经具备：
 
@@ -346,6 +415,6 @@ uv run --project projects/demo-api uvicorn student_behavior_demo_api.main:app --
 - 分析数据库层
 - 结果生成层
 - 只读 API 层
-- 独立前端分支
+- 独立前端分支与可演示主链路
 
-后续接手者最需要的不是“自由发挥”，而是按已有边界继续推进。
+后续接手者最需要的不是“自由发挥”，而是按已有边界继续推进，并且先把文档和实现对齐。

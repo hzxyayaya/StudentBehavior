@@ -3,7 +3,7 @@ import math
 from student_behavior_model_stubs.scoring import compute_risk_probability
 from student_behavior_model_stubs.scoring import map_risk_level
 from student_behavior_model_stubs.scoring import build_dimension_scores
-from student_behavior_model_stubs.scoring import compute_quadrant_label
+from student_behavior_model_stubs.scoring import compute_group_segment
 
 
 def test_compute_risk_probability_is_deterministic() -> None:
@@ -66,8 +66,8 @@ def test_compute_risk_probability_treats_nan_metrics_as_missing() -> None:
     assert compute_risk_probability(row) == 0.38
 
 
-def test_compute_quadrant_label_returns_frozen_enum() -> None:
-    label = compute_quadrant_label(
+def test_compute_group_segment_returns_readable_group_label() -> None:
+    label = compute_group_segment(
         {
             "student_id": "20230001",
             "term_key": "2023-1",
@@ -79,7 +79,7 @@ def test_compute_quadrant_label_returns_frozen_enum() -> None:
             "library_visit_count": 25,
         }
     )
-    assert label == "自律共鸣型"
+    assert label == "学习投入稳定组"
 
 
 def test_build_dimension_scores_returns_four_dimensions() -> None:

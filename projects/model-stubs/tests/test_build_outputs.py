@@ -33,7 +33,7 @@ def test_build_student_results_outputs_contract_aligned_columns() -> None:
         "term_key",
         "student_name",
         "major_name",
-        "quadrant_label",
+        "group_segment",
         "risk_probability",
         "risk_level",
         "dimension_scores_json",
@@ -44,7 +44,7 @@ def test_build_student_results_outputs_contract_aligned_columns() -> None:
             "term_key": "2023-2",
             "student_name": "20230002",
             "major_name": "软件工程",
-            "quadrant_label": "脱节离散型",
+            "group_segment": "作息失衡风险组",
             "risk_probability": 0.68,
             "risk_level": "medium",
             "dimension_scores_json": (
@@ -65,7 +65,7 @@ def test_build_student_reports_outputs_jsonl_ready_records() -> None:
                 "term_key": "2023-2",
                 "student_name": "20230002",
                 "major_name": "软件工程",
-                "quadrant_label": "脱节离散型",
+                "group_segment": "作息失衡风险组",
                 "risk_probability": 0.68,
                 "risk_level": "medium",
                 "dimension_scores_json": (
@@ -111,7 +111,7 @@ def test_build_student_reports_outputs_jsonl_ready_records() -> None:
             ],
             "report_text": (
                 "## 学生群体画像\n"
-                "该学生被系统归类为「脱节离散型」群体，当前风险等级为 中风险。\n\n"
+                "该学生当前属于「作息失衡风险组」，当前风险等级为 中风险。\n\n"
                 "## 核心风险指标解读\n"
                 "1. **学习行为活跃度**: 当前维度得分为 0.12，属于需要优先关注的弱项。\n"
                 "2. **生活规律与资源使用**: 当前维度得分为 0.23，属于需要优先关注的弱项。\n"
@@ -201,7 +201,7 @@ def test_build_student_reports_sorts_by_student_id_and_term_key() -> None:
                 "term_key": "2023-2",
                 "student_name": "20230010",
                 "major_name": "软件工程",
-                "quadrant_label": "脱节离散型",
+                "group_segment": "作息失衡风险组",
                 "risk_probability": 0.68,
                 "risk_level": "medium",
                 "dimension_scores_json": (
@@ -216,7 +216,7 @@ def test_build_student_reports_sorts_by_student_id_and_term_key() -> None:
                 "term_key": "2023-1",
                 "student_name": "20230002",
                 "major_name": "软件工程",
-                "quadrant_label": "脱节离散型",
+                "group_segment": "作息失衡风险组",
                 "risk_probability": 0.68,
                 "risk_level": "medium",
                 "dimension_scores_json": (
@@ -243,7 +243,7 @@ def test_build_overview_by_term_includes_required_sections() -> None:
                 "term_key": "2023-1",
                 "student_name": "20230001",
                 "major_name": "软件工程",
-                "quadrant_label": "脱节离散型",
+                "group_segment": "作息失衡风险组",
                 "risk_probability": 0.68,
                 "risk_level": "medium",
                 "dimension_scores_json": "[]",
@@ -253,7 +253,7 @@ def test_build_overview_by_term_includes_required_sections() -> None:
                 "term_key": "2023-1",
                 "student_name": "20230002",
                 "major_name": "软件工程",
-                "quadrant_label": "自律共鸣型",
+                "group_segment": "学习投入稳定组",
                 "risk_probability": 0.22,
                 "risk_level": "low",
                 "dimension_scores_json": "[]",
@@ -263,7 +263,7 @@ def test_build_overview_by_term_includes_required_sections() -> None:
                 "term_key": "2023-2",
                 "student_name": "20230003",
                 "major_name": "数据科学",
-                "quadrant_label": "情绪驱动型",
+                "group_segment": "课堂参与薄弱组",
                 "risk_probability": 0.81,
                 "risk_level": "high",
                 "dimension_scores_json": "[]",
@@ -276,7 +276,7 @@ def test_build_overview_by_term_includes_required_sections() -> None:
     assert {
         "student_count",
         "risk_distribution",
-        "quadrant_distribution",
+        "group_distribution",
         "major_risk_summary",
         "trend_summary",
     }.issubset(overview)
@@ -289,7 +289,7 @@ def test_build_model_summary_uses_fixed_now_for_updated_at_and_stub_fields() -> 
     summary = build_model_summary(now=fixed_now)
 
     assert summary == {
-        "cluster_method": "stub-quadrant-rules",
+        "cluster_method": "stub-group-rules",
         "risk_model": "stub-risk-rules",
         "target_label": "综合测评低等级风险",
         "auc": 0.8347,

@@ -14,7 +14,7 @@ def test_build_top_factors_matches_api_contract_shape() -> None:
 
     assert build_top_factors(
         risk_level="high",
-        quadrant_label="游戏沉迷型",
+        group_segment="作息失衡风险组",
         dimension_scores=dimension_scores,
     ) == [
         {
@@ -48,7 +48,7 @@ def test_build_report_payload_returns_readable_stub_content() -> None:
 
     assert build_report_payload(
         risk_level="high",
-        quadrant_label="游戏沉迷型",
+        group_segment="作息失衡风险组",
         dimension_scores=dimension_scores,
     ) == {
         "top_factors": [
@@ -78,7 +78,7 @@ def test_build_report_payload_returns_readable_stub_content() -> None:
         ],
         "report_text": (
             "## 学生群体画像\n"
-            "该学生被系统归类为「游戏沉迷型」群体，当前风险等级为 高风险。\n\n"
+            "该学生当前属于「作息失衡风险组」，当前风险等级为 高风险。\n\n"
             "## 核心风险指标解读\n"
             "1. **学业基础表现**: 当前维度得分为 0.18，属于需要优先关注的弱项。\n"
             "2. **课堂学习投入**: 当前维度得分为 0.32，属于需要优先关注的弱项。\n"
@@ -98,12 +98,12 @@ def test_build_report_payload_is_deterministic() -> None:
 
     payload_one = build_report_payload(
         risk_level="medium",
-        quadrant_label="被动守纪型",
+        group_segment="课堂参与薄弱组",
         dimension_scores=dimension_scores,
     )
     payload_two = build_report_payload(
         risk_level="medium",
-        quadrant_label="被动守纪型",
+        group_segment="课堂参与薄弱组",
         dimension_scores=dimension_scores,
     )
 
@@ -121,7 +121,7 @@ def test_build_report_payload_handles_one_shot_dimension_scores() -> None:
 
     payload = build_report_payload(
         risk_level="high",
-        quadrant_label="游戏沉迷型",
+        group_segment="作息失衡风险组",
         dimension_scores=score_rows(),
     )
 
@@ -151,7 +151,7 @@ def test_build_report_payload_handles_one_shot_dimension_scores() -> None:
 def test_build_report_payload_handles_sparse_dimension_scores() -> None:
     payload = build_report_payload(
         risk_level="low",
-        quadrant_label="自律共鸣型",
+        group_segment="学习投入稳定组",
         dimension_scores=[],
     )
 
@@ -177,7 +177,7 @@ def test_build_report_payload_handles_sparse_dimension_scores() -> None:
         },
     ]
     assert payload["report_text"].strip() != ""
-    assert "自律共鸣型" in payload["report_text"]
+    assert "学习投入稳定组" in payload["report_text"]
     assert "低风险" in payload["report_text"]
     assert "暂无有效数据" in payload["report_text"]
     assert "low" not in payload["report_text"]

@@ -26,7 +26,7 @@ def test_validate_overview_requires_term_buckets() -> None:
     payload = {
         "student_count": 10,
         "risk_distribution": {},
-        "quadrant_distribution": {},
+        "group_distribution": {},
     }
     with pytest.raises(ValueError, match="missing required keys"):
         validate_overview_payload(payload)
@@ -38,7 +38,7 @@ def test_validate_overview_requires_term_summary_fields() -> None:
             "2023-1": {
                 "student_count": 10,
                 "risk_distribution": {},
-                "quadrant_distribution": {},
+                "group_distribution": {},
             }
         }
     }
@@ -52,7 +52,7 @@ def test_validate_overview_accepts_complete_payload() -> None:
             "2023-1": {
                 "student_count": 10,
                 "risk_distribution": {},
-                "quadrant_distribution": {},
+                "group_distribution": {},
                 "major_risk_summary": [],
                 "trend_summary": [],
             }
@@ -76,7 +76,7 @@ def test_load_student_results_reads_csv(tmp_path: Path) -> None:
                 "term_key": "2023-1",
                 "student_name": "Alice",
                 "major_name": "CS",
-                "quadrant_label": "自律共鸣型",
+                "group_segment": "学习投入稳定组",
                 "risk_probability": 0.12,
                 "risk_level": "low",
                 "dimension_scores_json": "{\"engagement\": 0.9}",
@@ -97,7 +97,7 @@ def test_load_json_records_reads_json(tmp_path: Path) -> None:
             "2023-1": {
                 "student_count": 10,
                 "risk_distribution": {},
-                "quadrant_distribution": {},
+                "group_distribution": {},
                 "major_risk_summary": [],
                 "trend_summary": [],
             }

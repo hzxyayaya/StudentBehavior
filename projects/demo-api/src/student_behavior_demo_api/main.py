@@ -71,10 +71,10 @@ def get_overview(term: str) -> Envelope[dict]:
     )
 
 
-@app.get("/api/analytics/quadrants")
-def get_quadrants(term: str) -> Envelope[dict]:
+@app.get("/api/analytics/groups")
+def get_groups(term: str) -> Envelope[dict]:
     try:
-        data = get_store().get_quadrants(term=term)
+        data = get_store().get_groups(term=term)
     except KeyError as exc:
         if _is_unknown_term_error(exc, term):
             return _error_envelope(status_code=404, message="term not found", term=term)
@@ -149,7 +149,7 @@ def get_warnings(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=200),
     risk_level: Literal["high", "medium", "low"] | None = None,
-    quadrant_label: Literal["自律共鸣型", "被动守纪型", "脱节离散型", "情绪驱动型"] | None = None,
+    group_segment: str | None = Query(default=None, min_length=1),
     major_name: str | None = None,
 ) -> Envelope[dict]:
     try:
@@ -158,7 +158,7 @@ def get_warnings(
             page=page,
             page_size=page_size,
             risk_level=risk_level,
-            quadrant_label=quadrant_label,
+            group_segment=group_segment,
             major_name=major_name,
         )
     except KeyError:

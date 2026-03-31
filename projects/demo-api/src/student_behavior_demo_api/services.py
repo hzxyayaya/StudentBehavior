@@ -64,7 +64,7 @@ class DemoApiStore:
             "student_id": current_row.get("student_id"),
             "student_name": current_row.get("student_name"),
             "major_name": current_row.get("major_name"),
-            "quadrant_label": current_row.get("quadrant_label"),
+            "group_segment": current_row.get("group_segment"),
             "risk_level": current_row.get("risk_level"),
             "risk_probability": current_row.get("risk_probability"),
             "dimension_scores": _parse_json_field(
@@ -98,7 +98,7 @@ class DemoApiStore:
             "report_text": current_row.get("report_text"),
         }
 
-    def get_quadrants(self, *, term: str) -> dict[str, Any]:
+    def get_groups(self, *, term: str) -> dict[str, Any]:
         warning_rows = _load_warning_rows(self._warnings_path or _resolve_warning_artifact_path(self._repo_root))
         term_rows = [row for row in warning_rows if row["term_key"] == term]
         if not term_rows:
@@ -113,17 +113,17 @@ class DemoApiStore:
 
         grouped_rows: dict[str, list[dict[str, Any]]] = defaultdict(list)
         for row in term_rows:
-            grouped_rows[row["quadrant_label"]].append(row)
+            grouped_rows[row["group_segment"]].append(row)
 
-        quadrants: list[dict[str, Any]] = []
-        for quadrant_label, rows in grouped_rows.items():
+        groups: list[dict[str, Any]] = []
+        for group_segment, rows in grouped_rows.items():
             avg_risk_probability = round(
                 sum(row["risk_probability"] for row in rows) / len(rows), 4
             )
             factor_stats: dict[str, dict[str, Any]] = {}
             for row in rows:
                 report_row = report_index.get((row.get("student_id"), row.get("term_key")))
-                factor_entries = _extract_quadrant_factor_entries(report_row)
+                factor_entries = _extract_group_factor_entries(report_row)
                 for factor in factor_entries:
                     dimension = factor["dimension"]
                     importance = factor["importance"]
@@ -143,22 +143,22 @@ class DemoApiStore:
                 factor_stats.values(),
                 key=lambda item: (-item["count"], -item["importance"], item["dimension"]),
             )
-            quadrants.append(
+            groups.append(
                 {
-                    "quadrant_label": quadrant_label,
+                    "group_segment": group_segment,
                     "student_count": len(rows),
                     "avg_risk_probability": avg_risk_probability,
                     "top_factors": top_factors,
                 }
             )
 
-        quadrants.sort(
+        groups.sort(
             key=lambda item: (
                 -item["avg_risk_probability"],
-                item["quadrant_label"],
+                item["group_segment"],
             )
         )
-        return {"quadrants": quadrants}
+        return {"groups": groups}
 
     def list_warnings(
         self,
@@ -167,7 +167,7 @@ class DemoApiStore:
         page: int = 1,
         page_size: int = 20,
         risk_level: str | None = None,
-        quadrant_label: str | None = None,
+        group_segment: str | None = None,
         major_name: str | None = None,
     ) -> dict[str, Any]:
         warning_rows = _load_warning_rows(self._warnings_path or _resolve_warning_artifact_path(self._repo_root))
@@ -178,7 +178,7 @@ class DemoApiStore:
             for row in warning_rows
             if row["term_key"] == term
             and (risk_level is None or row["risk_level"] == risk_level)
-            and (quadrant_label is None or row["quadrant_label"] == quadrant_label)
+            and (group_segment is None or row["group_segment"] == group_segment)
             and (major_name is None or row["major_name"] == major_name)
         ]
         filtered_rows.sort(key=lambda row: (-row["risk_probability"], row["student_id"]))
@@ -266,7 +266,7 @@ def _parse_json_field(raw_value: Any, *, field_name: str) -> Any:
     return raw_value
 
 
-def _extract_quadrant_factor_entries(
+def _extract_group_factor_entries(
     report_row: Mapping[str, Any] | None,
 ) -> list[dict[str, Any]]:
     if report_row is None:
