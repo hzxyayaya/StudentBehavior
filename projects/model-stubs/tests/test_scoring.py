@@ -303,6 +303,22 @@ def test_build_dimension_scores_ignores_non_numeric_source_strings() -> None:
     assert "迟到次数 0" not in class_engagement["explanation"]
 
 
+def test_build_dimension_scores_does_not_substitute_raw_fields_for_derived_academic_metrics() -> None:
+    score_map = {
+        item["dimension_code"]: item
+        for item in build_dimension_scores(
+            {"student_id": "s1", "term_key": "2024-1", "KCCJ": 59}
+        )
+    }
+
+    academic_base = score_map["academic_base"]
+    assert academic_base["score"] == 0.0
+    assert academic_base["metrics"] == []
+    assert "挂科门数 59" not in academic_base["explanation"]
+    assert "边缘课程数 59" not in academic_base["explanation"]
+    assert "挂科占比 59" not in academic_base["explanation"]
+
+
 def test_build_dimension_scores_rejects_non_finite_metric_inputs() -> None:
     score_map = {
         item["dimension_code"]: item

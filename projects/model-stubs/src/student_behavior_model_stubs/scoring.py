@@ -193,27 +193,14 @@ def _score_metric(rule: Mapping[str, object], value: object, row: Mapping[str, o
 
 def _metric_value(row: Mapping[str, object], rule: Mapping[str, object]) -> object:
     metric_name = str(rule["metric"])
-    invalid_non_empty_string = False
-    if metric_name in row:
-        value = _usable_metric_input(row[metric_name])
-        if value is _MISSING_METRIC:
-            invalid_non_empty_string = True
-        elif value is not None:
-            return value
-    raw_fields = rule.get("raw_fields", [])
-    if raw_fields:
-        for raw_field in raw_fields:
-            if not isinstance(raw_field, str) or raw_field not in row:
-                continue
-            value = _usable_metric_input(row[raw_field])
-            if value is _MISSING_METRIC:
-                invalid_non_empty_string = True
-                continue
-            if value is not None:
-                return value
-    if invalid_non_empty_string:
+    if metric_name not in row:
         return _MISSING_METRIC
-    return 0.0
+    value = _usable_metric_input(row[metric_name])
+    if value is _MISSING_METRIC:
+        return _MISSING_METRIC
+    if value is None:
+        return _MISSING_METRIC
+    return value
 
 
 def _build_metrics(
