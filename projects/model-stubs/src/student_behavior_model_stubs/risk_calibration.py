@@ -3,6 +3,8 @@ from __future__ import annotations
 import math
 from collections.abc import Mapping, Sequence
 
+from student_behavior_model_stubs.calibration import METRIC_RULE_DECLARATIONS
+
 _MIN_SCORE = 0.0
 _MAX_SCORE = 100.0
 _NON_ACADEMIC_NEUTRAL = 0.5
@@ -26,7 +28,7 @@ def _coerce_float(value: object, default: float) -> float:
         coerced = float(value)
     except (TypeError, ValueError):
         return default
-    if math.isnan(coerced):
+    if not math.isfinite(coerced):
         return default
     return coerced
 
@@ -35,11 +37,6 @@ def _gpa_health_score(row: Mapping[str, object]) -> float:
     gpa = _coerce_float(row.get("term_gpa"), math.nan)
     if not math.isnan(gpa):
         return _clamp((gpa - 1.5) / 2.5, 0.0, 1.0)
-
-    academic_base_score = _coerce_float(row.get("academic_base_score_raw"), math.nan)
-    if not math.isnan(academic_base_score):
-        return _clamp(academic_base_score / 100.0, 0.0, 1.0)
-
     return 0.5
 
 
@@ -73,13 +70,38 @@ def _dimension_score(item: Mapping[str, object]) -> float | None:
     return _clamp(score, 0.0, 1.0)
 
 
-def compute_risk_adjustment_score(dimension_scores: Sequence[Mapping[str, object]]) -> float:
+def _has_usable_evidence(row: Mapping[str, object], dimension_code: str) -> bool:
+    for rule in METRIC_RULE_DECLARATIONS[dimension_code]:
+        candidate_keys = [str(rule.get("metric", "")), *[str(raw_field) for raw_field in rule.get("raw_fields", [])]]
+        for candidate_key in candidate_keys:
+            if not candidate_key:
+                continue
+            value = row.get(candidate_key)
+            if value is None:
+                continue
+            if isinstance(value, bool):
+                return True
+            try:
+                coerced = float(value)
+            except (TypeError, ValueError):
+                return True
+            if math.isfinite(coerced):
+                return True
+    return False
+
+
+def compute_risk_adjustment_score(
+    row: Mapping[str, object],
+    dimension_scores: Sequence[Mapping[str, object]],
+) -> float:
     """Convert non-academic dimension scores into a signed adjustment."""
 
     non_academic_scores: list[float] = []
     for item in dimension_scores:
         dimension_code = str(item.get("dimension_code", ""))
         if dimension_code == "academic_base":
+            continue
+        if not _has_usable_evidence(row, dimension_code):
             continue
         score = _dimension_score(item)
         if score is not None:
@@ -137,7 +159,7 @@ def build_risk_calibration(
     dimension_scores: Sequence[Mapping[str, object]],
 ) -> dict[str, object]:
     base_risk_score = compute_base_risk_score(row)
-    risk_adjustment_score = compute_risk_adjustment_score(dimension_scores)
+    risk_adjustment_score = compute_risk_adjustment_score(row, dimension_scores)
     adjusted_risk_score = compute_adjusted_risk_score(base_risk_score, risk_adjustment_score)
     previous_adjusted_risk_score = _previous_adjusted_risk_score(row)
     if previous_adjusted_risk_score is None:

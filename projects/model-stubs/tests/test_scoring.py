@@ -140,6 +140,25 @@ def test_compute_base_risk_score_rewards_low_gpa_and_many_failed_courses() -> No
     assert compute_base_risk_score(row) >= 90.0
 
 
+def test_compute_base_risk_score_uses_neutral_gpa_fallback_when_term_gpa_is_missing() -> None:
+    neutral_row = _base_row() | {
+        "term_gpa": None,
+        "academic_base_score_raw": 95.0,
+        "failed_course_count": 2,
+        "borderline_course_count": 1,
+        "failed_course_ratio": 0.1,
+    }
+    neutral_reference = _base_row() | {
+        "term_gpa": None,
+        "academic_base_score_raw": 10.0,
+        "failed_course_count": 2,
+        "borderline_course_count": 1,
+        "failed_course_ratio": 0.1,
+    }
+
+    assert compute_base_risk_score(neutral_row) == compute_base_risk_score(neutral_reference)
+
+
 def test_compute_risk_adjustment_score_moves_with_non_academic_dimensions() -> None:
     strong_support = build_risk_calibration(
         _base_row()
@@ -210,6 +229,22 @@ def test_compute_risk_adjustment_score_moves_with_non_academic_dimensions() -> N
     assert weak_support["adjusted_risk_score"] > strong_support["adjusted_risk_score"]
 
 
+def test_build_risk_calibration_returns_zero_adjustment_without_non_academic_evidence() -> None:
+    calibration = build_risk_calibration(
+        {
+            "student_id": "20230001",
+            "term_key": "2024-1",
+            "term_gpa": 3.2,
+            "failed_course_count": 0,
+            "borderline_course_count": 0,
+            "failed_course_ratio": 0.0,
+        }
+    )
+
+    assert calibration["risk_adjustment_score"] == 0.0
+    assert calibration["adjusted_risk_score"] == calibration["base_risk_score"]
+
+
 def test_adjusted_risk_level_maps_to_four_chinese_labels() -> None:
     assert map_adjusted_risk_level(82.0) == "高风险"
     assert map_adjusted_risk_level(70.0) == "较高风险"
@@ -222,6 +257,23 @@ def test_risk_delta_and_direction_helpers_are_consistent() -> None:
     assert compute_risk_change_direction(13.25) == "rising"
     assert compute_risk_change_direction(-4.0) == "falling"
     assert compute_risk_change_direction(0.25) == "steady"
+
+
+def test_build_risk_calibration_treats_non_finite_previous_scores_as_missing_history() -> None:
+    calibration = build_risk_calibration(
+        {
+            "student_id": "20230001",
+            "term_key": "2024-1",
+            "term_gpa": 3.2,
+            "failed_course_count": 0,
+            "borderline_course_count": 0,
+            "failed_course_ratio": 0.0,
+            "previous_adjusted_risk_score": math.inf,
+        }
+    )
+
+    assert calibration["risk_delta"] == 0.0
+    assert calibration["risk_change_direction"] == "steady"
 
 
 def test_compute_group_segment_returns_readable_group_label() -> None:
