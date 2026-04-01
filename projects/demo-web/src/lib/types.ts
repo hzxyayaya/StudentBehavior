@@ -6,22 +6,67 @@ export type Envelope<T> = {
 }
 
 export type RiskLevel = 'high' | 'medium' | 'low'
-export type QuadrantLabel = '自律共鸣型' | '被动守纪型' | '脱节离散型' | '情绪驱动型'
+export type GroupSegment = string
+
+export type DimensionMetric = {
+  metric: string
+  value: number | string
+  display?: string
+  label?: string
+  threshold_strategy?: string
+  deferred_status?: string
+  caveat?: string
+}
+
+export type CalibratedDimensionScore = {
+  dimension: string
+  score: number
+  level?: RiskLevel
+  label?: string
+  metrics?: DimensionMetric[]
+  explanation?: string
+  average_score?: number
+  dimension_code?: string
+  feature?: string
+  feature_cn?: string
+  provenance?: {
+    has_caveated_metrics?: boolean
+    has_deferred_metrics?: boolean
+    threshold_strategies?: string[]
+  }
+}
+
+export type CalibratedFactor = {
+  dimension: string
+  explanation: string
+  direction?: 'up' | 'down'
+  impact?: number
+  importance?: number
+  count?: number
+  label?: string
+  metrics?: DimensionMetric[]
+  feature?: string
+  feature_cn?: string
+  effect?: string
+  dimension_code?: string
+}
 
 export type OverviewData = {
   student_count: number
   risk_distribution: Array<{ risk_level: RiskLevel; count: number }>
-  quadrant_distribution: Array<{ quadrant_label: QuadrantLabel; count: number }>
+  group_distribution: Array<{ group_segment: GroupSegment; count: number }>
+  dimension_summary: CalibratedDimensionScore[]
   major_risk_summary: Array<{ major_name: string; high_risk_count: number; student_count: number }>
   trend_summary: Array<{ term: string; high_risk_count: number }>
 }
 
-export type QuadrantsData = {
-  quadrants: Array<{
-    quadrant_label: QuadrantLabel
+export type GroupsData = {
+  groups: Array<{
+    group_segment: GroupSegment
     student_count: number
     avg_risk_probability: number
-    top_factors: Array<{ dimension: string; explanation: string }>
+    avg_dimension_scores: CalibratedDimensionScore[]
+    top_factors: CalibratedFactor[]
   }>
 }
 
@@ -30,7 +75,7 @@ export type WarningsData = {
     student_id: string
     student_name: string
     major_name: string
-    quadrant_label: QuadrantLabel
+    group_segment: GroupSegment
     risk_level: RiskLevel
     risk_probability: number
   }>
@@ -43,16 +88,17 @@ export type StudentProfileData = {
   student_id: string
   student_name: string
   major_name: string
-  quadrant_label: QuadrantLabel
+  group_segment: GroupSegment
   risk_level: RiskLevel
   risk_probability: number
-  dimension_scores: Array<{ dimension: string; score: number }>
-  trend: Array<{ term: string; risk_probability: number }>
+  dimension_scores: CalibratedDimensionScore[]
+  trend: Array<{ term: string; risk_probability?: number; dimension_scores: CalibratedDimensionScore[] }>
 }
 
 export type StudentReportData = {
-  top_factors: Array<{ dimension: string; explanation: string; direction: 'up' | 'down'; impact: number }>
+  top_factors: CalibratedFactor[]
   intervention_advice: string[]
+  intervention_advice_items?: Array<{ title?: string; text?: string }>
   report_text: string
 }
 
@@ -65,8 +111,5 @@ export type ModelSummaryData = {
 }
 
 export type DemoLoginData = {
-  user_id: string
-  display_name: string
-  role: string
   session_token: string
 }

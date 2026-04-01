@@ -1,18 +1,19 @@
 :root {
   color-scheme: light;
-  --bg: #f4f1ea;
-  --panel: rgba(255, 255, 255, 0.84);
-  --panel-strong: rgba(255, 255, 255, 0.96);
-  --line: rgba(25, 33, 58, 0.12);
-  --text: #1c2238;
-  --muted: rgba(28, 34, 56, 0.66);
-  --brand: #173a72;
-  --brand-2: #0b5a6d;
-  --hot: #e65d5d;
-  --warn: #d99b2b;
-  --cool: #2a8a79;
-  --shadow: 0 24px 70px rgba(14, 22, 43, 0.14);
-  --radius: 24px;
+  --page-bg: #f1f3f6;
+  --nav-bg: #f9f9f9;
+  --main-bg: #ffffff;
+  --line: #e9edf2;
+  --text: #1f2530;
+  --muted: #7f8896;
+  --brand: #ff4b00;
+  --brand-soft: #fff1eb;
+  --danger: #ef4444;
+  --warning: #f5b90a;
+  --success: #22b573;
+  --blue: #3b82f6;
+  --shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+  --radius: 16px;
 }
 
 * {
@@ -27,17 +28,9 @@ body,
 
 body {
   margin: 0;
-  font-family:
-    'Iowan Old Style',
-    'Palatino Linotype',
-    'Songti SC',
-    'STSong',
-    serif;
+  font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   color: var(--text);
-  background:
-    radial-gradient(circle at top left, rgba(112, 163, 255, 0.18), transparent 30%),
-    radial-gradient(circle at top right, rgba(230, 93, 93, 0.12), transparent 28%),
-    linear-gradient(180deg, #f7f4ef 0%, #ece7de 100%);
+  background: var(--page-bg);
 }
 
 a {
@@ -65,11 +58,10 @@ button {
 }
 
 .panel {
-  background: var(--panel);
+  background: var(--main-bg);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  backdrop-filter: blur(18px);
 }
 
 .panel-inner {
@@ -77,17 +69,15 @@ button {
 }
 
 .title {
-  font-size: clamp(2rem, 4vw, 3.4rem);
-  line-height: 1.05;
+  font-size: clamp(1.4rem, 2vw, 1.8rem);
+  line-height: 1.2;
   margin: 0;
-  letter-spacing: 0.02em;
 }
 
 .eyebrow {
-  color: var(--brand);
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  font-size: 0.76rem;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  font-size: 0.78rem;
   font-weight: 700;
 }
 
@@ -114,15 +104,15 @@ button {
 
 .btn {
   border: 0;
-  border-radius: 999px;
+  border-radius: 10px;
   padding: 12px 18px;
-  background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  background: var(--brand);
   color: white;
-  box-shadow: 0 16px 30px rgba(23, 58, 114, 0.24);
+  box-shadow: 0 10px 20px rgba(255, 75, 0, 0.22);
 }
 
 .btn.secondary {
-  background: rgba(255, 255, 255, 0.85);
+  background: #fff;
   color: var(--text);
   border: 1px solid var(--line);
   box-shadow: none;
@@ -131,17 +121,17 @@ button {
 .field,
 .select {
   width: 100%;
-  border: 1px solid rgba(28, 34, 56, 0.14);
-  border-radius: 16px;
+  border: 1px solid #d8dde4;
+  border-radius: 10px;
   padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.82);
+  background: #fff;
   color: var(--text);
 }
 
 .card-kpi {
   padding: 18px;
-  border-radius: 20px;
-  background: var(--panel-strong);
+  border-radius: 14px;
+  background: #fff;
   border: 1px solid var(--line);
 }
 
@@ -157,21 +147,21 @@ button {
   gap: 6px;
   padding: 6px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(28, 34, 56, 0.12);
-  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid #e4e8ee;
+  background: #fff;
   font-size: 0.85rem;
 }
 
 .tag.hot {
-  color: #b43333;
+  color: var(--danger);
 }
 
 .tag.warn {
-  color: #976b10;
+  color: #b68500;
 }
 
 .tag.cool {
-  color: #1f6d60;
+  color: var(--success);
 }
 
 @media (max-width: 960px) {
