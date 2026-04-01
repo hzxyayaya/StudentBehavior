@@ -4,6 +4,13 @@ import math
 from student_behavior_model_stubs.calibration import CALIBRATED_DIMENSIONS
 from student_behavior_model_stubs.calibration import DIMENSION_LABELS
 from student_behavior_model_stubs.calibration import METRIC_RULE_DECLARATIONS
+from student_behavior_model_stubs.risk_calibration import build_risk_calibration as _build_risk_calibration
+from student_behavior_model_stubs.risk_calibration import compute_adjusted_risk_score
+from student_behavior_model_stubs.risk_calibration import compute_base_risk_score
+from student_behavior_model_stubs.risk_calibration import compute_risk_adjustment_score
+from student_behavior_model_stubs.risk_calibration import compute_risk_change_direction
+from student_behavior_model_stubs.risk_calibration import compute_risk_delta
+from student_behavior_model_stubs.risk_calibration import map_adjusted_risk_level
 
 _MIN_PROBABILITY = 0.05
 _MAX_PROBABILITY = 0.95
@@ -351,3 +358,7 @@ def build_dimension_scores(row: Mapping[str, object]) -> list[dict[str, object]]
             }
         )
     return dimension_scores
+
+
+def build_risk_calibration(row: Mapping[str, object]) -> dict[str, object]:
+    return _build_risk_calibration(row, build_dimension_scores(row))

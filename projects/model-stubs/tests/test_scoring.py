@@ -5,9 +5,16 @@ import pytest
 
 import student_behavior_model_stubs.scoring as scoring_module
 from student_behavior_model_stubs.scoring import build_dimension_scores
+from student_behavior_model_stubs.scoring import build_risk_calibration
 from student_behavior_model_stubs.scoring import compute_group_segment
+from student_behavior_model_stubs.scoring import compute_adjusted_risk_score
+from student_behavior_model_stubs.scoring import compute_base_risk_score
+from student_behavior_model_stubs.scoring import compute_risk_adjustment_score
+from student_behavior_model_stubs.scoring import compute_risk_change_direction
+from student_behavior_model_stubs.scoring import compute_risk_delta
 from student_behavior_model_stubs.scoring import compute_risk_probability
 from student_behavior_model_stubs.scoring import map_risk_level
+from student_behavior_model_stubs.scoring import map_adjusted_risk_level
 
 
 def _base_row() -> dict[str, object]:
@@ -120,6 +127,101 @@ def test_compute_risk_probability_treats_nan_metrics_as_missing() -> None:
         "failed_course_count": math.nan,
     }
     assert compute_risk_probability(row) == 0.52
+
+
+def test_compute_base_risk_score_rewards_low_gpa_and_many_failed_courses() -> None:
+    row = _base_row() | {
+        "term_gpa": 1.55,
+        "failed_course_count": 5,
+        "borderline_course_count": 4,
+        "failed_course_ratio": 0.3,
+    }
+
+    assert compute_base_risk_score(row) >= 90.0
+
+
+def test_compute_risk_adjustment_score_moves_with_non_academic_dimensions() -> None:
+    strong_support = build_risk_calibration(
+        _base_row()
+        | {
+            "term_gpa": 2.4,
+            "failed_course_count": 2,
+            "borderline_course_count": 2,
+            "failed_course_ratio": 0.12,
+            "class_engagement_score_raw": 95.0,
+            "online_activeness_score_raw": 94.0,
+            "library_immersion_score_raw": 96.0,
+            "network_habits_score_raw": 95.0,
+            "daily_routine_boundary_score_raw": 93.0,
+            "physical_resilience_score_raw": 97.0,
+            "appraisal_status_alert_score_raw": 94.0,
+        }
+    )
+    weak_support = build_risk_calibration(
+        _base_row()
+        | {
+            "term_gpa": 2.4,
+            "failed_course_count": 2,
+            "borderline_course_count": 2,
+            "failed_course_ratio": 0.12,
+            "class_engagement_score_raw": 12.0,
+            "online_activeness_score_raw": 14.0,
+            "library_immersion_score_raw": 10.0,
+            "network_habits_score_raw": 95.0,
+            "daily_routine_boundary_score_raw": 93.0,
+            "physical_resilience_score_raw": 11.0,
+            "appraisal_status_alert_score_raw": 9.0,
+            "attendance_rate": 0.45,
+            "late_count": 6,
+            "truancy_count": 3,
+            "absence_count": 5,
+            "video_completion_rate": 0.35,
+            "online_test_avg_score": 60.0,
+            "online_work_avg_score": 62.0,
+            "online_exam_avg_score": 58.0,
+            "platform_engagement_score": 40.0,
+            "forum_interaction_total": 0,
+            "library_completed_visit_count": 0,
+            "avg_library_stay_minutes": 20.0,
+            "weekly_library_visit_avg": 0.0,
+            "monthly_online_duration_avg": 80.0,
+            "term_online_duration_sum": 240.0,
+            "online_duration_vs_school_avg_gap": 30.0,
+            "first_daily_access_time_avg": 9.5,
+            "first_daily_access_time_std": 2.5,
+            "late_return_count": 8,
+            "late_return_ratio": 0.3,
+            "daily_access_time_variability": 3.0,
+            "physical_test_avg_score": 60.0,
+            "physical_test_pass_flag": 0,
+            "weekly_running_count_avg": 0.0,
+            "weekly_exercise_count_avg": 0.0,
+            "scholarship_amount_sum": 0.0,
+            "scholarship_level_score": 0.0,
+            "negative_status_alert_flag": 1,
+            "status_change_count": 3,
+        }
+    )
+
+    assert strong_support["risk_adjustment_score"] < 0
+    assert strong_support["adjusted_risk_score"] < strong_support["base_risk_score"]
+    assert weak_support["risk_adjustment_score"] > 0
+    assert weak_support["adjusted_risk_score"] > weak_support["base_risk_score"]
+    assert weak_support["adjusted_risk_score"] > strong_support["adjusted_risk_score"]
+
+
+def test_adjusted_risk_level_maps_to_four_chinese_labels() -> None:
+    assert map_adjusted_risk_level(82.0) == "高风险"
+    assert map_adjusted_risk_level(70.0) == "较高风险"
+    assert map_adjusted_risk_level(55.0) == "一般风险"
+    assert map_adjusted_risk_level(44.0) == "低风险"
+
+
+def test_risk_delta_and_direction_helpers_are_consistent() -> None:
+    assert compute_risk_delta(73.25, 60.0) == 13.25
+    assert compute_risk_change_direction(13.25) == "rising"
+    assert compute_risk_change_direction(-4.0) == "falling"
+    assert compute_risk_change_direction(0.25) == "steady"
 
 
 def test_compute_group_segment_returns_readable_group_label() -> None:
