@@ -90,7 +90,7 @@ def _coerce_float(value: object, default: float) -> float:
         coerced = float(value)
     except (TypeError, ValueError):
         return default
-    if math.isnan(coerced):
+    if not math.isfinite(coerced):
         return default
     return coerced
 

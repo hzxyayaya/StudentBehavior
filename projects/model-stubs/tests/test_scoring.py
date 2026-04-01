@@ -129,6 +129,11 @@ def test_compute_risk_probability_treats_nan_metrics_as_missing() -> None:
     assert compute_risk_probability(row) == 0.52
 
 
+def test_compute_risk_probability_treats_infinite_metrics_as_missing() -> None:
+    assert compute_risk_probability({"academic_base_score_raw": math.inf}) == 0.52
+    assert compute_risk_probability({"academic_base_score_raw": -math.inf}) == 0.52
+
+
 def test_compute_base_risk_score_rewards_low_gpa_and_many_failed_courses() -> None:
     row = _base_row() | {
         "term_gpa": 1.55,
@@ -592,22 +597,51 @@ def test_build_dimension_scores_uses_distribution_context_for_hybrid_metrics() -
     assert network_habits["provenance"]["threshold_strategies"] == ["hybrid"]
 
 
-def test_dimension_scores_are_clamped_and_rounded() -> None:
+def test_build_dimension_scores_clamps_and_sanitizes_real_metric_inputs() -> None:
     scores = build_dimension_scores(
         _base_row()
         | {
-            "academic_base_score_raw": 120,
-            "class_engagement_score_raw": -5,
-            "online_activeness_score_raw": 50.555,
-            "library_immersion_score_raw": None,
-            "network_habits_score_raw": math.nan,
-            "daily_routine_boundary_score_raw": 101,
-            "physical_resilience_score_raw": 66.666,
-            "appraisal_status_alert_score_raw": -100,
+            "term_gpa": math.inf,
+            "failed_course_count": 9,
+            "borderline_course_count": 7,
+            "failed_course_ratio": 0.6,
+            "attendance_rate": 1.5,
+            "late_count": -4,
+            "truancy_count": 6,
+            "absence_count": 12,
+            "video_completion_rate": 1.25,
+            "online_test_avg_score": 90.555,
+            "online_work_avg_score": 120.0,
+            "online_exam_avg_score": -5.0,
+            "platform_engagement_score": 99.999,
+            "forum_interaction_total": 999,
+            "library_completed_visit_count": 88,
+            "avg_library_stay_minutes": 200.0,
+            "weekly_library_visit_avg": -2.0,
+            "monthly_online_duration_avg": 0.0,
+            "term_online_duration_sum": 999.0,
+            "online_duration_vs_school_avg_gap": -7.0,
+            "first_daily_access_time_avg": 12.0,
+            "first_daily_access_time_std": -1.0,
+            "late_return_count": 12,
+            "late_return_ratio": 0.9,
+            "daily_access_time_variability": 8.0,
+            "physical_test_avg_score": 100.0,
+            "physical_test_pass_flag": 2,
+            "weekly_running_count_avg": 9.0,
+            "weekly_exercise_count_avg": 11.0,
+            "scholarship_amount_sum": 99999.0,
+            "scholarship_level_score": 9.0,
+            "negative_status_alert_flag": 3,
+            "status_change_count": 10,
         }
     )
 
     assert len(scores) == 8
+    academic_base = next(item for item in scores if item["dimension_code"] == "academic_base")
+    assert all(math.isfinite(float(metric["value"])) for metric in academic_base["metrics"])
+    assert "学期GPA inf" not in academic_base["explanation"]
+    assert academic_base["score"] == round(academic_base["score"], 2)
     for item in scores:
         assert 0.0 <= item["score"] <= 1.0
         assert item["score"] == round(item["score"], 2)
