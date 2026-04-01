@@ -1,0 +1,613 @@
+{
+  "student_count": 2905,
+  "risk_distribution": {
+    "high": 0,
+    "medium": 2905,
+    "low": 0
+  },
+  "group_distribution": {
+    "课堂参与薄弱组": 2905
+  },
+  "major_risk_summary": [
+    {
+      "major_name": "人力资源管理",
+      "student_count": 9,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "人工智能",
+      "student_count": 94,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "信息与计算科学",
+      "student_count": 12,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "信息安全",
+      "student_count": 62,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "信息对抗技术",
+      "student_count": 61,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "信息工程",
+      "student_count": 101,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "信息管理与信息系统",
+      "student_count": 18,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "光电信息科学与工程",
+      "student_count": 45,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "哲学",
+      "student_count": 12,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "大数据管理与应用",
+      "student_count": 17,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "密码科学与技术",
+      "student_count": 3,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "工业工程",
+      "student_count": 13,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "工业设计",
+      "student_count": 16,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "工商管理（理工类）",
+      "student_count": 11,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "工程管理",
+      "student_count": 14,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "市场营销",
+      "student_count": 17,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "应用化学",
+      "student_count": 15,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "应用物理学",
+      "student_count": 9,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "录音艺术",
+      "student_count": 15,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "微电子科学与工程",
+      "student_count": 124,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "探测制导与控制技术",
+      "student_count": 32,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "数字媒体技术",
+      "student_count": 8,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "数学与应用数学",
+      "student_count": 23,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "数据科学与大数据技术",
+      "student_count": 19,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "日语",
+      "student_count": 8,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "智能医学工程",
+      "student_count": 16,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "智能科学与技术",
+      "student_count": 109,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "机器人工程",
+      "student_count": 37,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "机械设计制造及其自动化",
+      "student_count": 83,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "材料科学与工程",
+      "student_count": 23,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "汉语言文学",
+      "student_count": 15,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "测控技术与仪器",
+      "student_count": 57,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "物联网工程",
+      "student_count": 24,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "生物医学工程",
+      "student_count": 19,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "生物技术",
+      "student_count": 6,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "电子信息工程",
+      "student_count": 254,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "电子信息科学与技术",
+      "student_count": 109,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "电子商务",
+      "student_count": 15,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "电子封装技术",
+      "student_count": 16,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "电子科学与技术",
+      "student_count": 139,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "电气工程及其自动化",
+      "student_count": 28,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "电波传播与天线",
+      "student_count": 11,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "电磁场与无线技术",
+      "student_count": 42,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "空间信息与数字技术",
+      "student_count": 23,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "空间科学与技术",
+      "student_count": 40,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "纳米材料与技术",
+      "student_count": 17,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "统计学",
+      "student_count": 5,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "网络工程",
+      "student_count": 22,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "网络空间安全",
+      "student_count": 55,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "翻译",
+      "student_count": 17,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "自动化",
+      "student_count": 47,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "英语",
+      "student_count": 19,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "计算机科学与技术",
+      "student_count": 232,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "软件工程",
+      "student_count": 187,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "通信工程",
+      "student_count": 325,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "遥感科学与技术",
+      "student_count": 23,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "金融学",
+      "student_count": 14,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "集成电路设计与集成系统",
+      "student_count": 106,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    },
+    {
+      "major_name": "飞行器设计与工程",
+      "student_count": 12,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.52
+    }
+  ],
+  "trend_summary": {
+    "terms": [
+      {
+        "term_key": "2023-2",
+        "student_count": 2440,
+        "average_risk_probability": 0.52,
+        "risk_distribution": {
+          "high": 0,
+          "medium": 2440,
+          "low": 0
+        },
+        "dimension_summary": [
+          {
+            "dimension": "学业基础表现",
+            "dimension_code": "academic_base",
+            "average_score": 0.75
+          },
+          {
+            "dimension": "综合荣誉与异动预警",
+            "dimension_code": "appraisal_status_alert",
+            "average_score": 0.5
+          },
+          {
+            "dimension": "课堂学习投入",
+            "dimension_code": "class_engagement",
+            "average_score": 0.75
+          },
+          {
+            "dimension": "早晚生活作息规律",
+            "dimension_code": "daily_routine_boundary",
+            "average_score": 1.0
+          },
+          {
+            "dimension": "图书馆沉浸度",
+            "dimension_code": "library_immersion",
+            "average_score": 0.0
+          },
+          {
+            "dimension": "网络作息自律指数",
+            "dimension_code": "network_habits",
+            "average_score": 1.0
+          },
+          {
+            "dimension": "在线学习积极性",
+            "dimension_code": "online_activeness",
+            "average_score": 0.0
+          },
+          {
+            "dimension": "体质及运动状况",
+            "dimension_code": "physical_resilience",
+            "average_score": 0.0
+          }
+        ]
+      },
+      {
+        "term_key": "2024-1",
+        "student_count": 290,
+        "average_risk_probability": 0.52,
+        "risk_distribution": {
+          "high": 0,
+          "medium": 290,
+          "low": 0
+        },
+        "dimension_summary": [
+          {
+            "dimension": "学业基础表现",
+            "dimension_code": "academic_base",
+            "average_score": 0.75
+          },
+          {
+            "dimension": "综合荣誉与异动预警",
+            "dimension_code": "appraisal_status_alert",
+            "average_score": 0.5
+          },
+          {
+            "dimension": "课堂学习投入",
+            "dimension_code": "class_engagement",
+            "average_score": 0.75
+          },
+          {
+            "dimension": "早晚生活作息规律",
+            "dimension_code": "daily_routine_boundary",
+            "average_score": 1.0
+          },
+          {
+            "dimension": "图书馆沉浸度",
+            "dimension_code": "library_immersion",
+            "average_score": 0.0
+          },
+          {
+            "dimension": "网络作息自律指数",
+            "dimension_code": "network_habits",
+            "average_score": 1.0
+          },
+          {
+            "dimension": "在线学习积极性",
+            "dimension_code": "online_activeness",
+            "average_score": 0.0
+          },
+          {
+            "dimension": "体质及运动状况",
+            "dimension_code": "physical_resilience",
+            "average_score": 0.0
+          }
+        ]
+      },
+      {
+        "term_key": "2024-2",
+        "student_count": 175,
+        "average_risk_probability": 0.52,
+        "risk_distribution": {
+          "high": 0,
+          "medium": 175,
+          "low": 0
+        },
+        "dimension_summary": [
+          {
+            "dimension": "学业基础表现",
+            "dimension_code": "academic_base",
+            "average_score": 0.75
+          },
+          {
+            "dimension": "综合荣誉与异动预警",
+            "dimension_code": "appraisal_status_alert",
+            "average_score": 0.5
+          },
+          {
+            "dimension": "课堂学习投入",
+            "dimension_code": "class_engagement",
+            "average_score": 0.75
+          },
+          {
+            "dimension": "早晚生活作息规律",
+            "dimension_code": "daily_routine_boundary",
+            "average_score": 1.0
+          },
+          {
+            "dimension": "图书馆沉浸度",
+            "dimension_code": "library_immersion",
+            "average_score": 0.0
+          },
+          {
+            "dimension": "网络作息自律指数",
+            "dimension_code": "network_habits",
+            "average_score": 1.0
+          },
+          {
+            "dimension": "在线学习积极性",
+            "dimension_code": "online_activeness",
+            "average_score": 0.0
+          },
+          {
+            "dimension": "体质及运动状况",
+            "dimension_code": "physical_resilience",
+            "average_score": 0.0
+          }
+        ]
+      }
+    ]
+  },
+  "dimension_summary": [
+    {
+      "dimension": "学业基础表现",
+      "dimension_code": "academic_base",
+      "average_score": 0.75
+    },
+    {
+      "dimension": "综合荣誉与异动预警",
+      "dimension_code": "appraisal_status_alert",
+      "average_score": 0.5
+    },
+    {
+      "dimension": "课堂学习投入",
+      "dimension_code": "class_engagement",
+      "average_score": 0.75
+    },
+    {
+      "dimension": "早晚生活作息规律",
+      "dimension_code": "daily_routine_boundary",
+      "average_score": 1.0
+    },
+    {
+      "dimension": "图书馆沉浸度",
+      "dimension_code": "library_immersion",
+      "average_score": 0.0
+    },
+    {
+      "dimension": "网络作息自律指数",
+      "dimension_code": "network_habits",
+      "average_score": 1.0
+    },
+    {
+      "dimension": "在线学习积极性",
+      "dimension_code": "online_activeness",
+      "average_score": 0.0
+    },
+    {
+      "dimension": "体质及运动状况",
+      "dimension_code": "physical_resilience",
+      "average_score": 0.0
+    }
+  ],
+  "group_score_summary": {
+    "课堂参与薄弱组": [
+      {
+        "dimension": "学业基础表现",
+        "dimension_code": "academic_base",
+        "average_score": 0.75
+      },
+      {
+        "dimension": "综合荣誉与异动预警",
+        "dimension_code": "appraisal_status_alert",
+        "average_score": 0.5
+      },
+      {
+        "dimension": "课堂学习投入",
+        "dimension_code": "class_engagement",
+        "average_score": 0.75
+      },
+      {
+        "dimension": "早晚生活作息规律",
+        "dimension_code": "daily_routine_boundary",
+        "average_score": 1.0
+      },
+      {
+        "dimension": "图书馆沉浸度",
+        "dimension_code": "library_immersion",
+        "average_score": 0.0
+      },
+      {
+        "dimension": "网络作息自律指数",
+        "dimension_code": "network_habits",
+        "average_score": 1.0
+      },
+      {
+        "dimension": "在线学习积极性",
+        "dimension_code": "online_activeness",
+        "average_score": 0.0
+      },
+      {
+        "dimension": "体质及运动状况",
+        "dimension_code": "physical_resilience",
+        "average_score": 0.0
+      }
+    ]
+  }
+}

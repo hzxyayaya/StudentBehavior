@@ -18,21 +18,10 @@ _LABEL_COLUMNS = (
     "source_row_hash",
 )
 
-_STUDENT_ID_KEYS = (
-    "student_id",
-    "学号",
-    "学生学号",
-    "学籍号",
-    "XH",
-    "XSBH",
-    "LOGIN_NAME",
-    "USERNUM",
-    "SID",
-)
-
-_TERM_YEAR_KEYS = ("XN", "xn", "school_year", "学年", "学年度", "开课学年")
-_TERM_NO_KEYS = ("XQ", "xq", "term_no", "学期", "学期序号", "开课学期")
-_COMBINED_TERM_KEYS = ("term_key", "学年学期", "学年学期名称", "学期名称", "xnxq", "XNXQ")
+_STUDENT_ID_KEYS = ("student_id", "XH", "XSBH", "LOGIN_NAME", "USERNUM", "SID")
+_TERM_YEAR_KEYS = ("XN", "xn", "school_year", "PDXN", "CPXN")
+_TERM_NO_KEYS = ("XQ", "xq", "term_no", "PDXQ", "CPXQ")
+_COMBINED_TERM_KEYS = ("term_key", "xnxq", "XNXQ")
 _STANDARD_TERM_KEY_RE = re.compile(r"^\d{4}-[12]$")
 
 
@@ -40,8 +29,8 @@ def load_fact_evaluation_labels(rows: list[dict[str, Any]]) -> pd.DataFrame:
     records = []
     for row in rows:
         student_id = _pick_student_id(row)
-        cpxq = _normalize_text(_first_value(row, "CPXQ", "cpxq"))
-        source_file = _normalize_text(_first_value(row, "source_file", "源文件"))
+        cpxq = _normalize_text(_first_value(row, "CPXQ", "PDXQ", "cpxq"))
+        source_file = _normalize_text(_first_value(row, "source_file"))
         source_row_hash = _normalize_text(_first_value(row, "source_row_hash", "row_hash"))
         if student_id is None or cpxq is None or source_file is None or source_row_hash is None:
             continue
@@ -97,8 +86,8 @@ def _term_key_and_source(row: dict[str, Any], cpxq: str) -> tuple[str | None, st
 
 
 def _risk_label(row: dict[str, Any]) -> int | None:
-    rank = _normalize_decimal(_first_value(row, "ZYNJPM", "zynjpm", "major_grade_rank"))
-    total = _normalize_decimal(_first_value(row, "ZYNJRS", "zynjrs", "major_grade_total"))
+    rank = _normalize_decimal(_first_value(row, "ZYNJPM", "major_grade_rank"))
+    total = _normalize_decimal(_first_value(row, "ZYNJRS", "major_grade_total"))
     if rank is None or total is None or total == 0:
         return None
     major_grade_rank_pct = rank / total

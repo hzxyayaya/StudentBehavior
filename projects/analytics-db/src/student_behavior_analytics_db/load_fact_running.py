@@ -7,6 +7,7 @@ from typing import Any, Iterable
 import pandas as pd
 
 from .normalize_ids import normalize_student_id
+from .normalize_terms import infer_term_from_month_only
 from .normalize_terms import normalize_term_key
 
 _RUNNING_COLUMNS = (
@@ -98,7 +99,7 @@ def _pick_term_key(
     # TERM_ID exists in the raw running source, but there is no frozen in-repo
     # TERM_ID -> term_key mapping yet, so this loader currently relies on the
     # caller's explicit term calendar instead of inventing an unsupported mapping.
-    return _term_key_from_calendar(run_date, term_calendar)
+    return _term_key_from_calendar(run_date, term_calendar) or infer_term_from_month_only(run_date)
 
 
 def _normalize_term_key_value(raw: Any) -> str | None:

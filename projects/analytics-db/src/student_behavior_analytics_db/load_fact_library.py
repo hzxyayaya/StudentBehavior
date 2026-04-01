@@ -7,6 +7,7 @@ from typing import Any, Iterable
 import pandas as pd
 
 from .normalize_ids import normalize_student_id
+from .normalize_terms import infer_term_from_month_only
 from .normalize_terms import normalize_term_key
 
 _LIBRARY_COLUMNS = (
@@ -89,7 +90,7 @@ def _pick_term_key(
         if term_key is not None:
             return term_key
 
-    return _term_key_from_calendar(visited_at, term_calendar)
+    return _term_key_from_calendar(visited_at, term_calendar) or infer_term_from_month_only(visited_at)
 
 
 def _normalize_term_key_value(raw: Any) -> str | None:

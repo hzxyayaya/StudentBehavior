@@ -21,8 +21,7 @@ _STUDENT_COLUMNS = (
 _STUDENT_ID_KEYS = (
     "student_id",
     "学号",
-    "学生学号",
-    "学籍号",
+    "瀛﹀彿",
     "XH",
     "XSBH",
     "LOGIN_NAME",
@@ -31,13 +30,13 @@ _STUDENT_ID_KEYS = (
 )
 
 _STUDENT_FIELD_ALIASES = {
-    "gender": ("gender", "性别"),
-    "ethnicity": ("ethnicity", "民族"),
-    "political_status": ("political_status", "政治面貌"),
-    "major_name": ("major_name", "专业名称", "专业"),
-    "college_name": ("college_name", "学院名称", "学院"),
-    "class_name": ("class_name", "班级名称", "班级"),
-    "enrollment_year": ("enrollment_year", "入学年份", "入学年"),
+    "gender": ("gender", "XB", "性别", "鎬у埆"),
+    "ethnicity": ("ethnicity", "MZMC", "民族", "姘戞棌"),
+    "political_status": ("political_status", "ZZMMMC", "政治面貌", "鏀挎不闈㈣矊"),
+    "major_name": ("major_name", "MAJOR_NAME", "ZYM", "专业名称", "涓撲笟鍚嶇О"),
+    "college_name": ("college_name", "COLLEGE_NAME", "学院名称", "瀛﹂櫌鍚嶇О"),
+    "class_name": ("class_name", "CLASS_NAME", "XSM", "班级名称", "鐝骇鍚嶇О"),
+    "enrollment_year": ("enrollment_year", "RXSJ", "ENROLLMENT_YEAR", "入学年份", "鍏ュ骞翠唤"),
 }
 
 
@@ -112,6 +111,6 @@ def _normalize_enrollment_year(raw: Any) -> int | None:
         return None
     if isinstance(value, int):
         return value
-    if isinstance(value, str) and value.isdigit():
-        return int(value)
+    if isinstance(value, str) and value[:4].isdigit():
+        return int(value[:4])
     return None

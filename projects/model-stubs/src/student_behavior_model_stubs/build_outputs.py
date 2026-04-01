@@ -71,6 +71,49 @@ def _term_sort_key(term_key: str) -> tuple[int, str]:
     return 10**9, term_key
 
 
+def _average_dimension_scores(
+    rows: Sequence[object],
+) -> list[dict[str, object]]:
+    totals: dict[str, dict[str, object]] = {}
+    for value in rows:
+        for item in _coerce_dimension_scores(value):
+            dimension_code = str(item.get("dimension_code", "")).strip()
+            dimension = str(item.get("dimension", "")).strip()
+            try:
+                score = float(item.get("score"))
+            except (TypeError, ValueError):
+                continue
+            if pd.isna(score):
+                continue
+            if not dimension_code or not dimension:
+                continue
+            bucket = totals.setdefault(
+                dimension_code,
+                {
+                    "dimension": dimension,
+                    "dimension_code": dimension_code,
+                    "score_total": 0.0,
+                    "score_count": 0,
+                },
+            )
+            bucket["score_total"] = float(bucket["score_total"]) + score
+            bucket["score_count"] = int(bucket["score_count"]) + 1
+
+    averaged: list[dict[str, object]] = []
+    for bucket in totals.values():
+        count = int(bucket["score_count"])
+        if count == 0:
+            continue
+        averaged.append(
+            {
+                "dimension": str(bucket["dimension"]),
+                "dimension_code": str(bucket["dimension_code"]),
+                "average_score": round(float(bucket["score_total"]) / count, 2),
+            }
+        )
+    return sorted(averaged, key=lambda item: str(item["dimension_code"]))
+
+
 def build_overview_by_term(student_results: pd.DataFrame) -> dict[str, object]:
     if student_results.empty:
         return {
@@ -79,6 +122,8 @@ def build_overview_by_term(student_results: pd.DataFrame) -> dict[str, object]:
             "group_distribution": {},
             "major_risk_summary": [],
             "trend_summary": {"terms": []},
+            "dimension_summary": [],
+            "group_score_summary": {},
         }
 
     ordered_results = student_results.copy()
@@ -118,8 +163,16 @@ def build_overview_by_term(student_results: pd.DataFrame) -> dict[str, object]:
                 "student_count": int(len(term_frame)),
                 "average_risk_probability": round(float(term_frame["risk_probability"].mean()), 2),
                 "risk_distribution": risk_distribution,
+                "dimension_summary": _average_dimension_scores(term_frame["dimension_scores_json"]),
             }
         )
+
+    group_score_summary = {
+        str(group_segment): _average_dimension_scores(group_frame["dimension_scores_json"])
+        for group_segment, group_frame in sorted(
+            ordered_results.groupby("group_segment", sort=True), key=lambda item: item[0]
+        )
+    }
 
     return {
         "student_count": int(len(ordered_results)),
@@ -127,6 +180,8 @@ def build_overview_by_term(student_results: pd.DataFrame) -> dict[str, object]:
         "group_distribution": _count_distribution(ordered_results["group_segment"]),
         "major_risk_summary": major_risk_summary,
         "trend_summary": {"terms": trend_terms},
+        "dimension_summary": _average_dimension_scores(ordered_results["dimension_scores_json"]),
+        "group_score_summary": group_score_summary,
     }
 
 
@@ -135,9 +190,9 @@ def build_model_summary(*, now: datetime) -> dict[str, object]:
         raise TypeError("now must be a datetime")
 
     return {
-        "cluster_method": "stub-group-rules",
-        "risk_model": "stub-risk-rules",
-        "target_label": "综合测评低等级风险",
+        "cluster_method": "stub-eight-dimension-group-rules",
+        "risk_model": "stub-eight-dimension-risk-rules",
+        "target_label": "学期级八维学业风险",
         "auc": _MODEL_SUMMARY_AUC,
         "updated_at": now.isoformat(timespec="seconds"),
     }
@@ -227,8 +282,10 @@ def build_student_reports(student_results: pd.DataFrame) -> list[dict[str, objec
             {
                 "student_id": row["student_id"],
                 "term_key": row["term_key"],
+                "version": payload["version"],
                 "top_factors": payload["top_factors"],
                 "intervention_advice": payload["intervention_advice"],
+                "intervention_advice_items": payload["intervention_advice_items"],
                 "report_text": payload["report_text"],
             }
         )

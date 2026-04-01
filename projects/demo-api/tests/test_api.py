@@ -56,14 +56,208 @@ def test_get_overview_returns_404_for_unknown_term(client) -> None:
     assert payload["meta"]["term"] == "2099-1"
 
 
-@pytest.mark.parametrize("term", ["2023-2", "2024-1", "2024-2"])
-def test_get_overview_accepts_all_real_terms(client, term: str) -> None:
+@pytest.mark.parametrize(
+    ("term", "student_count", "risk_distribution", "group_distribution", "major_risk_summary"),
+    [
+        ("2023-2", 0, {"high": 0, "medium": 0, "low": 0}, {}, []),
+        (
+            "2024-1",
+            0,
+            {"high": 0, "medium": 0, "low": 0},
+            {},
+            [],
+        ),
+        ("2024-2", 179, {"high": 12, "medium": 64, "low": 103}, None, None),
+    ],
+)
+def test_get_overview_accepts_all_real_terms(
+    client,
+    term: str,
+    student_count: int,
+    risk_distribution: dict[str, int],
+    group_distribution: dict[str, int] | None,
+    major_risk_summary: list[dict[str, object]] | None,
+) -> None:
     response = client.get("/api/analytics/overview", params={"term": term})
     assert response.status_code == 200
     payload = response.json()
     assert payload["code"] == 200
     assert payload["meta"]["term"] == term
-    assert payload["data"]["student_count"] == 179
+    assert payload["data"]["student_count"] == student_count
+    assert payload["data"]["risk_distribution"] == risk_distribution
+    if group_distribution is not None:
+        assert payload["data"]["group_distribution"] == group_distribution
+        assert payload["data"]["major_risk_summary"] == major_risk_summary
+        assert payload["data"]["summary_term"] == term
+        assert payload["data"]["summary_source"] == "term_fallback"
+        assert payload["data"]["summary_unavailable_fields"] == ["trend_summary"]
+        assert payload["data"]["trend_summary"] is None
+    else:
+        assert "summary_source" not in payload["data"]
+
+
+def test_get_overview_returns_term_specific_fallback_payload(
+    monkeypatch, tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    overview_path = tmp_path / "artifacts" / "model_stubs" / "v1_overview_by_term.json"
+    overview_path.parent.mkdir(parents=True, exist_ok=True)
+    overview_path.write_text(
+        json.dumps(
+            {
+                "student_count": 12,
+                "risk_distribution": {"high": 1, "medium": 4, "low": 7},
+                "group_distribution": {
+                    "学习投入稳定组": 12,
+                },
+                "dimension_summary": [
+                    {
+                        "feature": "attendance",
+                        "feature_cn": "课堂学习投入",
+                        "dimension": "课堂学习投入",
+                        "average_score": 0.91,
+                    }
+                ],
+                "major_risk_summary": [
+                    {
+                        "major_name": "电子信息工程",
+                        "student_count": 12,
+                        "high_risk_count": 1,
+                        "average_risk_probability": 0.67,
+                    }
+                ],
+                "trend_summary": {
+                    "terms": [
+                        {
+                            "term_key": "2024-1",
+                            "student_count": 24,
+                            "risk_distribution": {"high": 2, "medium": 6, "low": 16},
+                        },
+                        {
+                            "term_key": "2024-2",
+                            "student_count": 12,
+                            "risk_distribution": {"high": 1, "medium": 4, "low": 7},
+                        },
+                    ]
+                },
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230001",
+                "term_key": "2024-1",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "group_segment": "综合发展优势组",
+                "risk_probability": 0.41,
+                "risk_level": "low",
+                "dimension_scores_json": json.dumps(
+                    [
+                        {
+                            "feature": "attendance",
+                            "feature_cn": "课堂学习投入",
+                            "dimension": "课堂参与表现",
+                            "score": 0.41,
+                        }
+                    ],
+                    ensure_ascii=False,
+                ),
+            },
+            {
+                "student_id": "20230002",
+                "term_key": "2024-1",
+                "student_name": "Alice",
+                "major_name": "软件工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.44,
+                "risk_level": "low",
+                "dimension_scores_json": json.dumps(
+                    [
+                        {
+                            "feature": "attendance",
+                            "feature_cn": "课堂学习投入",
+                            "dimension": "课堂学习投入",
+                            "score": 0.44,
+                        }
+                    ],
+                    ensure_ascii=False,
+                ),
+            },
+            {
+                "student_id": "20230004",
+                "term_key": "2024-1",
+                "student_name": "Dave",
+                "major_name": "电子信息工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.91,
+                "risk_level": "high",
+                "dimension_scores_json": json.dumps(
+                    [
+                        {
+                            "feature": "attendance",
+                            "feature_cn": "课堂学习投入",
+                            "dimension": "课堂学习投入",
+                            "score": 0.46,
+                        }
+                    ],
+                    ensure_ascii=False,
+                ),
+            },
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.write_text("", encoding="utf-8")
+    store = DemoApiStore(
+        overview_path=overview_path,
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+    monkeypatch.setattr(main_module, "get_store", lambda: store)
+    client = TestClient(app)
+
+    response = client.get("/api/analytics/overview", params={"term": "2024-1"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["meta"]["term"] == "2024-1"
+    assert payload["data"]["student_count"] == 24
+    assert payload["data"]["group_distribution"] == {
+        "综合发展优势组": 1,
+        "课堂参与薄弱组": 2,
+    }
+    assert payload["data"]["major_risk_summary"] == [
+        {
+            "major_name": "电子信息工程",
+            "student_count": 1,
+            "high_risk_count": 1,
+            "average_risk_probability": 0.91,
+        },
+        {
+            "major_name": "软件工程",
+            "student_count": 2,
+            "high_risk_count": 0,
+            "average_risk_probability": 0.42,
+        },
+    ]
+    assert payload["data"]["summary_term"] == "2024-1"
+    assert payload["data"]["summary_source"] == "term_fallback"
+    assert payload["data"]["summary_unavailable_fields"] == ["trend_summary"]
+    assert payload["data"]["trend_summary"] is None
+    assert payload["data"]["dimension_summary"] == [
+        {
+            "feature": "attendance",
+            "feature_cn": "课堂学习投入",
+            "dimension": "课堂参与表现",
+            "average_score": 0.44,
+            "score_count": 3,
+        }
+    ]
 
 
 def test_api_returns_500_when_artifacts_missing(app_without_artifacts) -> None:
@@ -219,8 +413,8 @@ def test_get_models_summary_returns_envelope_payload(client) -> None:
     assert response.status_code == 200
     payload = response.json()
     assert payload["code"] == 200
-    assert payload["data"]["cluster_method"] == "stub-group-rules"
-    assert payload["data"]["risk_model"] == "stub-risk-rules"
+    assert payload["data"]["cluster_method"] == "stub-eight-dimension-group-rules"
+    assert payload["data"]["risk_model"] == "stub-eight-dimension-risk-rules"
     assert payload["meta"]["term"] == "2024-2"
 
 
@@ -255,6 +449,56 @@ def test_get_warnings_returns_404_for_unknown_term(client) -> None:
 def test_get_student_profile_returns_404_for_unknown_student(client) -> None:
     response = client.get("/api/students/404/profile", params={"term": "2023-1"})
     assert response.status_code == 404
+
+
+def test_get_student_profile_returns_calibrated_dimension_payload(
+    monkeypatch, tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    calibrated_dimension_scores = [
+        {
+            "dimension": "学业基础表现",
+            "score": 0.88,
+            "level": "high",
+            "label": "学业基础稳健",
+            "metrics": [{"name": "GPA", "value": 3.8, "display": "3.8"}],
+            "explanation": "GPA 与不及格课程表现稳定。",
+        }
+    ]
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230001",
+                "term_key": "2023-1",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "group_segment": "综合发展优势组",
+                "risk_probability": 0.81,
+                "risk_level": "medium",
+                "dimension_scores_json": json.dumps(calibrated_dimension_scores, ensure_ascii=False),
+            }
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.write_text("", encoding="utf-8")
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+    monkeypatch.setattr(main_module, "get_store", lambda: store)
+    client = TestClient(app)
+
+    response = client.get("/api/students/20230001/profile", params={"term": "2023-1"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["code"] == 200
+    first_dimension = payload["data"]["dimension_scores"][0]
+    assert first_dimension == calibrated_dimension_scores[0]
 
 
 def test_get_student_report_returns_404_for_unknown_student(client) -> None:

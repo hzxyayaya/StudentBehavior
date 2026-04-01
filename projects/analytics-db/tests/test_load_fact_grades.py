@@ -60,3 +60,33 @@ def test_load_grade_records_preserves_score_and_gpa_fields():
             "source_row_hash": "grade-1",
         }
     ]
+
+
+def test_load_grade_records_supports_real_excel_columns_and_date_based_term_inference():
+    df = load_fact_grades(
+        [
+            {
+                "XH": " pjxyqxbj901 ",
+                "KCH": "CS201",
+                "KCCJ": 59,
+                "JDCJ": 1.2,
+                "KSSJ": "2025-01-08 09:00:00",
+                "source_file": "学生成绩.xlsx",
+                "source_row_hash": "grade-real-1",
+            }
+        ]
+    )
+
+    assert df.to_dict(orient="records") == [
+        {
+            "student_id": "pjxyqxbj901",
+            "term_key": "2024-1",
+            "course_id": "CS201",
+            "course_name": None,
+            "score": 59,
+            "gpa": 1.2,
+            "passed": False,
+            "source_file": "学生成绩.xlsx",
+            "source_row_hash": "grade-real-1",
+        }
+    ]

@@ -18,21 +18,10 @@ _ENROLLMENT_COLUMNS = (
     "source_row_hash",
 )
 
-_STUDENT_ID_KEYS = (
-    "student_id",
-    "学号",
-    "学生学号",
-    "学籍号",
-    "XH",
-    "XSBH",
-    "LOGIN_NAME",
-    "USERNUM",
-    "SID",
-)
-
-_TERM_YEAR_KEYS = ("XN", "xn", "school_year", "学年", "学年度", "开课学年")
-_TERM_NO_KEYS = ("XQ", "xq", "term_no", "学期", "学期序号", "开课学期")
-_COMBINED_TERM_KEYS = ("term_key", "学年学期", "学年学期名称", "学期名称", "xnxq", "XNXQ")
+_STUDENT_ID_KEYS = ("student_id", "XH", "XSBH", "LOGIN_NAME", "USERNUM", "SID")
+_TERM_YEAR_KEYS = ("XN", "xn", "school_year", "KKXN")
+_TERM_NO_KEYS = ("XQ", "xq", "term_no", "KKXQ")
+_COMBINED_TERM_KEYS = ("term_key", "xnxq", "XNXQ")
 _STANDARD_TERM_KEY_RE = re.compile(r"^\d{4}-[12]$")
 
 
@@ -41,7 +30,7 @@ def load_fact_enrollments(rows: list[dict[str, Any]]) -> pd.DataFrame:
     for row in rows:
         student_id = _pick_student_id(row)
         term_key = _pick_term_key(row)
-        source_file = _normalize_text(_first_value(row, "source_file", "源文件"))
+        source_file = _normalize_text(_first_value(row, "source_file"))
         source_row_hash = _normalize_text(_first_value(row, "source_row_hash", "row_hash"))
         if student_id is None or term_key is None or source_file is None or source_row_hash is None:
             continue
@@ -50,9 +39,9 @@ def load_fact_enrollments(rows: list[dict[str, Any]]) -> pd.DataFrame:
             {
                 "student_id": student_id,
                 "term_key": term_key,
-                "course_id": _normalize_text(_first_value(row, "course_id", "课程ID", "课程编号")),
-                "course_code": _normalize_text(_first_value(row, "course_code", "课程代码")),
-                "course_name": _normalize_text(_first_value(row, "course_name", "课程名称")),
+                "course_id": _normalize_text(_first_value(row, "course_id", "KCH", "JXBH")),
+                "course_code": _normalize_text(_first_value(row, "course_code", "KCH")),
+                "course_name": _normalize_text(_first_value(row, "course_name", "KCM")),
                 "source_file": source_file,
                 "source_row_hash": source_row_hash,
             }

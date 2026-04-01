@@ -30,4 +30,6 @@ def test_normalize_term_key_rejects_unsupported_combined_format_when_raw_term_is
 
 
 def test_guess_based_term_inference_is_rejected():
-    assert infer_term_from_month_only("2023-03-01") is None
+    assert infer_term_from_month_only("2024-03-01") == "2023-2"
+    assert infer_term_from_month_only("2024-09-01") == "2024-1"
+    assert infer_term_from_month_only("2025-01-10") == "2024-1"

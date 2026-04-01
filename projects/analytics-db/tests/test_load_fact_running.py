@@ -37,7 +37,7 @@ def test_load_running_events_maps_usernum_and_run_time():
     ]
 
 
-def test_load_running_events_drops_rows_without_term_calendar():
+def test_load_running_events_infer_term_without_term_calendar():
     df = load_fact_running(
         [
             {
@@ -51,4 +51,14 @@ def test_load_running_events_drops_rows_without_term_calendar():
         ]
     )
 
-    assert df.to_dict(orient="records") == []
+    assert df.to_dict(orient="records") == [
+        {
+            "student_id": "pjxyqxbj795",
+            "term_key": "2020-1",
+            "ran_at": "2020-09-25 06:25:06",
+            "run_date": "2020-09-25",
+            "distance_km": None,
+            "source_file": "跑步打卡.xlsx",
+            "source_row_hash": "running-raw-1",
+        }
+    ]

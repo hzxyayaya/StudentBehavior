@@ -46,7 +46,7 @@ def test_load_signin_events_maps_real_source_rows_with_term_calendar():
     ]
 
 
-def test_load_signin_events_drops_rows_without_term_calendar():
+def test_load_signin_events_infer_term_without_term_calendar():
     df = load_fact_signins(
         [
             {
@@ -58,4 +58,12 @@ def test_load_signin_events_drops_rows_without_term_calendar():
         ]
     )
 
-    assert df.to_dict(orient="records") == []
+    assert df.to_dict(orient="records") == [
+        {
+            "student_id": "pjxyqxbj337",
+            "term_key": "2020-1",
+            "signed_in_at": "2020-10-14 02:24:44",
+            "source_file": "学生签到记录.xlsx",
+            "source_row_hash": "signin-1",
+        }
+    ]

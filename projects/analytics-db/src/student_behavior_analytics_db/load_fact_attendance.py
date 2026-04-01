@@ -6,6 +6,7 @@ from typing import Any
 import pandas as pd
 
 from .normalize_ids import normalize_student_id
+from .normalize_terms import infer_term_from_month_only
 from .normalize_terms import normalize_term_key
 
 _ATTENDANCE_COLUMNS = (
@@ -17,21 +18,10 @@ _ATTENDANCE_COLUMNS = (
     "source_row_hash",
 )
 
-_STUDENT_ID_KEYS = (
-    "student_id",
-    "学号",
-    "学生学号",
-    "学籍号",
-    "XH",
-    "XSBH",
-    "LOGIN_NAME",
-    "USERNUM",
-    "SID",
-)
-
-_TERM_YEAR_KEYS = ("XN", "xn", "school_year", "学年", "学年度", "开课学年")
-_TERM_NO_KEYS = ("XQ", "xq", "term_no", "学期", "学期序号", "开课学期")
-_COMBINED_TERM_KEYS = ("term_key", "学年学期", "学年学期名称", "学期名称", "xnxq", "XNXQ")
+_STUDENT_ID_KEYS = ("student_id", "XH", "XSBH", "LOGIN_NAME", "USERNUM", "SID")
+_TERM_YEAR_KEYS = ("XN", "xn", "school_year")
+_TERM_NO_KEYS = ("XQ", "xq", "term_no")
+_COMBINED_TERM_KEYS = ("term_key", "xnxq", "XNXQ")
 _STANDARD_TERM_KEY_RE = re.compile(r"^\d{4}-[12]$")
 
 
@@ -39,8 +29,9 @@ def load_fact_attendance(rows: list[dict[str, Any]]) -> pd.DataFrame:
     records = []
     for row in rows:
         student_id = _pick_student_id(row)
-        term_key = _pick_term_key(row)
-        source_file = _normalize_text(_first_value(row, "source_file", "源文件"))
+        attended_at = _normalize_text(_first_value(row, "attended_at", "DKSJ", "RQ"))
+        term_key = _pick_term_key(row, attended_at)
+        source_file = _normalize_text(_first_value(row, "source_file"))
         source_row_hash = _normalize_text(_first_value(row, "source_row_hash", "row_hash"))
         if student_id is None or term_key is None or source_file is None or source_row_hash is None:
             continue
@@ -49,10 +40,8 @@ def load_fact_attendance(rows: list[dict[str, Any]]) -> pd.DataFrame:
             {
                 "student_id": student_id,
                 "term_key": term_key,
-                "attendance_status": _normalize_text(
-                    _first_value(row, "attendance_status", "考勤状态", "出勤状态")
-                ),
-                "attended_at": _normalize_text(_first_value(row, "attended_at", "考勤时间", "签到时间")),
+                "attendance_status": _normalize_text(_first_value(row, "attendance_status", "ZT")),
+                "attended_at": attended_at,
                 "source_file": source_file,
                 "source_row_hash": source_row_hash,
             }
@@ -69,7 +58,7 @@ def _pick_student_id(row: dict[str, Any]) -> str | None:
     return None
 
 
-def _pick_term_key(row: dict[str, Any]) -> str | None:
+def _pick_term_key(row: dict[str, Any], attended_at: str | None) -> str | None:
     for key in _COMBINED_TERM_KEYS:
         if key in row:
             term_key = _normalize_term_key_value(row.get(key))
@@ -79,7 +68,7 @@ def _pick_term_key(row: dict[str, Any]) -> str | None:
     raw_year = _first_value(row, *_TERM_YEAR_KEYS)
     raw_term = _first_value(row, *_TERM_NO_KEYS)
     if raw_year is None or raw_term is None:
-        return None
+        return infer_term_from_month_only(attended_at)
     return normalize_term_key(raw_year, raw_term)
 
 

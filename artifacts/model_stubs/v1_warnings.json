@@ -1,0 +1,17 @@
+{
+  "generated_at": "2026-04-01T01:22:16Z",
+  "input_row_count": 2905,
+  "output_row_count": 2905,
+  "dropped_row_count": 0,
+  "null_metric_summary": {
+    "avg_course_score": 2905,
+    "failed_course_count": 2905,
+    "attendance_normal_rate": 2726,
+    "sign_event_count": 225,
+    "selected_course_count": 157,
+    "library_visit_count": 2442
+  },
+  "notes": [
+    "build completed"
+  ]
+}

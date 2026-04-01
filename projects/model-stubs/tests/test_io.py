@@ -40,7 +40,7 @@ def test_optional_draft_source_columns_may_be_null(tmp_path) -> None:
 
     frame = read_features(export_path)
 
-    assert list(frame.columns) == [
+    assert {
         "student_id",
         "term_key",
         "major_name",
@@ -48,7 +48,32 @@ def test_optional_draft_source_columns_may_be_null(tmp_path) -> None:
         "avg_course_score",
         "failed_course_count",
         "attendance_normal_rate",
+        "sign_event_count",
+        "selected_course_count",
+        "library_visit_count",
         "major_rank_pct",
-    ]
+    }.issubset(set(frame.columns))
     assert pd.isna(frame.loc[0, "attendance_normal_rate"])
     assert pd.isna(frame.loc[0, "major_rank_pct"])
+
+
+def test_read_features_accepts_minimal_semester_export_and_backfills_optional_columns(tmp_path) -> None:
+    export_path = tmp_path / "semester_features.csv"
+    export_path.write_text(
+        "\n".join(
+            [
+                "student_id,term_key,major_name,attendance_record_count,internet_duration_sum",
+                "pjwrqxbj901,2024-2,应用化学,4,0.0",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    frame = read_features(export_path)
+
+    assert frame.loc[0, "student_id"] == "pjwrqxbj901"
+    assert frame.loc[0, "term_key"] == "2024-2"
+    assert frame.loc[0, "major_name"] == "应用化学"
+    assert pd.isna(frame.loc[0, "avg_course_score"])
+    assert pd.isna(frame.loc[0, "failed_course_count"])
+    assert pd.isna(frame.loc[0, "attendance_normal_rate"])

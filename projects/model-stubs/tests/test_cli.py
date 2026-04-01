@@ -144,54 +144,39 @@ def test_main_build_writes_all_expected_artifacts(
     warnings = json.loads(warnings_json.read_text(encoding="utf-8"))
 
     assert list(results["student_id"].astype(str)) == ["20230001"]
-    assert reports == [
-        {
-            "student_id": "20230001",
-            "term_key": "2023-1",
-            "top_factors": [
-                {
-                    "feature": "behavior_activity",
-                    "feature_cn": "学习行为活跃度",
-                    "effect": "positive",
-                    "importance": 0.69,
-                },
-                {
-                    "feature": "routine_resource_use",
-                    "feature_cn": "生活规律与资源使用",
-                    "effect": "positive",
-                    "importance": 0.64,
-                },
-                {
-                    "feature": "class_engagement",
-                    "feature_cn": "课堂学习投入",
-                    "effect": "positive",
-                    "importance": 0.55,
-                },
-            ],
-            "intervention_advice": [
-                "建议先聚焦课堂参与和作息稳定，按周观察变化趋势。",
-                "把学习任务拆成小步执行，并保留固定的反馈节奏。",
-                "继续维持已有的正向行为，同时减少波动较大的环节。",
-            ],
-            "report_text": (
-                "## 学生群体画像\n"
-                "该学生当前属于「课堂参与薄弱组」，当前风险等级为 中风险。\n\n"
-                "## 核心风险指标解读\n"
-                "1. **学习行为活跃度**: 当前维度得分为 0.12，属于需要优先关注的弱项。\n"
-                "2. **生活规律与资源使用**: 当前维度得分为 0.23，属于需要优先关注的弱项。\n"
-                "3. **课堂学习投入**: 当前维度得分为 0.39，属于需要优先关注的弱项。\n\n"
-                "## 建设性改进建议\n"
-                "1. 建议先聚焦课堂参与和作息稳定，按周观察变化趋势。\n"
-                "2. 把学习任务拆成小步执行，并保留固定的反馈节奏。\n"
-                "3. 继续维持已有的正向行为，同时减少波动较大的环节。"
-            ),
-        }
-    ]
+    dimension_scores = json.loads(results.loc[0, "dimension_scores_json"])
+    assert len(dimension_scores) == 8
+    assert isinstance(dimension_scores[0]["label"], str)
+    assert dimension_scores[0]["label"] not in {"high", "medium", "low"}
+    assert dimension_scores[0]["metrics"]
+    assert "学期GPA" in dimension_scores[0]["explanation"]
+    assert reports[0]["student_id"] == "20230001"
+    assert reports[0]["term_key"] == "2023-1"
+    assert reports[0]["version"] == "v1_calibrated_report"
+    assert len(reports[0]["top_factors"]) == 3
+    assert all(factor["effect"] == "positive" for factor in reports[0]["top_factors"])
+    assert all(factor["importance"] == 0.75 for factor in reports[0]["top_factors"])
+    assert len(reports[0]["intervention_advice_items"]) == 3
+    assert [item["priority"] for item in reports[0]["intervention_advice_items"]] == [1, 2, 3]
+    assert [item["text"] for item in reports[0]["intervention_advice_items"]] == reports[0]["intervention_advice"]
+    assert all({"key", "priority", "text"} <= set(item) for item in reports[0]["intervention_advice_items"])
+    first_factor = reports[0]["top_factors"][0]["feature_cn"]
+    first_dimension = next(item for item in dimension_scores if item["dimension"] == first_factor)
+    assert reports[0]["top_factors"][0]["dimension_code"] == first_dimension["dimension_code"]
+    assert "指标：" in reports[0]["report_text"]
+    assert "当前维度得分 " in reports[0]["report_text"]
+    if first_dimension["provenance"]["has_caveated_metrics"] or first_dimension["provenance"]["has_deferred_metrics"]:
+        assert "证据提示：当前维度包含 caveated/deferred 证据" in reports[0]["report_text"]
     assert overview["student_count"] == 1
+    assert overview["dimension_summary"][0]["dimension_code"] == "academic_base"
+    assert overview["dimension_summary"][0]["average_score"] == dimension_scores[0]["score"]
+    only_group_summary = next(iter(overview["group_score_summary"].values()))
+    assert only_group_summary[0]["dimension_code"] == "academic_base"
+    assert only_group_summary[0]["average_score"] == dimension_scores[0]["score"]
     assert model_summary == {
-        "cluster_method": "stub-group-rules",
-        "risk_model": "stub-risk-rules",
-        "target_label": "综合测评低等级风险",
+        "cluster_method": "stub-eight-dimension-group-rules",
+        "risk_model": "stub-eight-dimension-risk-rules",
+        "target_label": "学期级八维学业风险",
         "auc": 0.8347,
         "updated_at": model_summary["updated_at"],
     }

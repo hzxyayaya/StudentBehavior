@@ -4,107 +4,148 @@ from student_behavior_model_stubs.templates import build_report_payload
 from student_behavior_model_stubs.templates import build_top_factors
 
 
-def test_build_top_factors_matches_api_contract_shape() -> None:
-    dimension_scores = [
-        {"dimension": "学业基础表现", "score": 0.18},
-        {"dimension": "课堂学习投入", "score": 0.32},
-        {"dimension": "学习行为活跃度", "score": 0.57},
-        {"dimension": "生活规律与资源使用", "score": 0.81},
+def _dimension_scores() -> list[dict[str, object]]:
+    return [
+        {
+            "dimension": "学业基础表现",
+            "dimension_code": "academic_base",
+            "score": 0.18,
+            "level": "low",
+            "label": "学业基础预警",
+            "metrics": [{"metric": "term_gpa", "label": "学期GPA", "value": 2.1}],
+            "explanation": "学业基础表现处于学业基础预警，主要依据是学期GPA 2.1。",
+            "provenance": {"has_caveated_metrics": False},
+        },
+        {
+            "dimension": "课堂学习投入",
+            "dimension_code": "class_engagement",
+            "score": 0.32,
+            "level": "low",
+            "label": "课堂投入薄弱",
+            "metrics": [{"metric": "attendance_rate", "label": "出勤率", "value": 0.76}],
+            "explanation": "课堂学习投入处于课堂投入薄弱，主要依据是出勤率 0.76。",
+            "provenance": {"has_caveated_metrics": True},
+        },
+        {
+            "dimension": "在线学习积极性",
+            "dimension_code": "online_activeness",
+            "score": 0.41,
+            "level": "low",
+            "label": "在线学习偏弱",
+            "metrics": [{"metric": "video_completion_rate", "label": "视频完成率", "value": 0.52}],
+            "explanation": "在线学习积极性处于在线学习偏弱，主要依据是视频完成率 0.52。",
+            "provenance": {"has_caveated_metrics": False},
+        },
+        {
+            "dimension": "图书馆沉浸度",
+            "dimension_code": "library_immersion",
+            "score": 0.57,
+            "level": "medium",
+            "label": "图书馆投入一般",
+            "metrics": [{"metric": "weekly_library_visit_avg", "label": "周均进馆次数", "value": 1.4}],
+            "explanation": "图书馆沉浸度处于图书馆投入一般，主要依据是周均进馆次数 1.4。",
+            "provenance": {"has_caveated_metrics": False},
+        },
+        {
+            "dimension": "网络作息自律指数",
+            "dimension_code": "network_habits",
+            "score": 0.21,
+            "level": "low",
+            "label": "网络作息失衡",
+            "metrics": [{"metric": "monthly_online_duration_avg", "label": "月均上网时长", "value": 42}],
+            "explanation": "网络作息自律指数处于网络作息失衡，主要依据是月均上网时长 42。 说明：不声称深夜指标，不使用 0:00-6:00 明细；仅允许聚合上网强度。",
+            "provenance": {"has_caveated_metrics": True},
+        },
+        {
+            "dimension": "早晚生活作息规律",
+            "dimension_code": "daily_routine_boundary",
+            "score": 0.26,
+            "level": "low",
+            "label": "作息边界失衡",
+            "metrics": [{"metric": "late_return_ratio", "label": "晚归占比", "value": 0.28}],
+            "explanation": "早晚生活作息规律处于作息边界失衡，主要依据是晚归占比 0.28。",
+            "provenance": {"has_caveated_metrics": False},
+        },
+        {
+            "dimension": "体质及运动状况",
+            "dimension_code": "physical_resilience",
+            "score": 0.81,
+            "level": "high",
+            "label": "体能状态良好",
+            "metrics": [{"metric": "physical_test_avg_score", "label": "体测均分", "value": 88}],
+            "explanation": "体质及运动状况处于体能状态良好，主要依据是体测均分 88。",
+            "provenance": {"has_caveated_metrics": False},
+        },
+        {
+            "dimension": "综合荣誉与异动预警",
+            "dimension_code": "appraisal_status_alert",
+            "score": 0.74,
+            "level": "medium",
+            "label": "综合表现波动",
+            "metrics": [{"metric": "status_change_count", "label": "异动次数", "value": 1}],
+            "explanation": "综合荣誉与异动预警处于综合表现波动，主要依据是异动次数 1。",
+            "provenance": {"has_caveated_metrics": False},
+        },
     ]
 
-    assert build_top_factors(
+
+def test_build_top_factors_matches_api_contract_shape() -> None:
+    factors = build_top_factors(
         risk_level="high",
         group_segment="作息失衡风险组",
-        dimension_scores=dimension_scores,
-    ) == [
-        {
-            "feature": "academic_base_score",
-            "feature_cn": "学业基础表现",
-            "effect": "positive",
-            "importance": 0.66,
-        },
-        {
-            "feature": "class_engagement",
-            "feature_cn": "课堂学习投入",
-            "effect": "positive",
-            "importance": 0.59,
-        },
-        {
-            "feature": "behavior_activity",
-            "feature_cn": "学习行为活跃度",
-            "effect": "negative",
-            "importance": 0.47,
-        },
+        dimension_scores=_dimension_scores(),
+    )
+
+    assert [factor["feature"] for factor in factors] == [
+        "academic_base",
+        "network_habits",
+        "daily_routine_boundary",
     ]
+    assert {"feature", "feature_cn", "effect", "importance", "dimension_code", "label", "explanation", "provenance"} <= set(factors[0])
+    assert factors[0]["dimension_code"] == "academic_base"
+    assert factors[0]["label"] == "学业基础预警"
+    assert "学期GPA 2.1" in factors[0]["explanation"]
+    assert factors[1]["dimension_code"] == "network_habits"
+    assert factors[1]["provenance"] == {"has_caveated_metrics": True}
 
 
 def test_build_report_payload_returns_readable_stub_content() -> None:
-    dimension_scores = [
-        {"dimension": "学业基础表现", "score": 0.18},
-        {"dimension": "课堂学习投入", "score": 0.32},
-        {"dimension": "学习行为活跃度", "score": 0.57},
-        {"dimension": "生活规律与资源使用", "score": 0.81},
-    ]
-
-    assert build_report_payload(
+    payload = build_report_payload(
         risk_level="high",
         group_segment="作息失衡风险组",
-        dimension_scores=dimension_scores,
-    ) == {
-        "top_factors": [
-            {
-                "feature": "academic_base_score",
-                "feature_cn": "学业基础表现",
-                "effect": "positive",
-                "importance": 0.66,
-            },
-            {
-                "feature": "class_engagement",
-                "feature_cn": "课堂学习投入",
-                "effect": "positive",
-                "importance": 0.59,
-            },
-            {
-                "feature": "behavior_activity",
-                "feature_cn": "学习行为活跃度",
-                "effect": "negative",
-                "importance": 0.47,
-            },
-        ],
-        "intervention_advice": [
-            "优先安排一次一对一沟通，确认深夜在线和课堂投入偏低的原因。",
-            "建议将本周学习目标拆成可执行清单，并按天跟进完成情况。",
-            "同步提醒宿舍作息和电子设备使用边界，先把晚间行为稳定下来。",
-        ],
-        "report_text": (
-            "## 学生群体画像\n"
-            "该学生当前属于「作息失衡风险组」，当前风险等级为 高风险。\n\n"
-            "## 核心风险指标解读\n"
-            "1. **学业基础表现**: 当前维度得分为 0.18，属于需要优先关注的弱项。\n"
-            "2. **课堂学习投入**: 当前维度得分为 0.32，属于需要优先关注的弱项。\n"
-            "3. **学习行为活跃度**: 当前维度得分为 0.57，保持观察即可。\n\n"
-            "## 建设性改进建议\n"
-            "1. 优先安排一次一对一沟通，确认深夜在线和课堂投入偏低的原因。\n"
-            "2. 建议将本周学习目标拆成可执行清单，并按天跟进完成情况。\n"
-            "3. 同步提醒宿舍作息和电子设备使用边界，先把晚间行为稳定下来。"
-        ),
-    }
+        dimension_scores=_dimension_scores(),
+    )
+
+    assert payload["version"] == "v1_calibrated_report"
+    assert [factor["dimension_code"] for factor in payload["top_factors"]] == [
+        "academic_base",
+        "network_habits",
+        "daily_routine_boundary",
+    ]
+    assert len(payload["intervention_advice"]) == 3
+    assert len(payload["intervention_advice_items"]) == 3
+    assert [item["priority"] for item in payload["intervention_advice_items"]] == [1, 2, 3]
+    assert [item["text"] for item in payload["intervention_advice_items"]] == payload["intervention_advice"]
+    assert [item["key"] for item in payload["intervention_advice_items"]] == [
+        "stabilize_core_learning",
+        "set_routine_boundaries",
+        "protect_strengths_focus_weakest",
+    ]
+    assert "作息失衡风险组" in payload["report_text"]
+    assert "高风险" in payload["report_text"]
+    assert "证据提示：当前维度包含 caveated/deferred 证据" in payload["report_text"]
 
 
 def test_build_report_payload_is_deterministic() -> None:
-    dimension_scores = [
-        {"dimension": "课堂学习投入", "score": 0.24},
-    ]
-
     payload_one = build_report_payload(
         risk_level="medium",
         group_segment="课堂参与薄弱组",
-        dimension_scores=dimension_scores,
+        dimension_scores=[{"dimension": "课堂学习投入", "score": 0.24}],
     )
     payload_two = build_report_payload(
         risk_level="medium",
         group_segment="课堂参与薄弱组",
-        dimension_scores=dimension_scores,
+        dimension_scores=[{"dimension": "课堂学习投入", "score": 0.24}],
     )
 
     assert payload_one == payload_two
@@ -114,10 +155,7 @@ def test_build_report_payload_is_deterministic() -> None:
 
 def test_build_report_payload_handles_one_shot_dimension_scores() -> None:
     def score_rows() -> Iterator[dict[str, object]]:
-        yield {"dimension": "学业基础表现", "score": 0.18}
-        yield {"dimension": "课堂学习投入", "score": 0.32}
-        yield {"dimension": "学习行为活跃度", "score": 0.57}
-        yield {"dimension": "生活规律与资源使用", "score": 0.81}
+        yield from _dimension_scores()
 
     payload = build_report_payload(
         risk_level="high",
@@ -125,27 +163,15 @@ def test_build_report_payload_handles_one_shot_dimension_scores() -> None:
         dimension_scores=score_rows(),
     )
 
-    assert payload["top_factors"] == [
-        {
-            "feature": "academic_base_score",
-            "feature_cn": "学业基础表现",
-            "effect": "positive",
-            "importance": 0.66,
-        },
-        {
-            "feature": "class_engagement",
-            "feature_cn": "课堂学习投入",
-            "effect": "positive",
-            "importance": 0.59,
-        },
-        {
-            "feature": "behavior_activity",
-            "feature_cn": "学习行为活跃度",
-            "effect": "negative",
-            "importance": 0.47,
-        },
+    assert [factor["dimension_code"] for factor in payload["top_factors"]] == [
+        "academic_base",
+        "network_habits",
+        "daily_routine_boundary",
     ]
     assert "高风险" in payload["report_text"]
+    assert "学业基础预警" in payload["report_text"]
+    assert "月均上网时长 42" in payload["report_text"]
+    assert "证据提示：当前维度包含 caveated/deferred 证据" in payload["report_text"]
 
 
 def test_build_report_payload_handles_sparse_dimension_scores() -> None:
@@ -156,28 +182,66 @@ def test_build_report_payload_handles_sparse_dimension_scores() -> None:
     )
 
     assert len(payload["top_factors"]) == 3
-    assert payload["top_factors"] == [
-        {
-            "feature": "academic_base_score",
-            "feature_cn": "学业基础表现",
-            "effect": "neutral",
-            "importance": 0.0,
-        },
-        {
-            "feature": "class_engagement",
-            "feature_cn": "课堂学习投入",
-            "effect": "neutral",
-            "importance": 0.0,
-        },
-        {
-            "feature": "behavior_activity",
-            "feature_cn": "学习行为活跃度",
-            "effect": "neutral",
-            "importance": 0.0,
-        },
+    assert [factor["dimension_code"] for factor in payload["top_factors"]] == [
+        "academic_base",
+        "class_engagement",
+        "online_activeness",
     ]
+    assert all(factor["effect"] == "neutral" for factor in payload["top_factors"])
+    assert all(factor["importance"] == 0.0 for factor in payload["top_factors"])
+    assert all(factor["label"] == "" for factor in payload["top_factors"])
+    assert all(factor["explanation"] == "" for factor in payload["top_factors"])
+    assert all(factor["provenance"] == {} for factor in payload["top_factors"])
     assert payload["report_text"].strip() != ""
     assert "学习投入稳定组" in payload["report_text"]
     assert "低风险" in payload["report_text"]
     assert "暂无有效数据" in payload["report_text"]
     assert "low" not in payload["report_text"]
+    assert payload["version"] == "v1_calibrated_report"
+    assert len(payload["intervention_advice_items"]) == 3
+
+
+def test_build_top_factors_prefers_calibrated_explanations_over_plain_scores() -> None:
+    payload = build_report_payload(
+        risk_level="high",
+        group_segment="作息失衡风险组",
+        dimension_scores=_dimension_scores(),
+    )
+
+    assert payload["top_factors"][1]["feature"] == "network_habits"
+    assert "网络作息失衡" in payload["report_text"]
+    assert "不声称深夜指标" in payload["report_text"]
+
+
+def test_build_report_payload_structurally_uses_metrics_and_provenance() -> None:
+    scores = _dimension_scores()
+    scores[0] = {
+        **scores[0],
+        "explanation": "占位说明，不应成为唯一信息来源。",
+    }
+    scores[4] = {
+        **scores[4],
+        "provenance": {
+            "has_caveated_metrics": True,
+            "has_deferred_metrics": True,
+            "threshold_strategies": ["hybrid"],
+        },
+    }
+
+    payload = build_report_payload(
+        risk_level="high",
+        group_segment="作息失衡风险组",
+        dimension_scores=scores,
+    )
+
+    assert "指标：学期GPA 2.1" in payload["report_text"]
+    assert "当前维度得分 0.18，水平 low。" in payload["report_text"]
+    assert "证据提示：当前维度包含 caveated/deferred 证据，解读时需保留口径限制。" in payload["report_text"]
+    assert payload["top_factors"][0]["dimension_code"] == "academic_base"
+    assert payload["top_factors"][0]["label"] == "学业基础预警"
+    assert payload["top_factors"][0]["explanation"] == "占位说明，不应成为唯一信息来源。"
+    network_factor = next(
+        factor for factor in payload["top_factors"] if factor["dimension_code"] == "network_habits"
+    )
+    assert network_factor["provenance"]["has_deferred_metrics"] is True
+    assert [item["priority"] for item in payload["intervention_advice_items"]] == [1, 2, 3]

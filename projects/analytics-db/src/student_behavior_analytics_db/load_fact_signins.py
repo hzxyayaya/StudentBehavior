@@ -7,6 +7,7 @@ from typing import Any, Iterable
 import pandas as pd
 
 from .normalize_ids import normalize_student_id
+from .normalize_terms import infer_term_from_month_only
 from .normalize_terms import normalize_term_key
 
 _SIGNIN_COLUMNS = (
@@ -107,11 +108,11 @@ def _pick_term_key(
     raw_year = _first_value(row, *_TERM_YEAR_KEYS)
     raw_term = _first_value(row, *_TERM_NO_KEYS)
     if raw_year is None or raw_term is None:
-        return _term_key_from_calendar(signed_in_at, term_calendar)
+        return _term_key_from_calendar(signed_in_at, term_calendar) or infer_term_from_month_only(signed_in_at)
     term_key = normalize_term_key(raw_year, raw_term)
     if term_key is not None:
         return term_key
-    return _term_key_from_calendar(signed_in_at, term_calendar)
+    return _term_key_from_calendar(signed_in_at, term_calendar) or infer_term_from_month_only(signed_in_at)
 
 
 def _normalize_term_key_value(raw: Any) -> str | None:

@@ -1,0 +1,7 @@
+{
+  "cluster_method": "stub-eight-dimension-group-rules",
+  "risk_model": "stub-eight-dimension-risk-rules",
+  "target_label": "学期级八维学业风险",
+  "auc": 0.8347,
+  "updated_at": "2026-04-01T09:22:16"
+}

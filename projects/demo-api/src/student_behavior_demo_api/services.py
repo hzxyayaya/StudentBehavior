@@ -43,7 +43,22 @@ class DemoApiStore:
     def get_overview(self, term: str) -> dict[str, Any]:
         if term not in self._overview_terms:
             raise KeyError(term)
-        return dict(self._overview_payload)
+        payload = dict(self._overview_payload)
+        term_rows = [
+            row
+            for row in _load_warning_rows(
+                self._warnings_path or _resolve_warning_artifact_path(self._repo_root)
+            )
+            if row["term_key"] == term
+        ]
+
+        if term != self._overview_term:
+            payload = _build_term_aware_overview_fallback(payload, term, term_rows)
+        elif "dimension_summary" not in payload:
+            term_dimension_summary = _build_average_dimension_scores(term_rows)
+            if term_dimension_summary:
+                payload["dimension_summary"] = term_dimension_summary
+        return payload
 
     def get_model_summary(self, term: str | None = None) -> dict[str, Any]:
         return dict(self._model_summary_payload)
@@ -120,27 +135,43 @@ class DemoApiStore:
             avg_risk_probability = round(
                 sum(row["risk_probability"] for row in rows) / len(rows), 4
             )
+            avg_dimension_scores = _build_average_dimension_scores(rows)
             factor_stats: dict[str, dict[str, Any]] = {}
+            factor_aliases: dict[str, str] = {}
             for row in rows:
                 report_row = report_index.get((row.get("student_id"), row.get("term_key")))
                 factor_entries = _extract_group_factor_entries(report_row)
                 for factor in factor_entries:
-                    dimension = factor["dimension"]
+                    identity_key = _resolve_identity_key(
+                        factor.get("_identity_key"),
+                        factor.get("_identity_aliases", []),
+                        factor_aliases,
+                    )
                     importance = factor["importance"]
-                    current = factor_stats.get(dimension)
+                    current = factor_stats.get(identity_key)
                     if current is None:
-                        factor_stats[dimension] = {
-                            "dimension": dimension,
-                            "importance": importance,
-                            "count": 1,
-                        }
+                        factor_stats[identity_key] = _copy_public_fields(factor)
+                        factor_stats[identity_key]["count"] = 1
+                        _register_identity_aliases(
+                            factor_aliases,
+                            factor_stats[identity_key].get("_identity_key"),
+                            factor.get("_identity_aliases", []),
+                            identity_key,
+                        )
                         continue
                     current["count"] += 1
                     if importance > current["importance"]:
                         current["importance"] = importance
+                    _merge_summary_fields(current, factor)
+                    _register_identity_aliases(
+                        factor_aliases,
+                        current.get("_identity_key"),
+                        factor.get("_identity_aliases", []),
+                        identity_key,
+                    )
 
             top_factors = sorted(
-                factor_stats.values(),
+                [_copy_public_fields(item) for item in factor_stats.values()],
                 key=lambda item: (-item["count"], -item["importance"], item["dimension"]),
             )
             groups.append(
@@ -148,6 +179,7 @@ class DemoApiStore:
                     "group_segment": group_segment,
                     "student_count": len(rows),
                     "avg_risk_probability": avg_risk_probability,
+                    "avg_dimension_scores": avg_dimension_scores,
                     "top_factors": top_factors,
                 }
             )
@@ -276,11 +308,40 @@ def _extract_group_factor_entries(
     if not isinstance(report_factors, list):
         raise ValueError("top_factors must be a list")
 
-    entries = []
+    unique_entries: dict[str, dict[str, Any]] = {}
+    alias_index: dict[str, str] = {}
     for item in report_factors:
         if isinstance(item, str):
             if item:
-                entries.append({"dimension": item, "importance": 1.0})
+                factor_entry = {
+                    "dimension": item,
+                    "importance": 1.0,
+                    "_identity_key": item,
+                    "_identity_aliases": [item],
+                }
+                identity_key = _resolve_identity_key(
+                    factor_entry["_identity_key"],
+                    factor_entry["_identity_aliases"],
+                    alias_index,
+                )
+                current = unique_entries.get(identity_key)
+                if current is None:
+                    unique_entries[identity_key] = factor_entry
+                    _register_identity_aliases(
+                        alias_index,
+                        unique_entries[identity_key]["_identity_key"],
+                        factor_entry["_identity_aliases"],
+                        identity_key,
+                    )
+                else:
+                    current["importance"] = max(current["importance"], 1.0)
+                    _merge_summary_fields(current, factor_entry)
+                    _register_identity_aliases(
+                        alias_index,
+                        current.get("_identity_key"),
+                        factor_entry["_identity_aliases"],
+                        identity_key,
+                    )
             else:
                 raise ValueError("top_factors items must be strings or factor objects")
             continue
@@ -292,8 +353,287 @@ def _extract_group_factor_entries(
         importance = item.get("importance")
         if not isinstance(importance, (int, float)):
             raise ValueError("top_factors items must be strings or factor objects")
-        entries.append({"dimension": dimension, "importance": float(importance)})
-    return entries
+        factor_entry = {
+            "dimension": dimension,
+            "importance": float(importance),
+        }
+        for optional_key in ("feature", "feature_cn", "effect"):
+            optional_value = item.get(optional_key)
+            if isinstance(optional_value, str) and optional_value:
+                factor_entry[optional_key] = optional_value
+        factor_entry["_identity_aliases"] = _identity_aliases(factor_entry)
+        factor_entry["_identity_key"] = _preferred_identity_key(factor_entry)
+        identity_key = _resolve_identity_key(
+            factor_entry["_identity_key"],
+            factor_entry["_identity_aliases"],
+            alias_index,
+        )
+        current = unique_entries.get(identity_key)
+        if current is None:
+            unique_entries[identity_key] = factor_entry
+            _register_identity_aliases(
+                alias_index,
+                unique_entries[identity_key]["_identity_key"],
+                factor_entry["_identity_aliases"],
+                identity_key,
+            )
+        else:
+            current["importance"] = max(current["importance"], float(importance))
+            _merge_summary_fields(current, factor_entry)
+            _register_identity_aliases(
+                alias_index,
+                current.get("_identity_key"),
+                factor_entry["_identity_aliases"],
+                identity_key,
+            )
+    return list(unique_entries.values())
+
+
+def _build_average_dimension_scores(rows: list[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    totals: dict[str, dict[str, Any]] = {}
+    alias_index: dict[str, str] = {}
+    for row in rows:
+        dimension_scores = _parse_json_field(
+            row.get("dimension_scores_json"), field_name="dimension_scores_json"
+        )
+        if not isinstance(dimension_scores, list):
+            raise ValueError("dimension_scores_json must decode to a list")
+        for item in dimension_scores:
+            if not isinstance(item, Mapping):
+                raise ValueError("dimension_scores_json items must be objects")
+            dimension = item.get("dimension")
+            score = item.get("score")
+            if not isinstance(dimension, str) or not dimension:
+                raise ValueError("dimension_scores_json items must include dimension")
+            if not isinstance(score, (int, float)):
+                raise ValueError("dimension_scores_json items must include numeric score")
+            summary_entry = _build_dimension_summary_entry(item, float(score))
+            identity_key = _resolve_identity_key(
+                summary_entry["_identity_key"],
+                summary_entry["_identity_aliases"],
+                alias_index,
+            )
+            current = totals.get(identity_key)
+            if current is None:
+                totals[identity_key] = summary_entry
+                _register_identity_aliases(
+                    alias_index,
+                    summary_entry["_identity_key"],
+                    summary_entry["_identity_aliases"],
+                    identity_key,
+                )
+            else:
+                current["total"] += float(score)
+                current["score_count"] += 1
+                _merge_summary_fields(current, summary_entry)
+                _register_identity_aliases(
+                    alias_index,
+                    current.get("_identity_key"),
+                    summary_entry["_identity_aliases"],
+                    identity_key,
+                )
+
+    return [
+        _finalize_dimension_summary(value)
+        for value in totals.values()
+    ]
+
+
+def _find_trend_summary_term(payload: Mapping[str, Any], term: str) -> Mapping[str, Any] | None:
+    trend_summary = payload.get("trend_summary")
+    if not isinstance(trend_summary, Mapping):
+        return None
+
+    term_entries = trend_summary.get("terms")
+    if not isinstance(term_entries, list):
+        return None
+
+    for term_entry in term_entries:
+        if isinstance(term_entry, Mapping) and term_entry.get("term_key") == term:
+            return term_entry
+    return None
+
+
+def _build_term_aware_overview_fallback(
+    payload: Mapping[str, Any],
+    term: str,
+    term_rows: list[Mapping[str, Any]],
+) -> dict[str, Any]:
+    fallback_payload = dict(payload)
+    trend_entry = _find_trend_summary_term(payload, term)
+
+    if trend_entry is not None and isinstance(trend_entry.get("student_count"), int):
+        fallback_payload["student_count"] = trend_entry["student_count"]
+    else:
+        fallback_payload["student_count"] = len(term_rows)
+
+    if trend_entry is not None and isinstance(trend_entry.get("risk_distribution"), Mapping):
+        fallback_payload["risk_distribution"] = dict(trend_entry["risk_distribution"])
+    else:
+        fallback_payload["risk_distribution"] = _build_risk_distribution(term_rows)
+
+    fallback_payload["group_distribution"] = _build_group_distribution(term_rows)
+    fallback_payload["major_risk_summary"] = _build_major_risk_summary(term_rows)
+
+    term_dimension_summary = _build_average_dimension_scores(term_rows)
+    fallback_payload["dimension_summary"] = term_dimension_summary
+
+    fallback_payload["trend_summary"] = None
+    fallback_payload["summary_term"] = term
+    fallback_payload["summary_source"] = "term_fallback"
+    fallback_payload["summary_unavailable_fields"] = ["trend_summary"]
+    return fallback_payload
+
+
+def _build_dimension_summary_entry(item: Mapping[str, Any], score: float) -> dict[str, Any]:
+    summary_entry = {
+        "dimension": item["dimension"],
+        "total": score,
+        "score_count": 1,
+    }
+    for optional_key in ("feature", "feature_cn", "level", "label", "metrics", "explanation"):
+        optional_value = item.get(optional_key)
+        if optional_value is not None:
+            summary_entry[optional_key] = optional_value
+    summary_entry["_identity_aliases"] = _identity_aliases(summary_entry)
+    summary_entry["_identity_key"] = _preferred_identity_key(summary_entry)
+    return summary_entry
+
+
+def _build_group_distribution(rows: list[Mapping[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = defaultdict(int)
+    for row in rows:
+        group_segment = row.get("group_segment")
+        if isinstance(group_segment, str) and group_segment:
+            counts[group_segment] += 1
+    return dict(counts)
+
+
+def _build_major_risk_summary(rows: list[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    stats: dict[str, dict[str, float]] = {}
+    for row in rows:
+        major_name = row.get("major_name")
+        risk_level = row.get("risk_level")
+        risk_probability = row.get("risk_probability")
+        if not isinstance(major_name, str) or not major_name:
+            continue
+        if not isinstance(risk_probability, (int, float)):
+            continue
+        current = stats.get(major_name)
+        if current is None:
+            stats[major_name] = {
+                "student_count": 1.0,
+                "high_risk_count": 1.0 if risk_level == "high" else 0.0,
+                "risk_probability_total": float(risk_probability),
+            }
+            continue
+        current["student_count"] += 1.0
+        current["risk_probability_total"] += float(risk_probability)
+        if risk_level == "high":
+            current["high_risk_count"] += 1.0
+
+    summaries = [
+        {
+            "major_name": major_name,
+            "student_count": int(values["student_count"]),
+            "high_risk_count": int(values["high_risk_count"]),
+            "average_risk_probability": round(
+                values["risk_probability_total"] / values["student_count"], 2
+            ),
+        }
+        for major_name, values in stats.items()
+    ]
+    summaries.sort(key=lambda item: item["major_name"])
+    return summaries
+
+
+def _build_risk_distribution(rows: list[Mapping[str, Any]]) -> dict[str, int]:
+    distribution = {"high": 0, "medium": 0, "low": 0}
+    for row in rows:
+        risk_level = row.get("risk_level")
+        if isinstance(risk_level, str) and risk_level in distribution:
+            distribution[risk_level] += 1
+    return distribution
+
+
+def _finalize_dimension_summary(value: Mapping[str, Any]) -> dict[str, Any]:
+    summary = _copy_public_fields(value)
+    summary["average_score"] = round(float(value["total"]) / int(value["score_count"]), 2)
+    summary["score_count"] = int(value["score_count"])
+    return summary
+
+
+def _preferred_identity_key(item: Mapping[str, Any]) -> str:
+    for key in ("feature", "feature_cn", "dimension"):
+        value = item.get(key)
+        if isinstance(value, str) and value:
+            return value
+    raise ValueError("items must include a canonical identifier")
+
+
+def _identity_aliases(item: Mapping[str, Any]) -> list[str]:
+    aliases: list[str] = []
+    for key in ("feature", "feature_cn", "dimension"):
+        value = item.get(key)
+        if isinstance(value, str) and value and value not in aliases:
+            aliases.append(value)
+    return aliases
+
+
+def _resolve_identity_key(
+    preferred_key: Any,
+    aliases: list[str] | tuple[str, ...],
+    alias_index: Mapping[str, str],
+) -> str:
+    if isinstance(preferred_key, str):
+        existing_key = alias_index.get(preferred_key)
+        if existing_key is not None:
+            return existing_key
+    for alias in aliases:
+        existing_key = alias_index.get(alias)
+        if existing_key is not None:
+            return existing_key
+    if isinstance(preferred_key, str) and preferred_key:
+        return preferred_key
+    for alias in aliases:
+        if alias:
+            return alias
+    raise ValueError("items must include a canonical identifier")
+
+
+def _register_identity_aliases(
+    alias_index: dict[str, str],
+    preferred_key: Any,
+    aliases: list[str] | tuple[str, ...],
+    identity_key: str,
+) -> None:
+    if isinstance(preferred_key, str) and preferred_key:
+        alias_index[preferred_key] = identity_key
+    for alias in aliases:
+        alias_index[alias] = identity_key
+
+
+def _merge_summary_fields(current: dict[str, Any], incoming: Mapping[str, Any]) -> None:
+    for key, value in incoming.items():
+        if key in {"importance", "total", "score_count"}:
+            continue
+        if key not in current and not key.startswith("_"):
+            current[key] = value
+    current_aliases = _identity_aliases(current)
+    incoming_aliases = incoming.get("_identity_aliases", [])
+    merged_aliases = current_aliases[:]
+    for alias in incoming_aliases:
+        if alias not in merged_aliases:
+            merged_aliases.append(alias)
+    current["_identity_aliases"] = merged_aliases
+    if "feature" in incoming and "feature" not in current:
+        current["_identity_key"] = incoming["feature"]
+    else:
+        current["_identity_key"] = current.get("_identity_key") or _preferred_identity_key(current)
+
+
+def _copy_public_fields(item: Mapping[str, Any]) -> dict[str, Any]:
+    return {key: value for key, value in item.items() if not key.startswith("_") and key != "total"}
 
 
 def _sort_term_key(row: Mapping[str, Any]) -> tuple[int, int, str]:
