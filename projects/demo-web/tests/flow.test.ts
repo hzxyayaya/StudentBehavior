@@ -1,0 +1,456 @@
+import { RouterLinkStub, flushPromises, mount } from '@vue/test-utils'
+import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { createRouter as createAppRouter } from '@/app/router'
+import { useAuthStore } from '@/app/auth'
+import OverviewPage from '@/features/overview/OverviewPage.vue'
+import GroupsPage from '@/features/quadrants/QuadrantsPage.vue'
+import StudentPage from '@/features/students/StudentPage.vue'
+
+function createPlugins() {
+  const router = createAppRouter()
+  const vueQueryPlugin: [typeof VueQueryPlugin, { queryClient: QueryClient }] = [VueQueryPlugin, { queryClient: new QueryClient() }]
+  return { router, vueQueryPlugin }
+}
+
+describe('demo flow links', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+    sessionStorage.clear()
+  })
+
+  it('links major risk summary to high-risk warnings for the same major', async () => {
+    const auth = useAuthStore()
+    auth.signIn('demo-token', '演示管理员', '2024-2')
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input)
+
+        if (url.includes('/analytics/overview')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              code: 200,
+              message: 'OK',
+              data: {
+                student_count: 179,
+                risk_distribution: [
+                  { risk_level: 'high', count: 12 },
+                  { risk_level: 'medium', count: 34 },
+                  { risk_level: 'low', count: 133 },
+                ],
+                group_distribution: [
+                  { group_segment: '学习投入稳定组', count: 45 },
+                  { group_segment: '综合发展优势组', count: 51 },
+                  { group_segment: '作息失衡风险组', count: 39 },
+                  { group_segment: '课堂参与薄弱组', count: 44 },
+                ],
+                major_risk_summary: [
+                  { major_name: '计算机科学与技术', high_risk_count: 5, student_count: 18 },
+                ],
+                trend_summary: [
+                  { term: '2024-1', high_risk_count: 10 },
+                  { term: '2024-2', high_risk_count: 12 },
+                ],
+                dimension_summary: [
+                  {
+                    dimension: '学业基础表现',
+                    score: 82,
+                    level: 'high',
+                    label: '学业基础稳健',
+                    explanation: '学期 GPA 保持稳定。',
+                    metrics: [{ metric: '学期GPA', value: 3.1, display: '3.1' }],
+                  },
+                  {
+                    dimension: '课堂学习投入',
+                    score: 74,
+                    level: 'medium',
+                    label: '课堂投入一般',
+                    explanation: '出勤较稳但课堂参与仍有提升空间。',
+                    metrics: [{ metric: '全勤率', value: 0.87, display: '87%' }],
+                  },
+                ],
+              },
+              meta: { request_id: 'req-overview', term: '2024-2' },
+            }),
+          })
+        }
+
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            code: 200,
+            message: 'OK',
+            data: {
+              cluster_method: 'stub-group-rules',
+              risk_model: 'stub-risk-rules',
+              target_label: '综合测评低等级风险',
+              auc: 0.81,
+              updated_at: '2026-03-28T12:00:00+08:00',
+            },
+            meta: { request_id: 'req-summary', term: '2024-2' },
+          }),
+        })
+      }),
+    )
+
+    const { router, vueQueryPlugin } = createPlugins()
+    await router.push('/overview')
+    await router.isReady()
+
+    const wrapper = mount(OverviewPage, {
+      global: {
+        plugins: [router, vueQueryPlugin],
+        stubs: { RouterLink: RouterLinkStub, EChart: { template: '<div class="echart-stub" />' } },
+      },
+    })
+
+    await flushPromises()
+    await flushPromises()
+
+    const links = wrapper.findAllComponents(RouterLinkStub)
+    const majorLink = links.find((link) => link.text().includes('计算机科学与技术'))
+
+    expect(majorLink).toBeTruthy()
+    expect(majorLink!.props('to')).toEqual({
+      path: '/warnings',
+      query: {
+        term: '2024-2',
+        risk_level: 'high',
+        major_name: '计算机科学与技术',
+      },
+    })
+    const overviewCards = wrapper.findAll('.dimension-detail-card')
+    const [firstOverviewCard, secondOverviewCard] = overviewCards
+    if (!firstOverviewCard || !secondOverviewCard) {
+      throw new Error('missing overview dimension cards')
+    }
+
+    expect(overviewCards).toHaveLength(2)
+    expect(firstOverviewCard.text()).toContain('学业基础表现')
+    expect(firstOverviewCard.text()).toContain('高')
+    expect(firstOverviewCard.text()).toContain('82分')
+    expect(firstOverviewCard.text()).toContain('学业基础稳健')
+    expect(firstOverviewCard.text()).toContain('学期GPA')
+    expect(firstOverviewCard.text()).toContain('3.1')
+    expect(firstOverviewCard.text()).toContain('学期 GPA 保持稳定。')
+    expect(secondOverviewCard.text()).toContain('课堂学习投入')
+    expect(secondOverviewCard.text()).toContain('中')
+    expect(secondOverviewCard.text()).toContain('74分')
+    expect(secondOverviewCard.text()).toContain('课堂投入一般')
+    expect(secondOverviewCard.text()).toContain('出勤较稳但课堂参与仍有提升空间。')
+  })
+
+  it('keeps warning filters in the back link on student page', async () => {
+    const auth = useAuthStore()
+    auth.signIn('demo-token', '演示管理员', '2024-2')
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input)
+
+        if (url.includes('/profile')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              code: 200,
+              message: 'OK',
+              data: {
+                student_id: 'pjwrqxbj901',
+                student_name: '示例学生',
+                major_name: '计算机科学与技术',
+                group_segment: '作息失衡风险组',
+                risk_level: 'high',
+                risk_probability: 0.82,
+                dimension_scores: [
+                  {
+                    dimension: '课堂学习投入',
+                    score: 0.26,
+                    level: 'low',
+                    label: '课堂投入不足',
+                    explanation: '迟到与缺勤较多。',
+                    metrics: [{ metric: '迟到次数', value: 6, display: '6 次' }],
+                  },
+                ],
+                trend: [{ term: '2024-2', risk_probability: 0.82 }],
+              },
+              meta: { request_id: 'req-profile', term: '2024-2' },
+            }),
+          })
+        }
+
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            code: 200,
+            message: 'OK',
+            data: {
+              top_factors: [
+                {
+                  dimension: '课堂学习投入',
+                  explanation: '课堂参与下降',
+                  direction: 'up',
+                  impact: 0.21,
+                  label: '课堂投入不足',
+                  metrics: [{ metric: '迟到次数', value: 6, display: '6 次' }],
+                },
+              ],
+              intervention_advice: ['安排阶段性学习跟踪'],
+              report_text: '当前学生处于较高风险。',
+            },
+            meta: { request_id: 'req-report', term: '2024-2' },
+          }),
+        })
+      }),
+    )
+
+    const { router, vueQueryPlugin } = createPlugins()
+    await router.push(
+      '/students/pjwrqxbj901?term=2024-2&source=warnings&page=2&risk_level=high&group_segment=' +
+        encodeURIComponent('作息失衡风险组') +
+        '&major_name=' +
+        encodeURIComponent('计算机科学与技术'),
+    )
+    await router.isReady()
+
+    const wrapper = mount(StudentPage, {
+      global: {
+        plugins: [router, vueQueryPlugin],
+        stubs: { RouterLink: RouterLinkStub, EChart: { template: '<div class="echart-stub" />' } },
+      },
+    })
+
+    await flushPromises()
+    await flushPromises()
+
+    const backLink = wrapper.findAllComponents(RouterLinkStub).find((link) => link.text().includes('返回预警列表'))
+    const dimensionCards = wrapper.findAll('.dimension-card')
+    const [firstDimensionCard] = dimensionCards
+    if (!firstDimensionCard) {
+      throw new Error('missing student dimension card')
+    }
+
+    expect(backLink).toBeTruthy()
+    expect(backLink!.props('to')).toEqual({
+      path: '/warnings',
+      query: {
+        term: '2024-2',
+        page: '2',
+        risk_level: 'high',
+        group_segment: '作息失衡风险组',
+        major_name: '计算机科学与技术',
+      },
+    })
+    expect(dimensionCards).toHaveLength(1)
+    expect(firstDimensionCard.text()).toContain('课堂学习投入')
+    expect(firstDimensionCard.text()).toContain('低')
+    expect(firstDimensionCard.text()).toContain('课堂投入不足')
+    expect(firstDimensionCard.text()).toContain('26分')
+    expect(firstDimensionCard.text()).toContain('迟到次数')
+    expect(firstDimensionCard.text()).toContain('6 次')
+    expect(firstDimensionCard.text()).toContain('迟到与缺勤较多。')
+    expect(wrapper.text()).toContain('课堂参与下降')
+  })
+
+  it('renders calibrated labels, explanations, and metrics on the group page', async () => {
+    const auth = useAuthStore()
+    auth.signIn('demo-token', '演示管理员', '2024-2')
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input)
+
+        if (url.includes('/analytics/groups')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              code: 200,
+              message: 'OK',
+              data: {
+                groups: [
+                  {
+                    group_segment: '作息失衡风险组',
+                    student_count: 39,
+                    avg_risk_probability: 0.62,
+                    avg_dimension_scores: [
+                      {
+                        dimension: '网络作息自律指数',
+                        score: 0.43,
+                        level: 'low',
+                        label: '网络使用偏强',
+                        explanation: '月均上网时长较高，且与群体均值差距明显。',
+                        metrics: [
+                          { metric: '月均上网时长', value: 66, display: '66 小时' },
+                          { metric: '相对学校平均值偏差', value: 0.18, display: '偏高 18%' },
+                        ],
+                      },
+                    ],
+                    top_factors: [
+                      {
+                        dimension: '网络作息自律指数',
+                        importance: 0.75,
+                        count: 39,
+                        label: '网络使用偏强',
+                        explanation: '覆盖 39 人，重要度 0.75',
+                        metrics: [{ metric: '月均上网时长', value: 66, display: '66 小时' }],
+                      },
+                    ],
+                  },
+                ],
+              },
+              meta: { request_id: 'req-groups', term: '2024-2' },
+            }),
+          })
+        }
+
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            code: 200,
+            message: 'OK',
+            data: {
+              cluster_method: 'stub-group-rules',
+              risk_model: 'stub-risk-rules',
+              target_label: '综合测评低等级风险',
+              auc: 0.81,
+              updated_at: '2026-03-28T12:00:00+08:00',
+            },
+            meta: { request_id: 'req-summary', term: '2024-2' },
+          }),
+        })
+      }),
+    )
+
+    const { router, vueQueryPlugin } = createPlugins()
+    await router.push('/groups')
+    await router.isReady()
+
+    const wrapper = mount(GroupsPage, {
+      global: {
+        plugins: [router, vueQueryPlugin],
+        stubs: { RouterLink: RouterLinkStub, EChart: { template: '<div class="echart-stub" />' } },
+      },
+    })
+
+    await flushPromises()
+    await flushPromises()
+
+    const groupCards = wrapper.findAll('.group-card')
+    const [firstGroupCard] = groupCards
+    if (!firstGroupCard) {
+      throw new Error('missing group card')
+    }
+
+    expect(groupCards).toHaveLength(1)
+    expect(firstGroupCard.text()).toContain('作息失衡风险组')
+    expect(firstGroupCard.text()).toContain('39 人')
+    expect(firstGroupCard.text()).toContain('0.62')
+    const dimensionRows = firstGroupCard.findAll('.dimension-row')
+    const [firstDimensionRow] = dimensionRows
+    if (!firstDimensionRow) {
+      throw new Error('missing group dimension row')
+    }
+    expect(dimensionRows).toHaveLength(1)
+    expect(firstDimensionRow.text()).toContain('网络作息自律指数')
+    expect(firstDimensionRow.text()).toContain('低')
+    expect(firstDimensionRow.text()).toContain('网络使用偏强')
+    expect(firstDimensionRow.text()).toContain('43分')
+    expect(firstDimensionRow.text()).toContain('月均上网时长')
+    expect(firstDimensionRow.text()).toContain('66 小时')
+    expect(firstDimensionRow.text()).toContain('相对学校平均值偏差')
+    expect(firstDimensionRow.text()).toContain('偏高 18%')
+    expect(firstGroupCard.text()).toContain('覆盖 39 人，重要度 0.75')
+  })
+
+  it('shows incomplete calibrated fields explicitly when the backend leaves them unavailable', async () => {
+    const auth = useAuthStore()
+    auth.signIn('demo-token', '演示管理员', '2024-2')
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input)
+
+        if (url.includes('/profile')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              code: 200,
+              message: 'OK',
+              data: {
+                student_id: 'pjwrqxbj901',
+                student_name: '示例学生',
+                major_name: '计算机科学与技术',
+                group_segment: '待校准组',
+                risk_level: 'medium',
+                risk_probability: 0.52,
+                dimension_scores: [
+                  {
+                    dimension: '课堂学习投入',
+                    score: 0.48,
+                  },
+                ],
+                trend: [{ term: '2024-2', dimension_scores: [{ dimension: '课堂学习投入', score: 0.48 }] }],
+              },
+              meta: { request_id: 'req-profile', term: '2024-2' },
+            }),
+          })
+        }
+
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            code: 200,
+            message: 'OK',
+            data: {
+              top_factors: [
+                {
+                  dimension: '课堂学习投入',
+                  explanation: '课堂参与下降',
+                  direction: 'up',
+                  impact: 0.21,
+                },
+              ],
+              intervention_advice: ['安排阶段性学习跟踪'],
+              report_text: '当前学生处于较高风险。',
+            },
+            meta: { request_id: 'req-report', term: '2024-2' },
+          }),
+        })
+      }),
+    )
+
+    const { router, vueQueryPlugin } = createPlugins()
+    await router.push('/students/pjwrqxbj901?term=2024-2')
+    await router.isReady()
+
+    const wrapper = mount(StudentPage, {
+      global: {
+        plugins: [router, vueQueryPlugin],
+        stubs: { RouterLink: RouterLinkStub, EChart: { template: '<div class="echart-stub" />' } },
+      },
+    })
+
+    await flushPromises()
+    await flushPromises()
+
+    const dimensionCards = wrapper.findAll('.dimension-card')
+    const [firstIncompleteCard] = dimensionCards
+    if (!firstIncompleteCard) {
+      throw new Error('missing incomplete dimension card')
+    }
+
+    expect(dimensionCards).toHaveLength(1)
+    expect(firstIncompleteCard.text()).toContain('课堂学习投入')
+    expect(firstIncompleteCard.text()).toContain('待补充')
+    expect(firstIncompleteCard.text()).toContain('48分')
+    expect(firstIncompleteCard.text()).toContain('暂无指标')
+    expect(firstIncompleteCard.text()).toContain('当前维度尚未提供完整校准结果')
+    expect(wrapper.text()).not.toContain('低')
+  })
+})
