@@ -72,7 +72,10 @@ def _dimension_score(item: Mapping[str, object]) -> float | None:
 
 def _has_usable_evidence(row: Mapping[str, object], dimension_code: str) -> bool:
     for rule in METRIC_RULE_DECLARATIONS[dimension_code]:
-        candidate_keys = [str(rule.get("metric", "")), *[str(raw_field) for raw_field in rule.get("raw_fields", [])]]
+        candidate_keys = [
+            str(rule.get("metric", "")),
+            *[str(raw_field) for raw_field in rule.get("raw_fields", [])],
+        ]
         for candidate_key in candidate_keys:
             if not candidate_key:
                 continue
@@ -81,11 +84,9 @@ def _has_usable_evidence(row: Mapping[str, object], dimension_code: str) -> bool
                 continue
             if isinstance(value, bool):
                 return True
-            try:
-                coerced = float(value)
-            except (TypeError, ValueError):
-                return True
-            if math.isfinite(coerced):
+            if isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(
+                float(value)
+            ):
                 return True
     return False
 

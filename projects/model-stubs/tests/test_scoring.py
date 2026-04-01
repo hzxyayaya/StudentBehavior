@@ -245,6 +245,13 @@ def test_build_risk_calibration_returns_zero_adjustment_without_non_academic_evi
     assert calibration["adjusted_risk_score"] == calibration["base_risk_score"]
 
 
+def test_compute_risk_adjustment_score_ignores_non_numeric_source_strings() -> None:
+    assert compute_risk_adjustment_score(
+        {"ZTDM": "present"},
+        [{"dimension_code": "class_engagement", "score": 0.0}],
+    ) == 0.0
+
+
 def test_adjusted_risk_level_maps_to_four_chinese_labels() -> None:
     assert map_adjusted_risk_level(82.0) == "高风险"
     assert map_adjusted_risk_level(70.0) == "较高风险"
