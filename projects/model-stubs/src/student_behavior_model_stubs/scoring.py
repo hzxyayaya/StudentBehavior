@@ -44,6 +44,8 @@ _DIMENSION_EXPLANATION_SUFFIX = {
     "network_habits": "当前网络使用强度需结合聚合时长观察。",
 }
 
+_MISSING_METRIC = object()
+
 _METRIC_THRESHOLD_HINTS = {
     "term_gpa": (2.0, 4.0),
     "failed_course_count": (0.0, 4.0),
@@ -105,6 +107,23 @@ def _coerce_metric_value(value: object) -> float | int:
     if rounded.is_integer():
         return int(rounded)
     return rounded
+
+
+def _usable_metric_input(value: object) -> float | int | None | object:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, (int, float)):
+        numeric = float(value)
+        if math.isfinite(numeric):
+            return numeric
+        return _MISSING_METRIC
+    if isinstance(value, str):
+        if not value.strip() or value.strip().lower() == "nan":
+            return None
+        return _MISSING_METRIC
+    return _MISSING_METRIC
 
 
 def _distribution_context(row: Mapping[str, object]) -> Mapping[str, Mapping[str, object]]:
@@ -174,13 +193,26 @@ def _score_metric(rule: Mapping[str, object], value: object, row: Mapping[str, o
 
 def _metric_value(row: Mapping[str, object], rule: Mapping[str, object]) -> object:
     metric_name = str(rule["metric"])
+    invalid_non_empty_string = False
     if metric_name in row:
-        return row[metric_name]
+        value = _usable_metric_input(row[metric_name])
+        if value is _MISSING_METRIC:
+            invalid_non_empty_string = True
+        elif value is not None:
+            return value
     raw_fields = rule.get("raw_fields", [])
     if raw_fields:
-        first_field = raw_fields[0]
-        if isinstance(first_field, str) and first_field in row:
-            return row[first_field]
+        for raw_field in raw_fields:
+            if not isinstance(raw_field, str) or raw_field not in row:
+                continue
+            value = _usable_metric_input(row[raw_field])
+            if value is _MISSING_METRIC:
+                invalid_non_empty_string = True
+                continue
+            if value is not None:
+                return value
+    if invalid_non_empty_string:
+        return _MISSING_METRIC
     return 0.0
 
 
@@ -192,6 +224,8 @@ def _build_metrics(
     metric_scores: list[float] = []
     for rule in METRIC_RULE_DECLARATIONS[dimension_code]:
         value = _metric_value(row, rule)
+        if value is _MISSING_METRIC:
+            continue
         metrics.append(
             {
                 "metric": rule["metric"],

@@ -283,6 +283,34 @@ def test_build_risk_calibration_treats_non_finite_previous_scores_as_missing_his
     assert calibration["risk_change_direction"] == "steady"
 
 
+def test_build_dimension_scores_ignores_non_numeric_source_strings() -> None:
+    score_map = {
+        item["dimension_code"]: item
+        for item in build_dimension_scores(
+            {"student_id": "s1", "term_key": "2024-1", "ZTDM": "present"}
+        )
+    }
+
+    class_engagement = score_map["class_engagement"]
+    assert class_engagement["score"] == 0.0
+    assert class_engagement["metrics"] == []
+    assert "出勤率 0" not in class_engagement["explanation"]
+    assert "迟到次数 0" not in class_engagement["explanation"]
+
+
+def test_build_dimension_scores_rejects_non_finite_metric_inputs() -> None:
+    score_map = {
+        item["dimension_code"]: item
+        for item in build_dimension_scores(
+            {"student_id": "s1", "term_key": "2024-1", "term_gpa": math.inf}
+        )
+    }
+
+    academic_base = score_map["academic_base"]
+    assert all(math.isfinite(float(metric["value"])) for metric in academic_base["metrics"])
+    assert "学期GPA inf" not in academic_base["explanation"]
+
+
 def test_compute_group_segment_returns_readable_group_label() -> None:
     label = compute_group_segment(
         _base_row()
