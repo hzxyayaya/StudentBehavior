@@ -1729,6 +1729,143 @@ def test_list_warnings_raises_for_missing_term_key(
         store.list_warnings(term="2023-1")
 
 
+def test_list_warnings_raises_for_missing_group_segment(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230001",
+                "term_key": "2023-1",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "risk_probability": 0.55,
+                "risk_level": "low",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+            }
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.write_text("", encoding="utf-8")
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    with pytest.raises(ValueError, match="warnings rows must include group_segment"):
+        store.list_warnings(term="2023-1")
+
+
+def test_get_groups_accepts_blank_dimension_scores_json(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230009",
+                "term_key": "2023-1",
+                "student_name": "Ian",
+                "major_name": "软件工程",
+                "group_segment": "综合发展优势组",
+                "risk_probability": 0.66,
+                "risk_level": "medium",
+                "dimension_scores_json": "",
+                "top_risk_factors_json": json.dumps([], ensure_ascii=False),
+                "top_protective_factors_json": json.dumps([], ensure_ascii=False),
+                "base_risk_explanation": "base",
+                "behavior_adjustment_explanation": "adjust",
+                "risk_change_explanation": "change",
+            }
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.write_text("", encoding="utf-8")
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    payload = store.get_groups(term="2023-1")
+
+    assert payload["groups"][0]["avg_dimension_scores"] == []
+
+
+def test_get_groups_raises_for_missing_dimension_scores_json(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230010",
+                "term_key": "2023-1",
+                "student_name": "Jade",
+                "major_name": "软件工程",
+                "group_segment": "综合发展优势组",
+                "risk_probability": 0.66,
+                "risk_level": "medium",
+            }
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.write_text("", encoding="utf-8")
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    with pytest.raises(ValueError, match="warnings rows must include dimension_scores_json"):
+        store.get_groups(term="2023-1")
+
+
+@pytest.mark.parametrize("risk_probability", ["nan", "inf", "-inf"])
+def test_list_warnings_rejects_non_finite_risk_probability(
+    risk_probability: str, tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230011",
+                "term_key": "2023-1",
+                "student_name": "Kai",
+                "major_name": "软件工程",
+                "group_segment": "综合发展优势组",
+                "risk_probability": risk_probability,
+                "risk_level": "low",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+            }
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.write_text("", encoding="utf-8")
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    with pytest.raises(ValueError, match="warnings rows must include finite risk_probability"):
+        store.list_warnings(term="2023-1")
+
+
 def test_get_student_report_includes_risk_trend_metadata(
     tmp_path: Path, sample_artifacts_dir: Path
 ) -> None:

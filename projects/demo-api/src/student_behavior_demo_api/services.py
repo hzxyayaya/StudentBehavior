@@ -370,12 +370,21 @@ def _load_warning_rows(path: Path | None) -> list[dict[str, Any]]:
             if not isinstance(term_key, str) or not term_key:
                 raise ValueError("warnings rows must include term_key")
 
+            group_segment = raw_row.get("group_segment")
+            if not isinstance(group_segment, str) or not group_segment:
+                raise ValueError("warnings rows must include group_segment")
+
+            if "dimension_scores_json" not in raw_row:
+                raise ValueError("warnings rows must include dimension_scores_json")
+
             risk_probability_raw = raw_row.get("risk_probability")
             if not isinstance(risk_probability_raw, str) or not risk_probability_raw:
                 raise ValueError("warnings rows must include risk_probability")
 
             row = dict(raw_row)
             row["risk_probability"] = float(risk_probability_raw)
+            if not math.isfinite(row["risk_probability"]):
+                raise ValueError("warnings rows must include finite risk_probability")
             for key in (
                 "base_risk_score",
                 "risk_adjustment_score",
@@ -548,9 +557,13 @@ def _build_average_dimension_scores(rows: list[Mapping[str, Any]]) -> list[dict[
     totals: dict[str, dict[str, Any]] = {}
     alias_index: dict[str, str] = {}
     for row in rows:
-        dimension_scores = _parse_json_field(
-            row.get("dimension_scores_json"), field_name="dimension_scores_json"
-        )
+        raw_scores = row.get("dimension_scores_json")
+        if isinstance(raw_scores, str) and not raw_scores.strip():
+            dimension_scores = []
+        else:
+            dimension_scores = _parse_json_field(
+                raw_scores, field_name="dimension_scores_json"
+            )
         if not isinstance(dimension_scores, list):
             raise ValueError("dimension_scores_json must decode to a list")
         for item in dimension_scores:
