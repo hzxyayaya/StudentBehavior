@@ -151,6 +151,7 @@ def get_warnings(
     risk_level: Literal["high", "medium", "low"] | None = None,
     group_segment: str | None = Query(default=None, min_length=1),
     major_name: str | None = None,
+    risk_change_direction: Literal["rising", "steady", "falling"] | None = None,
 ) -> Envelope[dict]:
     try:
         data = get_store().list_warnings(
@@ -160,6 +161,7 @@ def get_warnings(
             risk_level=risk_level,
             group_segment=group_segment,
             major_name=major_name,
+            risk_change_direction=risk_change_direction,
         )
     except KeyError:
         return _error_envelope(status_code=404, message="term not found", term=term)

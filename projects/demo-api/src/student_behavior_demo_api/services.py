@@ -58,6 +58,10 @@ class DemoApiStore:
             term_dimension_summary = _build_average_dimension_scores(term_rows)
             if term_dimension_summary:
                 payload["dimension_summary"] = term_dimension_summary
+        if "risk_band_distribution" not in payload:
+            payload["risk_band_distribution"] = _build_risk_band_distribution(term_rows)
+        if "risk_factor_summary" not in payload:
+            payload["risk_factor_summary"] = _build_risk_factor_summary(term_rows)
         return payload
 
     def get_model_summary(self, term: str | None = None) -> dict[str, Any]:
@@ -82,12 +86,22 @@ class DemoApiStore:
             "group_segment": current_row.get("group_segment"),
             "risk_level": current_row.get("risk_level"),
             "risk_probability": current_row.get("risk_probability"),
+            "base_risk_score": _as_float(current_row.get("base_risk_score")),
+            "risk_adjustment_score": _as_float(current_row.get("risk_adjustment_score")),
+            "adjusted_risk_score": _as_float(current_row.get("adjusted_risk_score")),
+            "risk_delta": _as_float(current_row.get("risk_delta")),
+            "risk_change_direction": current_row.get("risk_change_direction"),
             "dimension_scores": _parse_json_field(
                 current_row.get("dimension_scores_json"), field_name="dimension_scores_json"
             ),
             "trend": [
                 {
                     "term": row.get("term_key"),
+                    "risk_level": row.get("risk_level"),
+                    "risk_probability": row.get("risk_probability"),
+                    "adjusted_risk_score": _as_float(row.get("adjusted_risk_score")),
+                    "risk_delta": _as_float(row.get("risk_delta")),
+                    "risk_change_direction": row.get("risk_change_direction"),
                     "dimension_scores": _parse_json_field(
                         row.get("dimension_scores_json"), field_name="dimension_scores_json"
                     ),
@@ -111,6 +125,12 @@ class DemoApiStore:
                 current_row.get("intervention_advice"), field_name="intervention_advice"
             ),
             "report_text": current_row.get("report_text"),
+            "base_risk_explanation": current_row.get("base_risk_explanation"),
+            "behavior_adjustment_explanation": current_row.get("behavior_adjustment_explanation"),
+            "risk_change_explanation": current_row.get("risk_change_explanation"),
+            "intervention_plan": _parse_maybe_json_field(
+                current_row.get("intervention_plan"), field_name="intervention_plan"
+            ),
         }
 
     def get_groups(self, *, term: str) -> dict[str, Any]:
@@ -135,7 +155,12 @@ class DemoApiStore:
             avg_risk_probability = round(
                 sum(row["risk_probability"] for row in rows) / len(rows), 4
             )
+            avg_risk_score = _average_numeric(rows, "adjusted_risk_score", fallback_field="risk_probability")
+            avg_risk_level = _resolve_avg_risk_level(rows)
+            risk_change_summary = _build_risk_change_summary(rows)
             avg_dimension_scores = _build_average_dimension_scores(rows)
+            risk_amplifiers = _aggregate_warning_factors(rows, "top_risk_factors_json")
+            protective_factors = _aggregate_warning_factors(rows, "top_protective_factors_json")
             factor_stats: dict[str, dict[str, Any]] = {}
             factor_aliases: dict[str, str] = {}
             for row in rows:
@@ -179,6 +204,11 @@ class DemoApiStore:
                     "group_segment": group_segment,
                     "student_count": len(rows),
                     "avg_risk_probability": avg_risk_probability,
+                    "avg_risk_score": avg_risk_score,
+                    "avg_risk_level": avg_risk_level,
+                    "risk_change_summary": risk_change_summary,
+                    "risk_amplifiers": risk_amplifiers,
+                    "protective_factors": protective_factors,
                     "avg_dimension_scores": avg_dimension_scores,
                     "top_factors": top_factors,
                 }
@@ -201,6 +231,7 @@ class DemoApiStore:
         risk_level: str | None = None,
         group_segment: str | None = None,
         major_name: str | None = None,
+        risk_change_direction: str | None = None,
     ) -> dict[str, Any]:
         warning_rows = _load_warning_rows(self._warnings_path or _resolve_warning_artifact_path(self._repo_root))
         if term not in {row["term_key"] for row in warning_rows}:
@@ -212,6 +243,10 @@ class DemoApiStore:
             and (risk_level is None or row["risk_level"] == risk_level)
             and (group_segment is None or row["group_segment"] == group_segment)
             and (major_name is None or row["major_name"] == major_name)
+            and (
+                risk_change_direction is None
+                or row.get("risk_change_direction") == risk_change_direction
+            )
         ]
         filtered_rows.sort(key=lambda row: (-row["risk_probability"], row["student_id"]))
 
@@ -219,9 +254,31 @@ class DemoApiStore:
         end_index = start_index + page_size
         items = [
             {
-                key: value
-                for key, value in row.items()
-                if key != "_risk_probability_sort"
+                "student_id": row.get("student_id"),
+                "student_name": row.get("student_name"),
+                "major_name": row.get("major_name"),
+                "group_segment": row.get("group_segment"),
+                "risk_probability": row.get("risk_probability"),
+                "base_risk_score": _as_float(row.get("base_risk_score")),
+                "risk_adjustment_score": _as_float(row.get("risk_adjustment_score")),
+                "adjusted_risk_score": _as_float(row.get("adjusted_risk_score")),
+                "risk_level": row.get("risk_level"),
+                "risk_delta": _as_float(row.get("risk_delta")),
+                "risk_change_direction": row.get("risk_change_direction"),
+                "top_risk_factors": [
+                    _copy_public_fields(item)
+                    for item in _parse_warning_factors(
+                        row.get("top_risk_factors_json"),
+                        field_name="top_risk_factors_json",
+                    )
+                ],
+                "top_protective_factors": [
+                    _copy_public_fields(item)
+                    for item in _parse_warning_factors(
+                        row.get("top_protective_factors_json"),
+                        field_name="top_protective_factors_json",
+                    )
+                ],
             }
             for row in filtered_rows[start_index:end_index]
         ]
@@ -271,6 +328,14 @@ def _load_warning_rows(path: Path | None) -> list[dict[str, Any]]:
 
             row = dict(raw_row)
             row["risk_probability"] = float(risk_probability_raw)
+            for key in (
+                "base_risk_score",
+                "risk_adjustment_score",
+                "adjusted_risk_score",
+                "risk_delta",
+            ):
+                if key in row:
+                    row[key] = _as_float(row.get(key))
             rows.append(row)
         return rows
 
@@ -296,6 +361,45 @@ def _parse_json_field(raw_value: Any, *, field_name: str) -> Any:
         except json.JSONDecodeError as exc:
             raise ValueError(f"{field_name} must contain valid JSON") from exc
     return raw_value
+
+
+def _parse_maybe_json_field(raw_value: Any, *, field_name: str) -> Any:
+    if isinstance(raw_value, str):
+        try:
+            return json.loads(raw_value)
+        except json.JSONDecodeError:
+            return raw_value
+    return raw_value
+
+
+def _as_float(value: Any) -> float | None:
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str) and value.strip():
+        try:
+            return float(value)
+        except ValueError as exc:
+            raise ValueError("numeric fields must be numeric") from exc
+    return None
+
+
+def _parse_warning_factors(raw_value: Any, *, field_name: str) -> list[dict[str, Any]]:
+    parsed = _parse_json_field(raw_value, field_name=field_name)
+    if parsed is None:
+        return []
+    if not isinstance(parsed, list):
+        raise ValueError(f"{field_name} must decode to a list")
+    factors: list[dict[str, Any]] = []
+    for item in parsed:
+        if not isinstance(item, Mapping):
+            raise ValueError(f"{field_name} items must be objects")
+        factor_entry = dict(item)
+        if "importance" in factor_entry:
+            factor_entry["importance"] = _as_float(factor_entry.get("importance"))
+        factor_entry["_identity_aliases"] = _identity_aliases(factor_entry)
+        factor_entry["_identity_key"] = _preferred_identity_key(factor_entry)
+        factors.append(factor_entry)
+    return factors
 
 
 def _extract_group_factor_entries(
@@ -472,8 +576,10 @@ def _build_term_aware_overview_fallback(
     else:
         fallback_payload["risk_distribution"] = _build_risk_distribution(term_rows)
 
+    fallback_payload["risk_band_distribution"] = _build_risk_band_distribution(term_rows)
     fallback_payload["group_distribution"] = _build_group_distribution(term_rows)
     fallback_payload["major_risk_summary"] = _build_major_risk_summary(term_rows)
+    fallback_payload["risk_factor_summary"] = _build_risk_factor_summary(term_rows)
 
     term_dimension_summary = _build_average_dimension_scores(term_rows)
     fallback_payload["dimension_summary"] = term_dimension_summary
@@ -554,6 +660,132 @@ def _build_risk_distribution(rows: list[Mapping[str, Any]]) -> dict[str, int]:
         if isinstance(risk_level, str) and risk_level in distribution:
             distribution[risk_level] += 1
     return distribution
+
+
+def _build_risk_band_distribution(rows: list[Mapping[str, Any]]) -> dict[str, int]:
+    distribution = {"高风险": 0, "较高风险": 0, "一般风险": 0, "低风险": 0}
+    for row in rows:
+        risk_level = row.get("risk_level")
+        normalized = _normalize_risk_level(risk_level)
+        if normalized in distribution:
+            distribution[normalized] += 1
+    return distribution
+
+
+def _build_risk_factor_summary(rows: list[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    return _aggregate_warning_factors(rows, "top_risk_factors_json")
+
+
+def _average_numeric(
+    rows: list[Mapping[str, Any]],
+    field_name: str,
+    *,
+    fallback_field: str | None = None,
+) -> float | None:
+    values: list[float] = []
+    for row in rows:
+        value = _as_float(row.get(field_name))
+        if value is None and fallback_field is not None:
+            value = _as_float(row.get(fallback_field))
+        if value is not None:
+            values.append(value)
+    if not values:
+        return None
+    return round(sum(values) / len(values), 2)
+
+
+def _resolve_avg_risk_level(rows: list[Mapping[str, Any]]) -> str | None:
+    avg_score = _average_numeric(rows, "adjusted_risk_score", fallback_field="risk_probability")
+    if avg_score is not None:
+        return _map_risk_level_from_score(avg_score)
+    levels = [row.get("risk_level") for row in rows if isinstance(row.get("risk_level"), str)]
+    if not levels:
+        return None
+    return max(levels, key=lambda value: (levels.count(value), _risk_level_severity(value)))
+
+
+def _build_risk_change_summary(rows: list[Mapping[str, Any]]) -> dict[str, int]:
+    summary = {"rising": 0, "steady": 0, "falling": 0}
+    for row in rows:
+        direction = row.get("risk_change_direction")
+        if isinstance(direction, str) and direction in summary:
+            summary[direction] += 1
+    return summary
+
+
+def _aggregate_warning_factors(rows: list[Mapping[str, Any]], field_name: str) -> list[dict[str, Any]]:
+    factor_stats: dict[str, dict[str, Any]] = {}
+    factor_aliases: dict[str, str] = {}
+    for row in rows:
+        factors = _parse_warning_factors(row.get(field_name), field_name=field_name)
+        for factor in factors:
+            identity_key = _resolve_identity_key(
+                factor.get("_identity_key"),
+                factor.get("_identity_aliases", []),
+                factor_aliases,
+            )
+            current = factor_stats.get(identity_key)
+            if current is None:
+                factor_stats[identity_key] = _copy_public_fields(factor)
+                factor_stats[identity_key]["count"] = 1
+                _register_identity_aliases(
+                    factor_aliases,
+                    factor.get("_identity_key"),
+                    factor.get("_identity_aliases", []),
+                    identity_key,
+                )
+                continue
+            current["count"] += 1
+            incoming_importance = factor.get("importance")
+            if isinstance(incoming_importance, (int, float)) and (
+                not isinstance(current.get("importance"), (int, float))
+                or float(incoming_importance) > float(current["importance"])
+            ):
+                current["importance"] = float(incoming_importance)
+            _merge_summary_fields(current, factor)
+            _register_identity_aliases(
+                factor_aliases,
+                factor.get("_identity_key"),
+                factor.get("_identity_aliases", []),
+                identity_key,
+            )
+
+    return sorted(
+        [_copy_public_fields(item) for item in factor_stats.values()],
+        key=lambda item: (-item.get("count", 0), -float(item.get("importance", 0) or 0)),
+    )
+
+
+def _normalize_risk_level(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    mapping = {
+        "high": "高风险",
+        "medium": "一般风险",
+        "low": "低风险",
+        "高风险": "高风险",
+        "较高风险": "较高风险",
+        "一般风险": "一般风险",
+        "低风险": "低风险",
+    }
+    return mapping.get(value)
+
+
+def _map_risk_level_from_score(score: float) -> str:
+    if score >= 80:
+        return "高风险"
+    if score >= 65:
+        return "较高风险"
+    if score >= 45:
+        return "一般风险"
+    return "低风险"
+
+
+def _risk_level_severity(level: str) -> int:
+    order = ["low", "medium", "high", "低风险", "一般风险", "较高风险", "高风险"]
+    if level in order:
+        return order.index(level)
+    return -1
 
 
 def _finalize_dimension_summary(value: Mapping[str, Any]) -> dict[str, Any]:

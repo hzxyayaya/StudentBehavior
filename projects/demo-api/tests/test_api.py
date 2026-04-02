@@ -260,6 +260,15 @@ def test_get_overview_returns_term_specific_fallback_payload(
     ]
 
 
+def test_get_overview_exposes_risk_band_distribution_and_factor_summary(client) -> None:
+    response = client.get("/api/analytics/overview", params={"term": "2024-2"})
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["code"] == 200
+    assert "risk_band_distribution" in payload["data"]
+    assert "risk_factor_summary" in payload["data"]
+
+
 def test_api_returns_500_when_artifacts_missing(app_without_artifacts) -> None:
     client = TestClient(app_without_artifacts)
     response = client.get("/api/analytics/overview", params={"term": "2023-1"})
@@ -408,6 +417,17 @@ def test_get_groups_returns_500_envelope_for_invalid_report_top_factors_item_sch
     assert payload["meta"]["term"] == "2023-1"
 
 
+def test_get_groups_exposes_risk_fields(client) -> None:
+    response = client.get("/api/analytics/groups", params={"term": "2023-1"})
+    assert response.status_code == 200
+    payload = response.json()
+    group = payload["data"]["groups"][0]
+    assert "avg_risk_score" in group
+    assert "avg_risk_level" in group
+    assert "risk_amplifiers" in group
+    assert "protective_factors" in group
+
+
 def test_get_models_summary_returns_envelope_payload(client) -> None:
     response = client.get("/api/models/summary", params={"term": "2024-2"})
     assert response.status_code == 200
@@ -444,6 +464,20 @@ def test_get_warnings_returns_404_for_unknown_term(client) -> None:
     payload = response.json()
     assert payload["code"] == 404
     assert payload["message"] == "term not found"
+
+
+def test_get_warnings_exposes_richer_warning_fields(client) -> None:
+    response = client.get("/api/warnings", params={"term": "2023-1"})
+    assert response.status_code == 200
+    payload = response.json()
+    item = payload["data"]["items"][0]
+    assert "base_risk_score" in item
+    assert "risk_adjustment_score" in item
+    assert "adjusted_risk_score" in item
+    assert "risk_delta" in item
+    assert "risk_change_direction" in item
+    assert "top_risk_factors" in item
+    assert "top_protective_factors" in item
 
 
 def test_get_student_profile_returns_404_for_unknown_student(client) -> None:
@@ -501,9 +535,27 @@ def test_get_student_profile_returns_calibrated_dimension_payload(
     assert first_dimension == calibrated_dimension_scores[0]
 
 
+def test_get_student_profile_includes_risk_metadata(client) -> None:
+    response = client.get("/api/students/20230001/profile", params={"term": "2023-1"})
+    assert response.status_code == 200
+    payload = response.json()
+    assert "base_risk_score" in payload["data"]
+    assert "risk_change_direction" in payload["data"]
+
+
 def test_get_student_report_returns_404_for_unknown_student(client) -> None:
     response = client.get("/api/students/404/report", params={"term": "2023-1"})
     assert response.status_code == 404
+
+
+def test_get_student_report_includes_risk_explanations(client) -> None:
+    response = client.get("/api/students/20230001/report", params={"term": "2023-1"})
+    assert response.status_code == 200
+    payload = response.json()
+    assert "base_risk_explanation" in payload["data"]
+    assert "behavior_adjustment_explanation" in payload["data"]
+    assert "risk_change_explanation" in payload["data"]
+    assert "intervention_plan" in payload["data"]
 
 
 def test_missing_artifacts_app_starts_and_fails_on_request(monkeypatch) -> None:
