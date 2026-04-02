@@ -149,7 +149,8 @@ def test_main_build_writes_all_expected_artifacts(
     assert isinstance(dimension_scores[0]["label"], str)
     assert dimension_scores[0]["label"] not in {"high", "medium", "low"}
     assert dimension_scores[0]["metrics"]
-    assert "学期GPA" in dimension_scores[0]["explanation"]
+    assert dimension_scores[0]["dimension"] in dimension_scores[0]["explanation"]
+    assert "主要依据" in dimension_scores[0]["explanation"]
     assert reports[0]["student_id"] == "20230001"
     assert reports[0]["term_key"] == "2023-1"
     assert reports[0]["version"] == "v1_calibrated_report"
