@@ -176,11 +176,17 @@ class DemoApiStore:
             raise KeyError(term)
 
         report_rows = _load_student_report_rows(self._repo_root)
-        report_index = {
-            (row.get("student_id"), row.get("term_key")): row
-            for row in report_rows
-            if isinstance(row.get("student_id"), str) and isinstance(row.get("term_key"), str)
-        }
+        report_index: dict[tuple[str, str], dict[str, Any]] = {}
+        for row in report_rows:
+            student_id = row.get("student_id")
+            term_key = row.get("term_key")
+            if student_id is None or term_key is None:
+                continue
+            student_id = str(student_id)
+            term_key = str(term_key)
+            if not student_id or not term_key:
+                continue
+            report_index[(student_id, term_key)] = row
 
         grouped_rows: dict[str, list[dict[str, Any]]] = defaultdict(list)
         for row in term_rows:
@@ -358,6 +364,10 @@ def _load_warning_rows(path: Path | None) -> list[dict[str, Any]]:
                     raw_row["student_id"] = bom_student_id
                 else:
                     raise ValueError("warnings rows must include student_id")
+
+            term_key = raw_row.get("term_key")
+            if not isinstance(term_key, str) or not term_key:
+                raise ValueError("warnings rows must include term_key")
 
             risk_probability_raw = raw_row.get("risk_probability")
             if not isinstance(risk_probability_raw, str) or not risk_probability_raw:

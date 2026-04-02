@@ -712,6 +712,83 @@ def test_get_groups_aggregates_top_factors_from_reports(sample_store) -> None:
     assert counts["图书馆沉浸度"] != counts["课堂学习投入"]
 
 
+def test_get_groups_normalizes_report_ids_to_match_warning_rows(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230006",
+                "term_key": "2023-1",
+                "student_name": "Frank",
+                "major_name": "软件工程",
+                "group_segment": "综合发展优势组",
+                "risk_probability": 0.66,
+                "base_risk_score": 58.0,
+                "risk_adjustment_score": -1.0,
+                "adjusted_risk_score": 57.0,
+                "risk_level": "medium",
+                "risk_delta": -0.2,
+                "risk_change_direction": "steady",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+                "top_risk_factors_json": json.dumps([], ensure_ascii=False),
+                "top_protective_factors_json": json.dumps([], ensure_ascii=False),
+                "base_risk_explanation": "base",
+                "behavior_adjustment_explanation": "adjust",
+                "risk_change_explanation": "change",
+            }
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.parent.mkdir(parents=True, exist_ok=True)
+    reports_path.write_text(
+        json.dumps(
+            {
+                "student_id": 20230006,
+                "term_key": "2023-1",
+                "student_name": "Frank",
+                "major_name": "软件工程",
+                "top_factors": [
+                    {
+                        "dimension": "课堂学习投入",
+                        "importance": 0.8,
+                        "feature": "class_engagement",
+                        "feature_cn": "课堂学习投入",
+                        "effect": "negative",
+                    }
+                ],
+                "intervention_advice": ["补齐课堂互动"],
+                "report_text": "report",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    payload = store.get_groups(term="2023-1")
+
+    dominant = payload["groups"][0]
+    assert dominant["top_factors"] == [
+        {
+            "dimension": "课堂学习投入",
+            "importance": 0.8,
+            "count": 1,
+            "feature": "class_engagement",
+            "feature_cn": "课堂学习投入",
+            "effect": "negative",
+        }
+    ]
+
+
 def test_get_groups_preserves_richer_factor_summary_fields(
     tmp_path: Path, sample_artifacts_dir: Path
 ) -> None:
@@ -1474,6 +1551,38 @@ def test_list_warnings_exposes_risk_fields_and_filters_by_change_direction(
 def test_list_warnings_raises_for_unknown_term(sample_store) -> None:
     with pytest.raises(KeyError, match="2099-1"):
         sample_store.list_warnings(term="2099-1")
+
+
+def test_list_warnings_raises_for_missing_term_key(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230001",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "group_segment": "综合发展优势组",
+                "risk_probability": 0.55,
+                "risk_level": "low",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+            }
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.write_text("", encoding="utf-8")
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    with pytest.raises(ValueError, match="warnings rows must include term_key"):
+        store.list_warnings(term="2023-1")
 
 
 def test_get_student_report_includes_risk_trend_metadata(
