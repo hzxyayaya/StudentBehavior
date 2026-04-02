@@ -526,6 +526,14 @@ def test_get_student_report_returns_exact_term_record(sample_store) -> None:
         "behavior_adjustment_explanation",
         "risk_change_explanation",
         "intervention_plan",
+        "risk_level",
+        "risk_probability",
+        "base_risk_score",
+        "risk_adjustment_score",
+        "adjusted_risk_score",
+        "risk_delta",
+        "risk_change_direction",
+        "trend",
     }
     assert payload["intervention_advice"][0].startswith("优先")
 
@@ -1303,6 +1311,14 @@ def test_get_student_profile_uses_injected_results_path(
     assert len(payload["trend"][0]["dimension_scores"]) == 8
 
 
+def test_get_student_profile_includes_risk_explanations(sample_store) -> None:
+    payload = sample_store.get_student_profile(student_id="20230001", term="2023-1")
+
+    assert payload["base_risk_explanation"] == "base explanation"
+    assert payload["behavior_adjustment_explanation"] == "adjustment explanation"
+    assert payload["risk_change_explanation"] == "change explanation"
+
+
 def test_list_warnings_filters_by_term_and_risk_level(sample_store) -> None:
     payload = sample_store.list_warnings(term="2023-1", risk_level="high")
     assert payload["total"] == 1
@@ -1398,6 +1414,78 @@ def test_list_warnings_exposes_risk_fields_and_filters_by_change_direction(
 def test_list_warnings_raises_for_unknown_term(sample_store) -> None:
     with pytest.raises(KeyError, match="2099-1"):
         sample_store.list_warnings(term="2099-1")
+
+
+def test_get_student_report_includes_risk_trend_metadata(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230001",
+                "term_key": "2022-2",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "group_segment": "综合发展优势组",
+                "risk_probability": 0.55,
+                "base_risk_score": 55.0,
+                "risk_adjustment_score": -1.0,
+                "adjusted_risk_score": 54.0,
+                "risk_level": "low",
+                "risk_delta": 0.0,
+                "risk_change_direction": "steady",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+            },
+            {
+                "student_id": "20230001",
+                "term_key": "2023-1",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "group_segment": "综合发展优势组",
+                "risk_probability": 0.81,
+                "base_risk_score": 62.0,
+                "risk_adjustment_score": -2.0,
+                "adjusted_risk_score": 60.0,
+                "risk_level": "medium",
+                "risk_delta": -1.0,
+                "risk_change_direction": "falling",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+            },
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.parent.mkdir(parents=True, exist_ok=True)
+    reports_path.write_text(
+        json.dumps(
+            {
+                "student_id": "20230001",
+                "term_key": "2023-1",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "top_factors": [],
+                "intervention_advice": [],
+                "report_text": "report",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    payload = store.get_student_report(student_id="20230001", term="2023-1")
+
+    assert payload["risk_level"] == "medium"
+    assert payload["risk_delta"] == -1.0
+    assert payload["risk_change_direction"] == "falling"
+    assert [item["term"] for item in payload["trend"]] == ["2022-2", "2023-1"]
 
 
 def test_missing_default_artifact_resolution_only_uses_current_worktree(tmp_path: Path) -> None:

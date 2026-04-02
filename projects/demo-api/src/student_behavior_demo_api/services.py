@@ -91,6 +91,9 @@ class DemoApiStore:
             "adjusted_risk_score": _as_float(current_row.get("adjusted_risk_score")),
             "risk_delta": _as_float(current_row.get("risk_delta")),
             "risk_change_direction": current_row.get("risk_change_direction"),
+            "base_risk_explanation": current_row.get("base_risk_explanation"),
+            "behavior_adjustment_explanation": current_row.get("behavior_adjustment_explanation"),
+            "risk_change_explanation": current_row.get("risk_change_explanation"),
             "dimension_scores": _parse_json_field(
                 current_row.get("dimension_scores_json"), field_name="dimension_scores_json"
             ),
@@ -119,6 +122,12 @@ class DemoApiStore:
         if current_row is None:
             raise KeyError((student_id, term))
 
+        student_rows = _load_student_result_rows(self._repo_root, self._warnings_path)
+        student_rows = [row for row in student_rows if row.get("student_id") == student_id]
+        current_warning = next((row for row in student_rows if row.get("term_key") == term), None)
+        if current_warning is None:
+            raise KeyError((student_id, term))
+
         return {
             "top_factors": _parse_json_field(current_row.get("top_factors"), field_name="top_factors"),
             "intervention_advice": _parse_json_field(
@@ -131,6 +140,26 @@ class DemoApiStore:
             "intervention_plan": _parse_maybe_json_field(
                 current_row.get("intervention_plan"), field_name="intervention_plan"
             ),
+            "risk_level": current_warning.get("risk_level"),
+            "risk_probability": current_warning.get("risk_probability"),
+            "base_risk_score": _as_float(current_warning.get("base_risk_score")),
+            "risk_adjustment_score": _as_float(current_warning.get("risk_adjustment_score")),
+            "adjusted_risk_score": _as_float(current_warning.get("adjusted_risk_score")),
+            "risk_delta": _as_float(current_warning.get("risk_delta")),
+            "risk_change_direction": current_warning.get("risk_change_direction"),
+            "trend": [
+                {
+                    "term": row.get("term_key"),
+                    "risk_level": row.get("risk_level"),
+                    "risk_probability": row.get("risk_probability"),
+                    "base_risk_score": _as_float(row.get("base_risk_score")),
+                    "risk_adjustment_score": _as_float(row.get("risk_adjustment_score")),
+                    "adjusted_risk_score": _as_float(row.get("adjusted_risk_score")),
+                    "risk_delta": _as_float(row.get("risk_delta")),
+                    "risk_change_direction": row.get("risk_change_direction"),
+                }
+                for row in sorted(student_rows, key=_sort_term_key)
+            ],
         }
 
     def get_groups(self, *, term: str) -> dict[str, Any]:

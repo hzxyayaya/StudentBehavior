@@ -541,6 +541,9 @@ def test_get_student_profile_includes_risk_metadata(client) -> None:
     payload = response.json()
     assert "base_risk_score" in payload["data"]
     assert "risk_change_direction" in payload["data"]
+    assert "base_risk_explanation" in payload["data"]
+    assert "behavior_adjustment_explanation" in payload["data"]
+    assert "risk_change_explanation" in payload["data"]
 
 
 def test_get_student_report_returns_404_for_unknown_student(client) -> None:
@@ -556,6 +559,10 @@ def test_get_student_report_includes_risk_explanations(client) -> None:
     assert "behavior_adjustment_explanation" in payload["data"]
     assert "risk_change_explanation" in payload["data"]
     assert "intervention_plan" in payload["data"]
+    assert "risk_level" in payload["data"]
+    assert "risk_delta" in payload["data"]
+    assert "risk_change_direction" in payload["data"]
+    assert "trend" in payload["data"]
 
 
 def test_missing_artifacts_app_starts_and_fails_on_request(monkeypatch) -> None:
