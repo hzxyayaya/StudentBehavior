@@ -55,7 +55,7 @@ class DemoApiStore:
 
         if term != self._overview_term:
             payload = _build_term_aware_overview_fallback(payload, term, term_rows)
-        elif "dimension_summary" not in payload:
+        elif "dimension_summary" not in payload or _is_sparse_dimension_summary(payload.get("dimension_summary")):
             term_dimension_summary = _build_average_dimension_scores(term_rows)
             if term_dimension_summary:
                 payload["dimension_summary"] = term_dimension_summary
@@ -668,13 +668,32 @@ def _build_dimension_summary_entry(item: Mapping[str, Any], score: float) -> dic
         "total": score,
         "score_count": 1,
     }
-    for optional_key in ("feature", "feature_cn", "level", "label", "metrics", "explanation"):
+    for optional_key in (
+        "dimension_code",
+        "feature",
+        "feature_cn",
+        "level",
+        "label",
+        "metrics",
+        "explanation",
+    ):
         optional_value = item.get(optional_key)
         if optional_value is not None:
             summary_entry[optional_key] = optional_value
     summary_entry["_identity_aliases"] = _identity_aliases(summary_entry)
     summary_entry["_identity_key"] = _preferred_identity_key(summary_entry)
     return summary_entry
+
+
+def _is_sparse_dimension_summary(raw: Any) -> bool:
+    if not isinstance(raw, list) or not raw:
+        return True
+    for item in raw:
+        if not isinstance(item, Mapping):
+            return True
+        if any(item.get(key) not in (None, [], "") for key in ("level", "label", "metrics", "explanation")):
+            return False
+    return True
 
 
 def _build_group_distribution(rows: list[Mapping[str, Any]]) -> dict[str, int]:
