@@ -293,45 +293,57 @@ describe('demo flow links', () => {
     expect(wrapper.text()).toContain('较高风险干预计划')
   })
 
-  it('renders richer warning rows and sends four-level/risk-change filters', async () => {
+  it('fetches all coarse high-risk pages and computes exact 高风险 pagination client-side', async () => {
     const auth = useAuthStore()
     auth.signIn('demo-token', '演示管理员', '2024-2')
+
+    const highRiskRisingItems = Array.from({ length: 11 }, (_, index) => ({
+      student_id: `high-${index + 1}`,
+      student_name: `高风险学生${index + 1}`,
+      major_name: '计算机科学与技术',
+      group_segment: '作息失衡风险组',
+      risk_level: '高风险',
+      risk_probability: 0.95 - index * 0.01,
+      base_risk_score: 86,
+      risk_adjustment_score: 4,
+      adjusted_risk_score: 90 - index * 0.2,
+      risk_delta: 3,
+      risk_change_direction: 'rising',
+      top_risk_factors: [
+        { feature: 'academic_base', feature_cn: '学业基础表现', dimension: '学业基础表现', importance: 0.9 },
+      ],
+      top_protective_factors: [
+        { feature: 'library_immersion', feature_cn: '图书馆沉浸度', dimension: '图书馆沉浸度', importance: 0.2 },
+      ],
+    }))
+    const elevatedRiskRisingItems = Array.from({ length: 10 }, (_, index) => ({
+      ...highRiskRisingItems[0],
+      student_id: `elevated-${index + 1}`,
+      student_name: `较高风险学生${index + 1}`,
+      risk_level: '较高风险',
+      adjusted_risk_score: 72 - index * 0.2,
+      risk_change_direction: 'rising',
+    }))
+
+    const backendItems = [...highRiskRisingItems, ...elevatedRiskRisingItems]
+    const page1Items = backendItems.slice(0, 20)
+    const page2Items = backendItems.slice(20)
 
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input)
 
-      if (url.includes('/warnings?')) {
+      if (url.includes('/warnings?') && url.includes('risk_level=high') && url.includes('risk_change_direction=rising')) {
+        const page = Number(new URL(url, 'http://localhost').searchParams.get('page') ?? '1')
         return Promise.resolve({
           ok: true,
           json: async () => ({
             code: 200,
             message: 'OK',
             data: {
-              items: [
-                {
-                  student_id: 'pjwrqxbj901',
-                  student_name: '示例学生',
-                  major_name: '计算机科学与技术',
-                  group_segment: '作息失衡风险组',
-                  risk_level: '较高风险',
-                  risk_probability: 0.82,
-                  base_risk_score: 76,
-                  risk_adjustment_score: 6,
-                  adjusted_risk_score: 82,
-                  risk_delta: 2,
-                  risk_change_direction: 'rising',
-                  top_risk_factors: [
-                    { feature: 'academic_base', feature_cn: '学业基础表现', dimension: '学业基础表现', importance: 0.9 },
-                    { feature: 'class_engagement', feature_cn: '课堂学习投入', dimension: '课堂学习投入', importance: 0.78 },
-                  ],
-                  top_protective_factors: [
-                    { feature: 'library_immersion', feature_cn: '图书馆沉浸度', dimension: '图书馆沉浸度', importance: 0.32 },
-                  ],
-                },
-              ],
-              page: 1,
+              items: page === 1 ? page1Items : page2Items,
+              page,
               page_size: 20,
-              total: 1,
+              total: backendItems.length,
             },
             meta: { request_id: 'req-warnings', term: '2024-2' },
           }),
@@ -358,7 +370,7 @@ describe('demo flow links', () => {
     vi.stubGlobal('fetch', fetchMock)
 
     const { router, vueQueryPlugin } = createPlugins()
-    await router.push('/warnings?term=2024-2&risk_level=%E8%BE%83%E9%AB%98%E9%A3%8E%E9%99%A9&risk_change_direction=rising')
+    await router.push('/warnings?term=2024-2&risk_level=%E9%AB%98%E9%A3%8E%E9%99%A9&risk_change_direction=rising')
     await router.isReady()
 
     const wrapper = mount(WarningsPage, {
@@ -371,24 +383,25 @@ describe('demo flow links', () => {
     await flushPromises()
     await flushPromises()
 
-    expect(fetchMock).toHaveBeenCalledWith(
+    const warningCalls = fetchMock.mock.calls
+      .map(([requestUrl]) => String(requestUrl))
+      .filter((requestUrl) => requestUrl.includes('/warnings?'))
+    expect(warningCalls).toEqual([
       expect.stringContaining('/warnings?term=2024-2&page=1&page_size=20&risk_level=high&risk_change_direction=rising'),
-      expect.objectContaining({
-        headers: { 'Content-Type': 'application/json' },
-      }),
-    )
+      expect.stringContaining('/warnings?term=2024-2&page=2&page_size=20&risk_level=high&risk_change_direction=rising'),
+    ])
 
     const text = wrapper.text()
-    expect(text).toContain('高风险')
-    expect(text).toContain('较高风险')
-    expect(text).toContain('一般风险')
-    expect(text).toContain('低风险')
+    expect(text).toContain('共 11 条')
+    expect(text).toContain('第 1 / 1 页')
     expect(text).toContain('风险分')
-    expect(text).toContain('82.0')
-    expect(text).toContain('+2.0')
+    expect(text).toContain('90.0')
+    expect(text).toContain('+3.0')
     expect(text).toContain('学业基础表现')
     expect(text).toContain('图书馆沉浸度')
     expect(text).toContain('上升')
+    expect(text).toContain('高风险学生1')
+    expect(text).not.toContain('较高风险学生1')
   })
 
   it('renders calibrated labels, explanations, and metrics on the group page', async () => {

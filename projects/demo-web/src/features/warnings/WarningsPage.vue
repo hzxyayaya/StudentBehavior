@@ -100,7 +100,14 @@ import LoadingState from '@/components/state/LoadingState.vue'
 import { getWarnings } from '@/lib/api'
 import { formatApiErrorMessage, formatRisk } from '@/lib/format'
 import type { RiskChangeDirection, RiskLevel, WarningFactor } from '@/lib/types'
-import { buildWarningContextQuery, buildWarningQuery, parseWarningQuery } from './query'
+import {
+  buildWarningContextQuery,
+  buildWarningQuery,
+  formatWarningLevelLabel,
+  getWarningLevelFilterPlan,
+  matchesSelectedWarningLevel,
+  parseWarningQuery,
+} from './query'
 
 const groupOptions = ['学习投入稳定组', '综合发展优势组', '作息失衡风险组', '课堂参与薄弱组']
 
@@ -137,16 +144,32 @@ const query = useQuery({
     appliedFilters.groupSegment,
     appliedFilters.majorName,
   ]),
-  queryFn: () =>
-    getWarnings({
-      term: termStore.term.value,
+  queryFn: async () => {
+    const levelPlan = getWarningLevelFilterPlan(appliedFilters.riskLevel)
+    if (!levelPlan.needsClientExactFiltering) {
+      return getWarnings({
+        term: termStore.term.value,
+        page: page.value,
+        page_size: pageSize.value,
+        risk_level: levelPlan.apiRiskLevel,
+        risk_change_direction: appliedFilters.riskChangeDirection || null,
+        group_segment: appliedFilters.groupSegment || null,
+        major_name: appliedFilters.majorName || null,
+      })
+    }
+
+    const allItems = await fetchAllExactLevelWarnings(levelPlan.apiRiskLevel)
+    const filteredItems = allItems.filter((item) => matchesSelectedWarningLevel(levelPlan.exactRiskLevel, item.risk_level))
+    const startIndex = (page.value - 1) * pageSize.value
+    const endIndex = startIndex + pageSize.value
+
+    return {
+      items: filteredItems.slice(startIndex, endIndex),
       page: page.value,
       page_size: pageSize.value,
-      risk_level: mapWarningLevelToApi(appliedFilters.riskLevel),
-      risk_change_direction: appliedFilters.riskChangeDirection || null,
-      group_segment: appliedFilters.groupSegment || null,
-      major_name: appliedFilters.majorName || null,
-    }),
+      total: filteredItems.length,
+    }
+  },
 })
 
 watch(
@@ -181,11 +204,7 @@ watch(
 )
 
 const term = computed(() => termStore.term.value)
-const items = computed(() => {
-  const rows = query.data.value?.items ?? []
-  if (!appliedFilters.riskLevel) return rows
-  return rows.filter((item) => formatWarningLevel(item.risk_level) === appliedFilters.riskLevel)
-})
+const items = computed(() => query.data.value?.items ?? [])
 const total = computed(() => query.data.value?.total ?? 0)
 const pageCount = computed(() => Math.max(1, Math.ceil(total.value / pageSize.value)))
 const paginationText = computed(() => `第 ${page.value} / ${pageCount.value} 页，共 ${total.value} 条`)
@@ -222,17 +241,7 @@ function buildStudentLink(studentId: string) {
 }
 
 function formatWarningLevel(level: RiskLevel) {
-  return (
-    {
-      high: '高风险',
-      medium: '一般风险',
-      low: '低风险',
-      高风险: '高风险',
-      较高风险: '较高风险',
-      一般风险: '一般风险',
-      低风险: '低风险',
-    }[level] ?? '低风险'
-  )
+  return formatWarningLevelLabel(level)
 }
 
 function riskChangeText(direction?: RiskChangeDirection) {
@@ -256,11 +265,27 @@ function factorText(factors: WarningFactor[]) {
   return labels.length > 0 ? labels.slice(0, 3).join('、') : '暂无'
 }
 
-function mapWarningLevelToApi(level: string) {
-  if (level === '高风险' || level === '较高风险') return 'high'
-  if (level === '一般风险') return 'medium'
-  if (level === '低风险') return 'low'
-  return level || null
+async function fetchAllExactLevelWarnings(apiRiskLevel: 'high' | 'medium' | 'low' | null) {
+  const rows = []
+  let currentPage = 1
+  let total = 0
+
+  do {
+    const response = await getWarnings({
+      term: termStore.term.value,
+      page: currentPage,
+      page_size: pageSize.value,
+      risk_level: apiRiskLevel,
+      risk_change_direction: appliedFilters.riskChangeDirection || null,
+      group_segment: appliedFilters.groupSegment || null,
+      major_name: appliedFilters.majorName || null,
+    })
+    rows.push(...response.items)
+    total = response.total
+    currentPage += 1
+  } while (rows.length < total)
+
+  return rows
 }
 </script>
 

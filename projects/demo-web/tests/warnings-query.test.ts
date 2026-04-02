@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildWarningQuery, parseWarningQuery } from '@/features/warnings/query'
+import {
+  buildWarningQuery,
+  getWarningLevelFilterPlan,
+  matchesSelectedWarningLevel,
+  parseWarningQuery,
+} from '@/features/warnings/query'
 
 describe('warnings query helpers', () => {
   it('parses valid warning query state', () => {
@@ -48,5 +53,31 @@ describe('warnings query helpers', () => {
       group_segment: '学习投入稳定组',
       risk_change_direction: 'falling',
     })
+  })
+
+  it.each([
+    ['高风险', { apiRiskLevel: 'high', exactRiskLevel: '高风险', needsClientExactFiltering: true }],
+    ['较高风险', { apiRiskLevel: 'high', exactRiskLevel: '较高风险', needsClientExactFiltering: true }],
+    ['一般风险', { apiRiskLevel: 'medium', exactRiskLevel: '一般风险', needsClientExactFiltering: false }],
+    ['低风险', { apiRiskLevel: 'low', exactRiskLevel: '低风险', needsClientExactFiltering: false }],
+    ['', { apiRiskLevel: null, exactRiskLevel: '', needsClientExactFiltering: false }],
+  ])('builds an exact filter plan for %s', (riskLevel, expectedPlan) => {
+    expect(getWarningLevelFilterPlan(riskLevel)).toEqual(expectedPlan)
+  })
+
+  it.each([
+    ['高风险', '高风险', true],
+    ['高风险', '较高风险', false],
+    ['较高风险', '较高风险', true],
+    ['较高风险', '高风险', false],
+    ['一般风险', '一般风险', true],
+    ['一般风险', 'medium', true],
+    ['一般风险', '低风险', false],
+    ['低风险', '低风险', true],
+    ['低风险', 'low', true],
+    ['低风险', '一般风险', false],
+    ['', '高风险', true],
+  ])('matches exact warning level selection %s against %s', (selectedLevel, itemLevel, expected) => {
+    expect(matchesSelectedWarningLevel(selectedLevel, itemLevel)).toBe(expected)
   })
 })

@@ -1,4 +1,5 @@
 import type { LocationQuery, LocationQueryRaw } from 'vue-router'
+import type { RiskLevel } from '@/lib/types'
 
 import { AVAILABLE_TERMS, DEFAULT_TERM } from '@/app/term'
 
@@ -18,6 +19,72 @@ function readSingle(queryValue: LocationQuery[string] | undefined) {
 function parsePage(value: string) {
   const parsed = Number.parseInt(value, 10)
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 1
+}
+
+export function formatWarningLevelLabel(level: string | RiskLevel) {
+  return (
+    {
+      high: '高风险',
+      medium: '一般风险',
+      low: '低风险',
+      高风险: '高风险',
+      较高风险: '较高风险',
+      一般风险: '一般风险',
+      低风险: '低风险',
+    }[level] ?? '低风险'
+  )
+}
+
+export function getWarningLevelFilterPlan(level: string) {
+  if (level === '高风险' || level === '较高风险') {
+    return {
+      apiRiskLevel: 'high',
+      exactRiskLevel: level,
+      needsClientExactFiltering: true,
+    } as const
+  }
+  if (level === '一般风险') {
+    return {
+      apiRiskLevel: 'medium',
+      exactRiskLevel: level,
+      needsClientExactFiltering: false,
+    } as const
+  }
+  if (level === '低风险') {
+    return {
+      apiRiskLevel: 'low',
+      exactRiskLevel: level,
+      needsClientExactFiltering: false,
+    } as const
+  }
+  if (level === 'high' || level === 'medium' || level === 'low') {
+    return {
+      apiRiskLevel: level,
+      exactRiskLevel: '',
+      needsClientExactFiltering: false,
+    } as const
+  }
+  return {
+    apiRiskLevel: null,
+    exactRiskLevel: '',
+    needsClientExactFiltering: false,
+  } as const
+}
+
+export function matchesSelectedWarningLevel(selectedLevel: string, itemLevel: string | RiskLevel) {
+  if (!selectedLevel) return true
+
+  const normalizedItemLevel = formatWarningLevelLabel(itemLevel)
+  if (selectedLevel === 'high') {
+    return normalizedItemLevel === '高风险' || normalizedItemLevel === '较高风险'
+  }
+  if (selectedLevel === 'medium') {
+    return normalizedItemLevel === '一般风险'
+  }
+  if (selectedLevel === 'low') {
+    return normalizedItemLevel === '低风险'
+  }
+  return normalizedItemLevel === selectedLevel
 }
 
 export function parseWarningQuery(query: LocationQuery): WarningFilterState {
