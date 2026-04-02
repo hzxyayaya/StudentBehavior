@@ -139,7 +139,7 @@ function normalizeGroupsData(raw: unknown): GroupsData {
         group_segment: asString(row.group_segment),
         student_count: asNumber(row.student_count),
         avg_risk_probability: asNumber(row.avg_risk_probability),
-        avg_risk_score: asNumber(row.avg_risk_score || asNumber(row.avg_risk_probability) * 100),
+        avg_risk_score: asOptionalNumber(row.avg_risk_score) ?? asNumber(row.avg_risk_probability) * 100,
         avg_risk_level: asOptionalString(row.avg_risk_level),
         risk_change_summary: normalizeRiskChangeSummary(row.risk_change_summary),
         avg_dimension_scores: normalizeCalibratedDimensions(row.avg_dimension_scores),

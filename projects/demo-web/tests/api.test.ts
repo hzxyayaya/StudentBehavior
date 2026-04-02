@@ -648,4 +648,54 @@ describe('api client', () => {
     ])
     expect(profile.trend[0]).not.toHaveProperty('risk_probability')
   })
+
+  it('preserves explicit zero avg_risk_score instead of falling back to probability-based score', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input)
+
+        if (url.includes('/analytics/groups')) {
+          return Promise.resolve({
+            ok: true,
+            text: async () =>
+              JSON.stringify({
+                code: 200,
+                message: 'OK',
+                data: {
+                  groups: [
+                    {
+                      group_segment: '稳态组',
+                      student_count: 12,
+                      avg_risk_probability: 0.61,
+                      avg_risk_score: 0,
+                      avg_dimension_scores: [],
+                      top_factors: [],
+                      risk_amplifiers: [],
+                      protective_factors: [],
+                    },
+                  ],
+                },
+                meta: { request_id: 'demo-request', term: '2024-2' },
+              }),
+          })
+        }
+
+        return Promise.resolve({
+          ok: true,
+          text: async () =>
+            JSON.stringify({
+              code: 200,
+              message: 'OK',
+              data: {},
+              meta: { request_id: 'demo-request', term: '2024-2' },
+            }),
+        })
+      }),
+    )
+
+    const groups = await getGroups('2024-2')
+    expect(groups.groups[0]?.avg_risk_probability).toBe(0.61)
+    expect(groups.groups[0]?.avg_risk_score).toBe(0)
+  })
 })
