@@ -272,15 +272,12 @@ class DemoApiStore:
         warning_rows = _load_warning_rows(self._warnings_path or _resolve_warning_artifact_path(self._repo_root))
         if term not in {row["term_key"] for row in warning_rows}:
             raise KeyError(term)
+        allowed_levels = _resolve_allowed_risk_levels(risk_level)
         filtered_rows = [
             row
             for row in warning_rows
             if row["term_key"] == term
-            and (
-                risk_level is None
-                or _normalize_risk_level(row.get("risk_level")) == _normalize_risk_level(risk_level)
-                or row.get("risk_level") == risk_level
-            )
+            and (allowed_levels is None or _normalize_risk_level(row.get("risk_level")) in allowed_levels)
             and (group_segment is None or row["group_segment"] == group_segment)
             and (major_name is None or row["major_name"] == major_name)
             and (
@@ -696,9 +693,13 @@ def _build_major_risk_summary(rows: list[Mapping[str, Any]]) -> list[dict[str, A
 def _build_risk_distribution(rows: list[Mapping[str, Any]]) -> dict[str, int]:
     distribution = {"high": 0, "medium": 0, "low": 0}
     for row in rows:
-        risk_level = row.get("risk_level")
-        if isinstance(risk_level, str) and risk_level in distribution:
-            distribution[risk_level] += 1
+        normalized = _normalize_risk_level(row.get("risk_level"))
+        if normalized in {"高风险", "较高风险"}:
+            distribution["high"] += 1
+        elif normalized == "一般风险":
+            distribution["medium"] += 1
+        elif normalized == "低风险":
+            distribution["low"] += 1
     return distribution
 
 
@@ -737,6 +738,8 @@ def _average_numeric(
 def _resolve_avg_risk_level(rows: list[Mapping[str, Any]]) -> str | None:
     avg_score = _average_numeric(rows, "adjusted_risk_score", fallback_field="risk_probability")
     if avg_score is not None:
+        if avg_score <= 1:
+            avg_score *= 100
         return _map_risk_level_from_score(avg_score)
     levels = [row.get("risk_level") for row in rows if isinstance(row.get("risk_level"), str)]
     if not levels:
@@ -833,6 +836,21 @@ def _finalize_dimension_summary(value: Mapping[str, Any]) -> dict[str, Any]:
     summary["average_score"] = round(float(value["total"]) / int(value["score_count"]), 2)
     summary["score_count"] = int(value["score_count"])
     return summary
+
+
+def _resolve_allowed_risk_levels(risk_level: str | None) -> set[str] | None:
+    if risk_level is None:
+        return None
+    normalized = _normalize_risk_level(risk_level) or risk_level
+    if normalized == "高风险":
+        if risk_level == "较高风险":
+            return {"较高风险"}
+        return {"高风险", "较高风险"}
+    if normalized == "一般风险":
+        return {"一般风险"}
+    if normalized == "低风险":
+        return {"低风险"}
+    return {normalized}
 
 
 def _preferred_identity_key(item: Mapping[str, Any]) -> str:
