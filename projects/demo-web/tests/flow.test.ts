@@ -7,6 +7,7 @@ import { useAuthStore } from '@/app/auth'
 import OverviewPage from '@/features/overview/OverviewPage.vue'
 import GroupsPage from '@/features/quadrants/QuadrantsPage.vue'
 import StudentPage from '@/features/students/StudentPage.vue'
+import WarningsPage from '@/features/warnings/WarningsPage.vue'
 
 function createPlugins() {
   const router = createAppRouter()
@@ -180,8 +181,16 @@ describe('demo flow links', () => {
                 student_name: '示例学生',
                 major_name: '计算机科学与技术',
                 group_segment: '作息失衡风险组',
-                risk_level: 'high',
+                risk_level: '较高风险',
                 risk_probability: 0.82,
+                base_risk_score: 76,
+                risk_adjustment_score: 6,
+                adjusted_risk_score: 82,
+                risk_delta: 2,
+                risk_change_direction: 'rising',
+                base_risk_explanation: '基础风险主要来自核心课程成绩下滑。',
+                behavior_adjustment_explanation: '行为表现使风险上调 6 分，重点集中在出勤与课堂参与。',
+                risk_change_explanation: '较上学期继续上升，需要立即跟进。',
                 dimension_scores: [
                   {
                     dimension: '课堂学习投入',
@@ -204,23 +213,30 @@ describe('demo flow links', () => {
           json: async () => ({
             code: 200,
             message: 'OK',
-            data: {
-              top_factors: [
-                {
-                  dimension: '课堂学习投入',
+              data: {
+                top_factors: [
+                  {
+                    dimension: '课堂学习投入',
                   explanation: '课堂参与下降',
                   direction: 'up',
                   impact: 0.21,
                   label: '课堂投入不足',
                   metrics: [{ metric: '迟到次数', value: 6, display: '6 次' }],
-                },
-              ],
-              intervention_advice: ['安排阶段性学习跟踪'],
-              report_text: '当前学生处于较高风险。',
-            },
-            meta: { request_id: 'req-report', term: '2024-2' },
-          }),
-        })
+                  },
+                ],
+                base_risk_explanation: '基础风险主要来自核心课程成绩下滑。',
+                behavior_adjustment_explanation: '行为表现使风险上调 6 分，重点集中在出勤与课堂参与。',
+                risk_change_explanation: '较上学期继续上升，需要立即跟进。',
+                intervention_advice: ['安排阶段性学习跟踪'],
+                intervention_plan: '较高风险干预计划：\n1. 每周复盘课堂参与。\n2. 联动辅导员跟进作业完成。',
+                report_text: '当前学生处于较高风险。',
+                risk_level: '较高风险',
+                risk_delta: 2,
+                risk_change_direction: 'rising',
+              },
+              meta: { request_id: 'req-report', term: '2024-2' },
+            }),
+          })
       }),
     )
 
@@ -229,7 +245,8 @@ describe('demo flow links', () => {
       '/students/pjwrqxbj901?term=2024-2&source=warnings&page=2&risk_level=high&group_segment=' +
         encodeURIComponent('作息失衡风险组') +
         '&major_name=' +
-        encodeURIComponent('计算机科学与技术'),
+        encodeURIComponent('计算机科学与技术') +
+        '&risk_change_direction=rising',
     )
     await router.isReady()
 
@@ -259,6 +276,7 @@ describe('demo flow links', () => {
         risk_level: 'high',
         group_segment: '作息失衡风险组',
         major_name: '计算机科学与技术',
+        risk_change_direction: 'rising',
       },
     })
     expect(dimensionCards).toHaveLength(1)
@@ -270,6 +288,107 @@ describe('demo flow links', () => {
     expect(firstDimensionCard.text()).toContain('6 次')
     expect(firstDimensionCard.text()).toContain('迟到与缺勤较多。')
     expect(wrapper.text()).toContain('课堂参与下降')
+    expect(wrapper.text()).toContain('基础风险主要来自核心课程成绩下滑。')
+    expect(wrapper.text()).toContain('行为表现使风险上调 6 分')
+    expect(wrapper.text()).toContain('较高风险干预计划')
+  })
+
+  it('renders richer warning rows and sends four-level/risk-change filters', async () => {
+    const auth = useAuthStore()
+    auth.signIn('demo-token', '演示管理员', '2024-2')
+
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input)
+
+      if (url.includes('/warnings?')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            code: 200,
+            message: 'OK',
+            data: {
+              items: [
+                {
+                  student_id: 'pjwrqxbj901',
+                  student_name: '示例学生',
+                  major_name: '计算机科学与技术',
+                  group_segment: '作息失衡风险组',
+                  risk_level: '较高风险',
+                  risk_probability: 0.82,
+                  base_risk_score: 76,
+                  risk_adjustment_score: 6,
+                  adjusted_risk_score: 82,
+                  risk_delta: 2,
+                  risk_change_direction: 'rising',
+                  top_risk_factors: [
+                    { feature: 'academic_base', feature_cn: '学业基础表现', dimension: '学业基础表现', importance: 0.9 },
+                    { feature: 'class_engagement', feature_cn: '课堂学习投入', dimension: '课堂学习投入', importance: 0.78 },
+                  ],
+                  top_protective_factors: [
+                    { feature: 'library_immersion', feature_cn: '图书馆沉浸度', dimension: '图书馆沉浸度', importance: 0.32 },
+                  ],
+                },
+              ],
+              page: 1,
+              page_size: 20,
+              total: 1,
+            },
+            meta: { request_id: 'req-warnings', term: '2024-2' },
+          }),
+        })
+      }
+
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          code: 200,
+          message: 'OK',
+          data: {
+            cluster_method: 'stub-group-rules',
+            risk_model: 'stub-risk-rules',
+            target_label: '综合测评低等级风险',
+            auc: 0.81,
+            updated_at: '2026-03-28T12:00:00+08:00',
+          },
+          meta: { request_id: 'req-summary', term: '2024-2' },
+        }),
+      })
+    })
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { router, vueQueryPlugin } = createPlugins()
+    await router.push('/warnings?term=2024-2&risk_level=%E8%BE%83%E9%AB%98%E9%A3%8E%E9%99%A9&risk_change_direction=rising')
+    await router.isReady()
+
+    const wrapper = mount(WarningsPage, {
+      global: {
+        plugins: [router, vueQueryPlugin],
+        stubs: { RouterLink: RouterLinkStub },
+      },
+    })
+
+    await flushPromises()
+    await flushPromises()
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/warnings?term=2024-2&page=1&page_size=20&risk_level=high&risk_change_direction=rising'),
+      expect.objectContaining({
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+
+    const text = wrapper.text()
+    expect(text).toContain('高风险')
+    expect(text).toContain('较高风险')
+    expect(text).toContain('一般风险')
+    expect(text).toContain('低风险')
+    expect(text).toContain('风险分')
+    expect(text).toContain('82.0')
+    expect(text).toContain('+2.0')
+    expect(text).toContain('学业基础表现')
+    expect(text).toContain('图书馆沉浸度')
+    expect(text).toContain('上升')
   })
 
   it('renders calibrated labels, explanations, and metrics on the group page', async () => {

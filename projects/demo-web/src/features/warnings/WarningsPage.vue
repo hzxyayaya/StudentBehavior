@@ -11,9 +11,16 @@
           </select>
           <select v-model="draftFilters.riskLevel" class="select">
             <option value="">全部风险等级</option>
-            <option value="high">高风险</option>
-            <option value="medium">中风险</option>
-            <option value="low">低风险</option>
+            <option value="高风险">高风险</option>
+            <option value="较高风险">较高风险</option>
+            <option value="一般风险">一般风险</option>
+            <option value="低风险">低风险</option>
+          </select>
+          <select v-model="draftFilters.riskChangeDirection" class="select">
+            <option value="">全部变化方向</option>
+            <option value="rising">上升</option>
+            <option value="steady">持平</option>
+            <option value="falling">下降</option>
           </select>
           <select v-model="draftFilters.groupSegment" class="select">
             <option value="">全部群体标签</option>
@@ -47,7 +54,8 @@
             <span>专业</span>
             <span>群体标签</span>
             <span>风险等级</span>
-            <span>风险概率</span>
+            <span>风险详情</span>
+            <span>风险因子</span>
           </div>
           <RouterLink
             v-for="item in items"
@@ -59,8 +67,19 @@
             <span>{{ item.student_name }}</span>
             <span>{{ item.major_name }}</span>
             <span>{{ item.group_segment }}</span>
-            <span>{{ formatRiskLevel(item.risk_level) }}</span>
-            <span>{{ formatRisk(item.risk_probability) }}</span>
+            <span>
+              <strong>{{ formatWarningLevel(item.risk_level) }}</strong>
+              <small class="risk-direction">{{ riskChangeText(item.risk_change_direction) }}</small>
+            </span>
+            <span class="stack compact">
+              <strong>风险分 {{ formatScore(item.adjusted_risk_score ?? item.risk_probability * 100) }}</strong>
+              <small>概率 {{ formatRisk(item.risk_probability) }}</small>
+              <small>变动 {{ formatSignedScore(item.risk_delta) }}</small>
+            </span>
+            <span class="factor-cell">
+              <small>风险因子 {{ factorText(item.top_risk_factors) }}</small>
+              <small>保护因子 {{ factorText(item.top_protective_factors) }}</small>
+            </span>
           </RouterLink>
         </div>
       </div>
@@ -79,7 +98,8 @@ import EmptyState from '@/components/state/EmptyState.vue'
 import ErrorState from '@/components/state/ErrorState.vue'
 import LoadingState from '@/components/state/LoadingState.vue'
 import { getWarnings } from '@/lib/api'
-import { formatApiErrorMessage, formatRisk, formatRiskLevel } from '@/lib/format'
+import { formatApiErrorMessage, formatRisk } from '@/lib/format'
+import type { RiskChangeDirection, RiskLevel, WarningFactor } from '@/lib/types'
 import { buildWarningContextQuery, buildWarningQuery, parseWarningQuery } from './query'
 
 const groupOptions = ['学习投入稳定组', '综合发展优势组', '作息失衡风险组', '课堂参与薄弱组']
@@ -95,11 +115,13 @@ const page = ref(initialState.page)
 const pageSize = ref(20)
 const draftFilters = reactive({
   riskLevel: initialState.riskLevel,
+  riskChangeDirection: initialState.riskChangeDirection,
   groupSegment: initialState.groupSegment,
   majorName: initialState.majorName,
 })
 const appliedFilters = reactive({
   riskLevel: initialState.riskLevel,
+  riskChangeDirection: initialState.riskChangeDirection,
   groupSegment: initialState.groupSegment,
   majorName: initialState.majorName,
 })
@@ -111,6 +133,7 @@ const query = useQuery({
     page.value,
     pageSize.value,
     appliedFilters.riskLevel,
+    appliedFilters.riskChangeDirection,
     appliedFilters.groupSegment,
     appliedFilters.majorName,
   ]),
@@ -119,7 +142,8 @@ const query = useQuery({
       term: termStore.term.value,
       page: page.value,
       page_size: pageSize.value,
-      risk_level: appliedFilters.riskLevel || null,
+      risk_level: mapWarningLevelToApi(appliedFilters.riskLevel),
+      risk_change_direction: appliedFilters.riskChangeDirection || null,
       group_segment: appliedFilters.groupSegment || null,
       major_name: appliedFilters.majorName || null,
     }),
@@ -133,7 +157,14 @@ watch(
 )
 
 watch(
-  () => [termStore.term.value, page.value, appliedFilters.riskLevel, appliedFilters.groupSegment, appliedFilters.majorName],
+  () => [
+    termStore.term.value,
+    page.value,
+    appliedFilters.riskLevel,
+    appliedFilters.riskChangeDirection,
+    appliedFilters.groupSegment,
+    appliedFilters.majorName,
+  ],
   () => {
     router.replace({
       path: '/warnings',
@@ -141,6 +172,7 @@ watch(
         term: termStore.term.value,
         page: page.value,
         riskLevel: appliedFilters.riskLevel,
+        riskChangeDirection: appliedFilters.riskChangeDirection,
         groupSegment: appliedFilters.groupSegment,
         majorName: appliedFilters.majorName,
       }),
@@ -149,7 +181,11 @@ watch(
 )
 
 const term = computed(() => termStore.term.value)
-const items = computed(() => query.data.value?.items ?? [])
+const items = computed(() => {
+  const rows = query.data.value?.items ?? []
+  if (!appliedFilters.riskLevel) return rows
+  return rows.filter((item) => formatWarningLevel(item.risk_level) === appliedFilters.riskLevel)
+})
 const total = computed(() => query.data.value?.total ?? 0)
 const pageCount = computed(() => Math.max(1, Math.ceil(total.value / pageSize.value)))
 const paginationText = computed(() => `第 ${page.value} / ${pageCount.value} 页，共 ${total.value} 条`)
@@ -158,6 +194,7 @@ const errorMessage = computed(() => formatApiErrorMessage(query.error.value, '�
 function applyFilters() {
   page.value = 1
   appliedFilters.riskLevel = draftFilters.riskLevel
+  appliedFilters.riskChangeDirection = draftFilters.riskChangeDirection
   appliedFilters.groupSegment = draftFilters.groupSegment
   appliedFilters.majorName = draftFilters.majorName.trim()
 }
@@ -177,10 +214,53 @@ function buildStudentLink(studentId: string) {
       term: termStore.term.value,
       page: page.value,
       riskLevel: appliedFilters.riskLevel,
+      riskChangeDirection: appliedFilters.riskChangeDirection,
       groupSegment: appliedFilters.groupSegment,
       majorName: appliedFilters.majorName,
     }),
   }
+}
+
+function formatWarningLevel(level: RiskLevel) {
+  return (
+    {
+      high: '高风险',
+      medium: '一般风险',
+      low: '低风险',
+      高风险: '高风险',
+      较高风险: '较高风险',
+      一般风险: '一般风险',
+      低风险: '低风险',
+    }[level] ?? '低风险'
+  )
+}
+
+function riskChangeText(direction?: RiskChangeDirection) {
+  if (direction === 'rising') return '上升'
+  if (direction === 'steady') return '持平'
+  if (direction === 'falling') return '下降'
+  return '未更新'
+}
+
+function formatScore(value: number) {
+  return value.toFixed(1)
+}
+
+function formatSignedScore(value?: number) {
+  if (typeof value !== 'number') return '0.0'
+  return `${value > 0 ? '+' : ''}${value.toFixed(1)}`
+}
+
+function factorText(factors: WarningFactor[]) {
+  const labels = factors.map((item) => item.feature_cn || item.dimension || item.feature).filter(Boolean)
+  return labels.length > 0 ? labels.slice(0, 3).join('、') : '暂无'
+}
+
+function mapWarningLevelToApi(level: string) {
+  if (level === '高风险' || level === '较高风险') return 'high'
+  if (level === '一般风险') return 'medium'
+  if (level === '低风险') return 'low'
+  return level || null
 }
 </script>
 
@@ -188,7 +268,7 @@ function buildStudentLink(studentId: string) {
 .filters {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
 .table-meta {
@@ -206,7 +286,7 @@ function buildStudentLink(studentId: string) {
 .table-row {
   display: grid;
   gap: 12px;
-  grid-template-columns: 1.1fr 1fr 1.2fr 1fr 0.8fr 0.7fr;
+  grid-template-columns: 1fr 0.9fr 1.1fr 1fr 0.9fr 1.1fr 1.4fr;
   padding: 14px 16px;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.82);
@@ -218,6 +298,21 @@ function buildStudentLink(studentId: string) {
   border: 0;
   color: var(--muted);
   padding-bottom: 0;
+}
+
+.compact {
+  gap: 4px;
+}
+
+.risk-direction {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.factor-cell {
+  display: grid;
+  gap: 4px;
 }
 
 

@@ -11,6 +11,7 @@ import type {
   RiskLevel,
   StudentProfileData,
   StudentReportData,
+  WarningFactor,
   WarningsData,
 } from './types'
 
@@ -79,6 +80,7 @@ export function getWarnings(params: {
   risk_level?: string | null
   group_segment?: string | null
   major_name?: string | null
+  risk_change_direction?: string | null
 }) {
   const search = new URLSearchParams({
     term: params.term,
@@ -88,6 +90,7 @@ export function getWarnings(params: {
   if (params.risk_level) search.set('risk_level', params.risk_level)
   if (params.group_segment) search.set('group_segment', params.group_segment)
   if (params.major_name) search.set('major_name', params.major_name)
+  if (params.risk_change_direction) search.set('risk_change_direction', params.risk_change_direction)
   return request<unknown>(`/warnings?${search.toString()}`).then(normalizeWarningsData)
 }
 
@@ -135,18 +138,21 @@ function normalizeGroupsData(raw: unknown): GroupsData {
   return {
     groups: asArray(data.groups).map((item) => {
       const row = asRecord(item)
-      return {
+      const group: GroupsData['groups'][number] = {
         group_segment: asString(row.group_segment),
         student_count: asNumber(row.student_count),
         avg_risk_probability: asNumber(row.avg_risk_probability),
         avg_risk_score: asOptionalNumber(row.avg_risk_score) ?? asNumber(row.avg_risk_probability) * 100,
-        avg_risk_level: asOptionalString(row.avg_risk_level),
-        risk_change_summary: normalizeRiskChangeSummary(row.risk_change_summary),
         avg_dimension_scores: normalizeCalibratedDimensions(row.avg_dimension_scores),
         top_factors: asArray(row.top_factors).map(normalizeCalibratedFactor),
         risk_amplifiers: normalizeRiskFactorSummary(row.risk_amplifiers ?? row.top_factors),
         protective_factors: normalizeRiskFactorSummary(row.protective_factors),
       }
+      const avgRiskLevel = asOptionalString(row.avg_risk_level)
+      if (avgRiskLevel !== undefined) group.avg_risk_level = avgRiskLevel
+      const riskChangeSummary = normalizeRiskChangeSummary(row.risk_change_summary)
+      if (riskChangeSummary !== undefined) group.risk_change_summary = riskChangeSummary
+      return group
     }),
   }
 }
@@ -156,14 +162,27 @@ function normalizeWarningsData(raw: unknown): WarningsData {
   return {
     items: asArray(data.items).map((item) => {
       const row = asRecord(item)
-      return {
+      const warning: WarningsData['items'][number] = {
         student_id: asString(row.student_id),
         student_name: asString(row.student_name),
         major_name: asString(row.major_name),
         group_segment: asString(row.group_segment),
         risk_level: asRiskLevel(row.risk_level),
         risk_probability: asNumber(row.risk_probability),
+        top_risk_factors: normalizeWarningFactors(row.top_risk_factors),
+        top_protective_factors: normalizeWarningFactors(row.top_protective_factors),
       }
+      const baseRiskScore = asOptionalNumber(row.base_risk_score)
+      if (baseRiskScore !== undefined) warning.base_risk_score = baseRiskScore
+      const riskAdjustmentScore = asOptionalNumber(row.risk_adjustment_score)
+      if (riskAdjustmentScore !== undefined) warning.risk_adjustment_score = riskAdjustmentScore
+      const adjustedRiskScore = asOptionalNumber(row.adjusted_risk_score)
+      if (adjustedRiskScore !== undefined) warning.adjusted_risk_score = adjustedRiskScore
+      const riskDelta = asOptionalNumber(row.risk_delta)
+      if (riskDelta !== undefined) warning.risk_delta = riskDelta
+      const riskChangeDirection = asOptionalRiskChangeDirection(row.risk_change_direction)
+      if (riskChangeDirection !== undefined) warning.risk_change_direction = riskChangeDirection
+      return warning
     }),
     page: asNumber(data.page),
     page_size: asNumber(data.page_size),
@@ -174,7 +193,7 @@ function normalizeWarningsData(raw: unknown): WarningsData {
 function normalizeStudentProfileData(raw: unknown): StudentProfileData {
   const data = asRecord(raw)
   const currentRisk = asNumber(data.risk_probability)
-  return {
+  const profile: StudentProfileData = {
     student_id: asString(data.student_id),
     student_name: asString(data.student_name),
     major_name: asString(data.major_name),
@@ -185,37 +204,130 @@ function normalizeStudentProfileData(raw: unknown): StudentProfileData {
     trend: asArray(data.trend).map((item) => {
       const row = asRecord(item)
       const trendScores = normalizeCalibratedDimensions(row.dimension_scores)
-      const trendRow: { term: string; dimension_scores: CalibratedDimensionScore[]; risk_probability?: number } = {
+      const trendRow: StudentProfileData['trend'][number] = {
         term: asString(row.term),
         dimension_scores: trendScores,
       }
       const riskProbability = asOptionalNumber(row.risk_probability)
       if (riskProbability !== undefined) trendRow.risk_probability = riskProbability
+      const riskLevel = asOptionalRiskLevel(row.risk_level)
+      if (riskLevel !== undefined) trendRow.risk_level = riskLevel
+      const adjustedRiskScore = asOptionalNumber(row.adjusted_risk_score)
+      if (adjustedRiskScore !== undefined) trendRow.adjusted_risk_score = adjustedRiskScore
+      const riskDelta = asOptionalNumber(row.risk_delta)
+      if (riskDelta !== undefined) trendRow.risk_delta = riskDelta
+      const riskChangeDirection = asOptionalRiskChangeDirection(row.risk_change_direction)
+      if (riskChangeDirection !== undefined) trendRow.risk_change_direction = riskChangeDirection
       return trendRow
     }),
   }
+  const baseRiskScore = asOptionalNumber(data.base_risk_score)
+  if (baseRiskScore !== undefined) profile.base_risk_score = baseRiskScore
+  const riskAdjustmentScore = asOptionalNumber(data.risk_adjustment_score)
+  if (riskAdjustmentScore !== undefined) profile.risk_adjustment_score = riskAdjustmentScore
+  const adjustedRiskScore = asOptionalNumber(data.adjusted_risk_score)
+  if (adjustedRiskScore !== undefined) profile.adjusted_risk_score = adjustedRiskScore
+  const riskDelta = asOptionalNumber(data.risk_delta)
+  if (riskDelta !== undefined) profile.risk_delta = riskDelta
+  const riskChangeDirection = asOptionalRiskChangeDirection(data.risk_change_direction)
+  if (riskChangeDirection !== undefined) profile.risk_change_direction = riskChangeDirection
+  const baseRiskExplanation = asOptionalString(data.base_risk_explanation)
+  if (baseRiskExplanation !== undefined) profile.base_risk_explanation = baseRiskExplanation
+  const behaviorAdjustmentExplanation = asOptionalString(data.behavior_adjustment_explanation)
+  if (behaviorAdjustmentExplanation !== undefined) profile.behavior_adjustment_explanation = behaviorAdjustmentExplanation
+  const riskChangeExplanation = asOptionalString(data.risk_change_explanation)
+  if (riskChangeExplanation !== undefined) profile.risk_change_explanation = riskChangeExplanation
+  return profile
 }
 
 function normalizeStudentReportData(raw: unknown): StudentReportData {
   const data = asRecord(raw)
-  return {
+  const report: StudentReportData = {
     top_factors: asArray(data.top_factors).map(normalizeCalibratedFactor),
     intervention_advice: asArray(data.intervention_advice).map((item) => asString(item)),
     report_text: asString(data.report_text),
-    ...(asArray(data.intervention_advice_items).length > 0
-      ? {
-          intervention_advice_items: asArray(data.intervention_advice_items).map((item) => {
-            const row = asRecord(item)
-            const adviceItem: { title?: string; text?: string } = {}
-            const title = asOptionalString(row.title)
-            if (title !== undefined) adviceItem.title = title
-            const text = asOptionalString(row.text)
-            if (text !== undefined) adviceItem.text = text
-            return adviceItem
-          }),
-        }
-      : {}),
   }
+  const baseRiskExplanation = asOptionalString(data.base_risk_explanation)
+  if (baseRiskExplanation !== undefined) report.base_risk_explanation = baseRiskExplanation
+  const behaviorAdjustmentExplanation = asOptionalString(data.behavior_adjustment_explanation)
+  if (behaviorAdjustmentExplanation !== undefined) report.behavior_adjustment_explanation = behaviorAdjustmentExplanation
+  const riskChangeExplanation = asOptionalString(data.risk_change_explanation)
+  if (riskChangeExplanation !== undefined) report.risk_change_explanation = riskChangeExplanation
+  const interventionPlan = normalizeInterventionPlan(data.intervention_plan)
+  if (interventionPlan !== undefined) report.intervention_plan = interventionPlan
+  const riskLevel = asOptionalRiskLevel(data.risk_level)
+  if (riskLevel !== undefined) report.risk_level = riskLevel
+  const riskProbability = asOptionalNumber(data.risk_probability)
+  if (riskProbability !== undefined) report.risk_probability = riskProbability
+  const baseRiskScore = asOptionalNumber(data.base_risk_score)
+  if (baseRiskScore !== undefined) report.base_risk_score = baseRiskScore
+  const riskAdjustmentScore = asOptionalNumber(data.risk_adjustment_score)
+  if (riskAdjustmentScore !== undefined) report.risk_adjustment_score = riskAdjustmentScore
+  const adjustedRiskScore = asOptionalNumber(data.adjusted_risk_score)
+  if (adjustedRiskScore !== undefined) report.adjusted_risk_score = adjustedRiskScore
+  const riskDelta = asOptionalNumber(data.risk_delta)
+  if (riskDelta !== undefined) report.risk_delta = riskDelta
+  const riskChangeDirection = asOptionalRiskChangeDirection(data.risk_change_direction)
+  if (riskChangeDirection !== undefined) report.risk_change_direction = riskChangeDirection
+  const interventionAdviceItems = asArray(data.intervention_advice_items)
+  if (interventionAdviceItems.length > 0) {
+    report.intervention_advice_items = interventionAdviceItems.map((item) => {
+      const row = asRecord(item)
+      const adviceItem: { title?: string; text?: string } = {}
+      const title = asOptionalString(row.title)
+      if (title !== undefined) adviceItem.title = title
+      const text = asOptionalString(row.text)
+      if (text !== undefined) adviceItem.text = text
+      return adviceItem
+    })
+  }
+  const trend = asArray(data.trend)
+  if (trend.length > 0) {
+    report.trend = trend.map((item) => {
+      const row = asRecord(item)
+      const trendRow: NonNullable<StudentReportData['trend']>[number] = {
+        term: asString(row.term),
+      }
+      const trendRiskLevel = asOptionalRiskLevel(row.risk_level)
+      if (trendRiskLevel !== undefined) trendRow.risk_level = trendRiskLevel
+      const trendRiskProbability = asOptionalNumber(row.risk_probability)
+      if (trendRiskProbability !== undefined) trendRow.risk_probability = trendRiskProbability
+      const trendBaseRiskScore = asOptionalNumber(row.base_risk_score)
+      if (trendBaseRiskScore !== undefined) trendRow.base_risk_score = trendBaseRiskScore
+      const trendRiskAdjustmentScore = asOptionalNumber(row.risk_adjustment_score)
+      if (trendRiskAdjustmentScore !== undefined) trendRow.risk_adjustment_score = trendRiskAdjustmentScore
+      const trendAdjustedRiskScore = asOptionalNumber(row.adjusted_risk_score)
+      if (trendAdjustedRiskScore !== undefined) trendRow.adjusted_risk_score = trendAdjustedRiskScore
+      const trendRiskDelta = asOptionalNumber(row.risk_delta)
+      if (trendRiskDelta !== undefined) trendRow.risk_delta = trendRiskDelta
+      const trendRiskChangeDirection = asOptionalRiskChangeDirection(row.risk_change_direction)
+      if (trendRiskChangeDirection !== undefined) trendRow.risk_change_direction = trendRiskChangeDirection
+      return trendRow
+    })
+  }
+  return report
+}
+
+function normalizeWarningFactors(raw: unknown): WarningFactor[] {
+  return asArray(raw).map((item) => {
+    const row = asRecord(item)
+    const factor: WarningFactor = {
+      feature: asString(row.feature || row.dimension),
+    }
+    const featureCn = asOptionalString(row.feature_cn)
+    if (featureCn !== undefined) factor.feature_cn = featureCn
+    const dimension = asOptionalString(row.dimension)
+    if (dimension !== undefined) factor.dimension = dimension
+    const importance = asOptionalNumber(row.importance)
+    if (importance !== undefined) factor.importance = importance
+    return factor
+  })
+}
+
+function normalizeInterventionPlan(raw: unknown): StudentReportData['intervention_plan'] | undefined {
+  if (typeof raw === 'string' && raw) return raw
+  if (Array.isArray(raw)) return raw.map((item) => asString(item)).filter(Boolean)
+  return undefined
 }
 
 function normalizeCalibratedDimensions(raw: unknown): CalibratedDimensionScore[] {
@@ -308,12 +420,14 @@ function normalizeTrendSummary(raw: unknown) {
 function normalizeRiskTrendSummary(raw: unknown) {
   return asArray(raw).map((item) => {
     const row = asRecord(item)
-    return {
+    const summary: OverviewData['risk_trend_summary'][number] = {
       term: asString(row.term),
       avg_risk_score: asNumber(row.avg_risk_score),
       high_risk_count: asNumber(row.high_risk_count),
-      risk_change_direction: asOptionalRiskChangeDirection(row.risk_change_direction),
     }
+    const riskChangeDirection = asOptionalRiskChangeDirection(row.risk_change_direction)
+    if (riskChangeDirection !== undefined) summary.risk_change_direction = riskChangeDirection
+    return summary
   })
 }
 
@@ -322,12 +436,13 @@ function normalizeRiskFactorSummary(raw: unknown) {
     const row = asRecord(item)
     const feature = asString(row.feature || row.dimension)
     const featureCn = asOptionalString(row.feature_cn || row.dimension)
-    return {
+    const summary: OverviewData['risk_factor_summary'][number] = {
       feature,
-      feature_cn: featureCn,
       count: asNumber(row.count),
       importance: asNumber(row.importance ?? row.impact),
     }
+    if (featureCn !== undefined) summary.feature_cn = featureCn
+    return summary
   })
 }
 
@@ -456,12 +571,20 @@ function asMetricValue(value: unknown): number | string {
   return 0
 }
 
-function asRiskLevel(value: unknown): 'high' | 'medium' | 'low' {
-  return value === 'high' || value === 'medium' || value === 'low' ? value : 'low'
+function asRiskLevel(value: unknown): RiskLevel {
+  return asOptionalRiskLevel(value) ?? 'low'
 }
 
 function asOptionalRiskLevel(value: unknown): RiskLevel | undefined {
-  return value === 'high' || value === 'medium' || value === 'low' ? value : undefined
+  return value === 'high' ||
+    value === 'medium' ||
+    value === 'low' ||
+    value === '高风险' ||
+    value === '较高风险' ||
+    value === '一般风险' ||
+    value === '低风险'
+    ? value
+    : undefined
 }
 
 function asOptionalRiskChangeDirection(value: unknown): RiskChangeDirection | undefined {

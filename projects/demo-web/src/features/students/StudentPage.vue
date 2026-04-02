@@ -25,12 +25,27 @@
           <div class="kpi-value" :class="riskClass">{{ riskLabel(profile.risk_level) }}</div>
         </article>
         <article class="card-kpi panel">
+          <div class="muted">风险分</div>
+          <div class="kpi-value">{{ formatRiskScore(report.adjusted_risk_score ?? profile.adjusted_risk_score) }}</div>
+        </article>
+        <article class="card-kpi panel">
+          <div class="muted">风险变化</div>
+          <div class="kpi-value">{{ formatSignedRisk(report.risk_delta ?? profile.risk_delta) }}</div>
+        </article>
+      </section>
+
+      <section class="grid-3 detail-grid">
+        <article class="card-kpi panel">
           <div class="muted">风险概率</div>
           <div class="kpi-value">{{ formatRisk(profile.risk_probability) }}</div>
         </article>
         <article class="card-kpi panel">
           <div class="muted">所属群体标签</div>
           <div class="kpi-value">{{ profile.group_segment }}</div>
+        </article>
+        <article class="card-kpi panel">
+          <div class="muted">变化方向</div>
+          <div class="kpi-value">{{ riskChangeText(report.risk_change_direction ?? profile.risk_change_direction) }}</div>
         </article>
       </section>
 
@@ -46,6 +61,29 @@
           <div class="panel-inner">
             <h3>维度评分</h3>
             <EChart :option="dimensionBarOption" height="300px" />
+          </div>
+        </article>
+      </section>
+
+      <section class="grid-3 detail-grid">
+        <article class="panel">
+          <div class="panel-inner stack">
+            <h3>基础风险解释</h3>
+            <p class="muted">{{ report.base_risk_explanation || profile.base_risk_explanation || '暂无基础风险解释' }}</p>
+          </div>
+        </article>
+        <article class="panel">
+          <div class="panel-inner stack">
+            <h3>行为调整解释</h3>
+            <p class="muted">
+              {{ report.behavior_adjustment_explanation || profile.behavior_adjustment_explanation || '暂无行为调整解释' }}
+            </p>
+          </div>
+        </article>
+        <article class="panel">
+          <div class="panel-inner stack">
+            <h3>风险变化说明</h3>
+            <p class="muted">{{ report.risk_change_explanation || profile.risk_change_explanation || '暂无风险变化说明' }}</p>
           </div>
         </article>
       </section>
@@ -111,6 +149,10 @@
             <ol class="advice-list">
               <li v-for="item in report.intervention_advice" :key="item">{{ item }}</li>
             </ol>
+            <div v-if="interventionPlanLines.length" class="summary-box">
+              <p class="muted">干预计划</p>
+              <p v-for="line in interventionPlanLines" :key="line" class="plan-line">{{ line }}</p>
+            </div>
             <div class="summary-box">
               <p class="muted">报告摘要</p>
               <strong>{{ report.report_text }}</strong>
@@ -154,6 +196,16 @@ const reportQuery = useQuery({
 
 const profile = computed(() => profileQuery.data.value)
 const report = computed(() => reportQuery.data.value)
+const interventionPlanLines = computed(() => {
+  const plan = report.value?.intervention_plan
+  if (typeof plan === 'string') {
+    return plan.split('\n').map((line) => line.trim()).filter(Boolean)
+  }
+  if (Array.isArray(plan)) {
+    return plan.filter(Boolean)
+  }
+  return []
+})
 
 const errorMessage = computed(() => {
   const firstError = profileQuery.error.value ?? reportQuery.error.value
@@ -211,15 +263,15 @@ const dimensionBarOption = computed<EChartsOption>(() => {
 
 const riskClass = computed(() => {
   const level = profile.value?.risk_level
-  if (level === 'high') return 'risk-high'
-  if (level === 'medium') return 'risk-medium'
+  if (level === 'high' || level === '高风险' || level === '较高风险') return 'risk-high'
+  if (level === 'medium' || level === '一般风险') return 'risk-medium'
   return 'risk-low'
 })
 
 const riskTagClass = computed(() => {
   const level = profile.value?.risk_level
-  if (level === 'high') return 'tag-high'
-  if (level === 'medium') return 'tag-medium'
+  if (level === 'high' || level === '高风险' || level === '较高风险') return 'tag-high'
+  if (level === 'medium' || level === '一般风险') return 'tag-medium'
   return 'tag-low'
 })
 
@@ -248,9 +300,27 @@ const backToWarningsTarget = computed(() => {
 })
 
 function riskLabel(level: string) {
-  if (level === 'high') return '高风险'
-  if (level === 'medium') return '中风险'
+  if (level === 'high' || level === '高风险') return '高风险'
+  if (level === '较高风险') return '较高风险'
+  if (level === 'medium' || level === '一般风险') return '一般风险'
   return '低风险'
+}
+
+function riskChangeText(direction?: string) {
+  if (direction === 'rising') return '上升'
+  if (direction === 'steady') return '持平'
+  if (direction === 'falling') return '下降'
+  return '未更新'
+}
+
+function formatRiskScore(value?: number) {
+  if (typeof value !== 'number') return '--'
+  return value.toFixed(1)
+}
+
+function formatSignedRisk(value?: number) {
+  if (typeof value !== 'number') return '--'
+  return `${value > 0 ? '+' : ''}${value.toFixed(1)}`
 }
 
 function retry() {
@@ -444,6 +514,11 @@ h3 {
 
 .summary-box p {
   margin: 0 0 6px;
+}
+
+.plan-line {
+  margin: 0;
+  white-space: pre-wrap;
 }
 
 @media (max-width: 980px) {

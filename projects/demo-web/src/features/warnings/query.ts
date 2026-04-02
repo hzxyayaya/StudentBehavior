@@ -8,6 +8,7 @@ export type WarningFilterState = {
   riskLevel: string
   groupSegment: string
   majorName: string
+  riskChangeDirection: string
 }
 
 function readSingle(queryValue: LocationQuery[string] | undefined) {
@@ -28,6 +29,7 @@ export function parseWarningQuery(query: LocationQuery): WarningFilterState {
     riskLevel: readSingle(query.risk_level),
     groupSegment: readSingle(query.group_segment),
     majorName: readSingle(query.major_name),
+    riskChangeDirection: readSingle(query.risk_change_direction),
   }
 }
 
@@ -47,6 +49,9 @@ export function buildWarningQuery(state: WarningFilterState): LocationQueryRaw {
   }
   if (state.majorName) {
     query.major_name = state.majorName
+  }
+  if (state.riskChangeDirection) {
+    query.risk_change_direction = state.riskChangeDirection
   }
 
   return query

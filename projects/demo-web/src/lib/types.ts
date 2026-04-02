@@ -5,7 +5,7 @@ export type Envelope<T> = {
   meta: { request_id: string; term?: string | null }
 }
 
-export type RiskLevel = 'high' | 'medium' | 'low'
+export type RiskLevel = 'high' | 'medium' | 'low' | '高风险' | '较高风险' | '一般风险' | '低风险'
 export type GroupSegment = string
 export type RiskChangeDirection = 'rising' | 'steady' | 'falling'
 
@@ -50,6 +50,13 @@ export type CalibratedFactor = {
   feature_cn?: string
   effect?: string
   dimension_code?: string
+}
+
+export type WarningFactor = {
+  feature: string
+  feature_cn?: string
+  dimension?: string
+  importance?: number
 }
 
 export type OverviewData = {
@@ -97,6 +104,13 @@ export type WarningsData = {
     group_segment: GroupSegment
     risk_level: RiskLevel
     risk_probability: number
+    base_risk_score?: number
+    risk_adjustment_score?: number
+    adjusted_risk_score?: number
+    risk_delta?: number
+    risk_change_direction?: RiskChangeDirection
+    top_risk_factors: WarningFactor[]
+    top_protective_factors: WarningFactor[]
   }>
   page: number
   page_size: number
@@ -110,15 +124,52 @@ export type StudentProfileData = {
   group_segment: GroupSegment
   risk_level: RiskLevel
   risk_probability: number
+  base_risk_score?: number
+  risk_adjustment_score?: number
+  adjusted_risk_score?: number
+  risk_delta?: number
+  risk_change_direction?: RiskChangeDirection
+  base_risk_explanation?: string
+  behavior_adjustment_explanation?: string
+  risk_change_explanation?: string
   dimension_scores: CalibratedDimensionScore[]
-  trend: Array<{ term: string; risk_probability?: number; dimension_scores: CalibratedDimensionScore[] }>
+  trend: Array<{
+    term: string
+    risk_level?: RiskLevel
+    risk_probability?: number
+    adjusted_risk_score?: number
+    risk_delta?: number
+    risk_change_direction?: RiskChangeDirection
+    dimension_scores: CalibratedDimensionScore[]
+  }>
 }
 
 export type StudentReportData = {
   top_factors: CalibratedFactor[]
+  base_risk_explanation?: string
+  behavior_adjustment_explanation?: string
+  risk_change_explanation?: string
   intervention_advice: string[]
   intervention_advice_items?: Array<{ title?: string; text?: string }>
+  intervention_plan?: string | string[]
   report_text: string
+  risk_level?: RiskLevel
+  risk_probability?: number
+  base_risk_score?: number
+  risk_adjustment_score?: number
+  adjusted_risk_score?: number
+  risk_delta?: number
+  risk_change_direction?: RiskChangeDirection
+  trend?: Array<{
+    term: string
+    risk_level?: RiskLevel
+    risk_probability?: number
+    base_risk_score?: number
+    risk_adjustment_score?: number
+    adjusted_risk_score?: number
+    risk_delta?: number
+    risk_change_direction?: RiskChangeDirection
+  }>
 }
 
 export type ModelSummaryData = {

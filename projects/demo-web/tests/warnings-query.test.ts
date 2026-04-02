@@ -7,17 +7,19 @@ describe('warnings query helpers', () => {
     const state = parseWarningQuery({
       term: '2023-2',
       page: '3',
-      risk_level: 'high',
+      risk_level: '较高风险',
       group_segment: '作息失衡风险组',
       major_name: '计算机科学与技术',
+      risk_change_direction: 'rising',
     })
 
     expect(state).toEqual({
       term: '2023-2',
       page: 3,
-      riskLevel: 'high',
+      riskLevel: '较高风险',
       groupSegment: '作息失衡风险组',
       majorName: '计算机科学与技术',
+      riskChangeDirection: 'rising',
     })
   })
 
@@ -39,10 +41,12 @@ describe('warnings query helpers', () => {
         riskLevel: '',
         groupSegment: '学习投入稳定组',
         majorName: '',
+        riskChangeDirection: 'falling',
       }),
     ).toEqual({
       term: '2024-2',
       group_segment: '学习投入稳定组',
+      risk_change_direction: 'falling',
     })
   })
 })
