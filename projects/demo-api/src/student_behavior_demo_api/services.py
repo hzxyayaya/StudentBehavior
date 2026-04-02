@@ -501,12 +501,12 @@ def _extract_group_factor_entries(
         dimension = item.get("dimension") or item.get("feature_cn") or item.get("feature")
         if not isinstance(dimension, str) or not dimension:
             raise ValueError("top_factors items must be strings or factor objects")
-        importance = item.get("importance")
-        if not isinstance(importance, (int, float)):
+        importance = _as_float(item.get("importance"))
+        if importance is None:
             raise ValueError("top_factors items must be strings or factor objects")
         factor_entry = {
             "dimension": dimension,
-            "importance": float(importance),
+            "importance": importance,
         }
         for optional_key in ("feature", "feature_cn", "effect"):
             optional_value = item.get(optional_key)
