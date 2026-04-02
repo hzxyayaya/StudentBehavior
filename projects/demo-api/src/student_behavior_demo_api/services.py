@@ -276,7 +276,11 @@ class DemoApiStore:
             row
             for row in warning_rows
             if row["term_key"] == term
-            and (risk_level is None or row["risk_level"] == risk_level)
+            and (
+                risk_level is None
+                or _normalize_risk_level(row.get("risk_level")) == _normalize_risk_level(risk_level)
+                or row.get("risk_level") == risk_level
+            )
             and (group_segment is None or row["group_segment"] == group_segment)
             and (major_name is None or row["major_name"] == major_name)
             and (
@@ -655,7 +659,7 @@ def _build_major_risk_summary(rows: list[Mapping[str, Any]]) -> list[dict[str, A
     stats: dict[str, dict[str, float]] = {}
     for row in rows:
         major_name = row.get("major_name")
-        risk_level = row.get("risk_level")
+        risk_level = _normalize_risk_level(row.get("risk_level")) or row.get("risk_level")
         risk_probability = row.get("risk_probability")
         if not isinstance(major_name, str) or not major_name:
             continue
@@ -665,13 +669,13 @@ def _build_major_risk_summary(rows: list[Mapping[str, Any]]) -> list[dict[str, A
         if current is None:
             stats[major_name] = {
                 "student_count": 1.0,
-                "high_risk_count": 1.0 if risk_level == "high" else 0.0,
+                "high_risk_count": 1.0 if risk_level == "高风险" else 0.0,
                 "risk_probability_total": float(risk_probability),
             }
             continue
         current["student_count"] += 1.0
         current["risk_probability_total"] += float(risk_probability)
-        if risk_level == "high":
+        if risk_level == "高风险":
             current["high_risk_count"] += 1.0
 
     summaries = [

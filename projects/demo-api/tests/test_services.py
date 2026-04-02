@@ -1336,6 +1336,51 @@ def test_list_warnings_sorts_by_risk_probability_desc_then_student_id(sample_sto
     assert [item["student_id"] for item in payload["items"]] == ["20230002", "20230001"]
 
 
+def test_list_warnings_normalizes_risk_level_filter(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230001",
+                "term_key": "2024-2",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.92,
+                "risk_level": "高风险",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+            },
+            {
+                "student_id": "20230002",
+                "term_key": "2024-2",
+                "student_name": "Alice",
+                "major_name": "软件工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.48,
+                "risk_level": "一般风险",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+            },
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.write_text("", encoding="utf-8")
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    payload = store.list_warnings(term="2024-2", risk_level="high")
+
+    assert payload["total"] == 1
+    assert payload["items"][0]["student_id"] == "20230001"
+
+
 def test_list_warnings_exposes_risk_fields_and_filters_by_change_direction(
     tmp_path: Path, sample_artifacts_dir: Path
 ) -> None:
@@ -1486,6 +1531,55 @@ def test_get_student_report_includes_risk_trend_metadata(
     assert payload["risk_delta"] == -1.0
     assert payload["risk_change_direction"] == "falling"
     assert [item["term"] for item in payload["trend"]] == ["2022-2", "2023-1"]
+
+
+def test_get_overview_counts_localized_high_risk_levels(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    overview_path = tmp_path / "artifacts" / "model_stubs" / "v1_overview_by_term.json"
+    overview_path.parent.mkdir(parents=True, exist_ok=True)
+    overview_path.write_text(
+        json.dumps(
+            {
+                "student_count": 1,
+                "risk_distribution": {"high": 1, "medium": 0, "low": 0},
+                "group_distribution": {"课堂参与薄弱组": 1},
+                "major_risk_summary": [],
+                "trend_summary": {"terms": [{"term_key": "2024-2"}]},
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230001",
+                "term_key": "2024-2",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.91,
+                "risk_level": "高风险",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+            }
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.write_text("", encoding="utf-8")
+    store = DemoApiStore(
+        overview_path=overview_path,
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-1",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    payload = store.get_overview("2024-2")
+
+    assert payload["major_risk_summary"][0]["high_risk_count"] == 1
 
 
 def test_missing_default_artifact_resolution_only_uses_current_worktree(tmp_path: Path) -> None:
