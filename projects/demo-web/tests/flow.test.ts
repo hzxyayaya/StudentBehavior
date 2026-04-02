@@ -404,6 +404,175 @@ describe('demo flow links', () => {
     expect(text).not.toContain('较高风险学生1')
   })
 
+  it('stops exact high-risk backfill when pagination metadata is inconsistent', async () => {
+    const auth = useAuthStore()
+    auth.signIn('demo-token', '演示管理员', '2024-2')
+
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input)
+
+      if (url.includes('/warnings?') && url.includes('risk_level=high')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            code: 200,
+            message: 'OK',
+            data: {
+              items: [
+                {
+                  student_id: 'high-1',
+                  student_name: '高风险学生1',
+                  major_name: '计算机科学与技术',
+                  group_segment: '作息失衡风险组',
+                  risk_level: '高风险',
+                  risk_probability: 0.95,
+                  adjusted_risk_score: 90,
+                  risk_delta: 3,
+                  risk_change_direction: 'rising',
+                  top_risk_factors: [{ feature: 'academic_base', feature_cn: '学业基础表现' }],
+                  top_protective_factors: [{ feature: 'library_immersion', feature_cn: '图书馆沉浸度' }],
+                },
+              ],
+              page: 1,
+              page_size: 20,
+              total: 999,
+            },
+            meta: { request_id: 'req-warnings', term: '2024-2' },
+          }),
+        })
+      }
+
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          code: 200,
+          message: 'OK',
+          data: {
+            cluster_method: 'stub-group-rules',
+            risk_model: 'stub-risk-rules',
+            target_label: '综合测评低等级风险',
+            auc: 0.81,
+            updated_at: '2026-03-28T12:00:00+08:00',
+          },
+          meta: { request_id: 'req-summary', term: '2024-2' },
+        }),
+      })
+    })
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { router, vueQueryPlugin } = createPlugins()
+    await router.push('/warnings?term=2024-2&risk_level=%E9%AB%98%E9%A3%8E%E9%99%A9')
+    await router.isReady()
+
+    const wrapper = mount(WarningsPage, {
+      global: {
+        plugins: [router, vueQueryPlugin],
+        stubs: { RouterLink: RouterLinkStub },
+      },
+    })
+
+    await flushPromises()
+    await flushPromises()
+
+    const warningCalls = fetchMock.mock.calls
+      .map(([requestUrl]) => String(requestUrl))
+      .filter((requestUrl) => requestUrl.includes('/warnings?'))
+    expect(warningCalls).toHaveLength(1)
+    expect(wrapper.text()).toContain('高风险学生1')
+    expect(wrapper.text()).toContain('共 1 条')
+  })
+
+  it('clamps stale exact-level pages instead of rendering an empty state', async () => {
+    const auth = useAuthStore()
+    auth.signIn('demo-token', '演示管理员', '2024-2')
+
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input)
+
+      if (url.includes('/warnings?') && url.includes('risk_level=high') && url.includes('page=1')) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            code: 200,
+            message: 'OK',
+            data: {
+              items: [
+                {
+                  student_id: 'high-1',
+                  student_name: '高风险学生1',
+                  major_name: '计算机科学与技术',
+                  group_segment: '作息失衡风险组',
+                  risk_level: '高风险',
+                  risk_probability: 0.95,
+                  adjusted_risk_score: 90,
+                  risk_delta: 3,
+                  risk_change_direction: 'rising',
+                  top_risk_factors: [{ feature: 'academic_base', feature_cn: '学业基础表现' }],
+                  top_protective_factors: [{ feature: 'library_immersion', feature_cn: '图书馆沉浸度' }],
+                },
+                {
+                  student_id: 'elevated-1',
+                  student_name: '较高风险学生1',
+                  major_name: '计算机科学与技术',
+                  group_segment: '作息失衡风险组',
+                  risk_level: '较高风险',
+                  risk_probability: 0.84,
+                  adjusted_risk_score: 72,
+                  risk_delta: 2,
+                  risk_change_direction: 'rising',
+                  top_risk_factors: [{ feature: 'academic_base', feature_cn: '学业基础表现' }],
+                  top_protective_factors: [{ feature: 'library_immersion', feature_cn: '图书馆沉浸度' }],
+                },
+              ],
+              page: 1,
+              page_size: 20,
+              total: 2,
+            },
+            meta: { request_id: 'req-warnings', term: '2024-2' },
+          }),
+        })
+      }
+
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          code: 200,
+          message: 'OK',
+          data: {
+            items: [],
+            page: 2,
+            page_size: 20,
+            total: 2,
+          },
+          meta: { request_id: 'req-warnings-2', term: '2024-2' },
+        }),
+      })
+    })
+
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { router, vueQueryPlugin } = createPlugins()
+    await router.push('/warnings?term=2024-2&page=2&risk_level=%E9%AB%98%E9%A3%8E%E9%99%A9')
+    await router.isReady()
+
+    const wrapper = mount(WarningsPage, {
+      global: {
+        plugins: [router, vueQueryPlugin],
+        stubs: { RouterLink: RouterLinkStub },
+      },
+    })
+
+    await flushPromises()
+    await flushPromises()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('高风险学生1')
+    expect(wrapper.text()).not.toContain('当前筛选下没有预警学生')
+    expect(wrapper.text()).toContain('第 1 / 1 页，共 1 条')
+    expect(router.currentRoute.value.query.page).toBeUndefined()
+  })
+
   it('renders calibrated labels, explanations, and metrics on the group page', async () => {
     const auth = useAuthStore()
     auth.signIn('demo-token', '演示管理员', '2024-2')

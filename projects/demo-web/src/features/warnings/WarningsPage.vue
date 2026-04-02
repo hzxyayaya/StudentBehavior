@@ -110,6 +110,7 @@ import {
 } from './query'
 
 const groupOptions = ['学习投入稳定组', '综合发展优势组', '作息失衡风险组', '课堂参与薄弱组']
+const MAX_EXACT_BACKFILL_PAGES = 100
 
 const route = useRoute()
 const router = useRouter()
@@ -160,12 +161,14 @@ const query = useQuery({
 
     const allItems = await fetchAllExactLevelWarnings(levelPlan.apiRiskLevel)
     const filteredItems = allItems.filter((item) => matchesSelectedWarningLevel(levelPlan.exactRiskLevel, item.risk_level))
-    const startIndex = (page.value - 1) * pageSize.value
+    const exactPageCount = Math.max(1, Math.ceil(filteredItems.length / pageSize.value))
+    const effectivePage = Math.min(Math.max(1, page.value), exactPageCount)
+    const startIndex = (effectivePage - 1) * pageSize.value
     const endIndex = startIndex + pageSize.value
 
     return {
       items: filteredItems.slice(startIndex, endIndex),
-      page: page.value,
+      page: effectivePage,
       page_size: pageSize.value,
       total: filteredItems.length,
     }
@@ -176,6 +179,15 @@ watch(
   () => termStore.term.value,
   () => {
     page.value = 1
+  },
+)
+
+watch(
+  () => query.data.value?.page,
+  (nextPage) => {
+    if (typeof nextPage === 'number' && nextPage > 0 && nextPage !== page.value) {
+      page.value = nextPage
+    }
   },
 )
 
@@ -268,9 +280,9 @@ function factorText(factors: WarningFactor[]) {
 async function fetchAllExactLevelWarnings(apiRiskLevel: 'high' | 'medium' | 'low' | null) {
   const rows = []
   let currentPage = 1
-  let total = 0
+  const seenResponsePages = new Set<number>()
 
-  do {
+  while (currentPage <= MAX_EXACT_BACKFILL_PAGES) {
     const response = await getWarnings({
       term: termStore.term.value,
       page: currentPage,
@@ -280,10 +292,22 @@ async function fetchAllExactLevelWarnings(apiRiskLevel: 'high' | 'medium' | 'low
       group_segment: appliedFilters.groupSegment || null,
       major_name: appliedFilters.majorName || null,
     })
+    const previousLength = rows.length
     rows.push(...response.items)
-    total = response.total
+    const responsePage = response.page > 0 ? response.page : currentPage
+    const computedMaxPage = response.page_size > 0 ? Math.max(1, Math.ceil(response.total / response.page_size)) : currentPage
+    const madeProgress = rows.length > previousLength
+
+    if (!madeProgress) break
+    if (seenResponsePages.has(responsePage)) break
+    seenResponsePages.add(responsePage)
+    if (response.items.length === 0) break
+    if (response.items.length < response.page_size) break
+    if (response.total > 0 && rows.length >= response.total) break
+    if (currentPage >= computedMaxPage) break
+
     currentPage += 1
-  } while (rows.length < total)
+  }
 
   return rows
 }
