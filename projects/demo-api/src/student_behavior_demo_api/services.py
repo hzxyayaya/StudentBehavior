@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+import math
 from collections import defaultdict
 from collections.abc import Mapping
 from pathlib import Path
@@ -501,8 +502,11 @@ def _extract_group_factor_entries(
         dimension = item.get("dimension") or item.get("feature_cn") or item.get("feature")
         if not isinstance(dimension, str) or not dimension:
             raise ValueError("top_factors items must be strings or factor objects")
-        importance = _as_float(item.get("importance"))
-        if importance is None:
+        try:
+            importance = _as_float(item.get("importance"))
+        except ValueError as exc:
+            raise ValueError("top_factors items must be strings or factor objects") from exc
+        if importance is None or not math.isfinite(importance):
             raise ValueError("top_factors items must be strings or factor objects")
         factor_entry = {
             "dimension": dimension,
