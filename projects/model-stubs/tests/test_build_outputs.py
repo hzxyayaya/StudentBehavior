@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 
 from student_behavior_model_stubs.build_outputs import _coerce_dimension_scores
+from student_behavior_model_stubs.build_outputs import _factor_names
 from student_behavior_model_stubs.build_outputs import build_model_summary
 from student_behavior_model_stubs.build_outputs import build_overview_by_term
 from student_behavior_model_stubs.build_outputs import build_student_reports
@@ -144,6 +145,17 @@ def test_build_student_reports_outputs_jsonl_ready_records() -> None:
     assert "当前维度得分 " in reports[0]["report_text"]
     if first_dimension["provenance"]["has_caveated_metrics"] or first_dimension["provenance"]["has_deferred_metrics"]:
         assert "证据提示：当前维度包含 caveated/deferred 证据" in reports[0]["report_text"]
+
+
+def test_factor_names_ignore_missing_values() -> None:
+    factors = [
+        {"feature_cn": "课堂学习投入"},
+        {"feature_cn": None},
+        {"feature_cn": float("nan")},
+        {"feature_cn": "  "},
+        {"feature_cn": "在线学习积极性"},
+    ]
+    assert _factor_names(factors) == "课堂学习投入、在线学习积极性"
 
 
 def test_build_overview_top_warning_factors_are_ranked_by_weakness() -> None:

@@ -78,11 +78,11 @@ def _json_load(value: object) -> object:
 
 
 def _factor_names(factors: Sequence[Mapping[str, object]]) -> str:
-    names = [
-        str(item.get("feature_cn", "")).strip()
-        for item in factors
-        if str(item.get("feature_cn", "")).strip()
-    ]
+    names: list[str] = []
+    for item in factors:
+        name = _normalized_text(item.get("feature_cn", ""))
+        if name:
+            names.append(name)
     return "、".join(names)
 
 
