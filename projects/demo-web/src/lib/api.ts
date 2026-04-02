@@ -370,6 +370,16 @@ function normalizeRiskDistribution(raw: unknown) {
     })
   }
   const record = asRecord(raw)
+  const localizedHigh = asNumber(record['高风险']) + asNumber(record['较高风险'])
+  const localizedMedium = asNumber(record['一般风险'])
+  const localizedLow = asNumber(record['低风险'])
+  if (localizedHigh || localizedMedium || localizedLow) {
+    return [
+      { risk_level: 'high' as const, count: localizedHigh },
+      { risk_level: 'medium' as const, count: localizedMedium },
+      { risk_level: 'low' as const, count: localizedLow },
+    ]
+  }
   return (['high', 'medium', 'low'] as const).map((riskLevel) => ({
     risk_level: riskLevel,
     count: asNumber(record[riskLevel]),
@@ -410,20 +420,35 @@ function normalizeTrendSummary(raw: unknown) {
   return trendTerms.map((item) => {
     const row = asRecord(item)
     const rowRiskDistribution = asRecord(row.risk_distribution)
+    const highRiskCount =
+      asNumber(rowRiskDistribution.high) +
+      asNumber(rowRiskDistribution['高风险']) +
+      asNumber(rowRiskDistribution['较高风险'])
     return {
       term: asString(row.term_key || row.term),
-      high_risk_count: asNumber(rowRiskDistribution.high),
+      high_risk_count: highRiskCount,
     }
   })
 }
 
 function normalizeRiskTrendSummary(raw: unknown) {
-  return asArray(raw).map((item) => {
+  const record = asRecord(raw)
+  const rows = asArray(record.terms).length > 0 ? asArray(record.terms) : asArray(raw)
+  return rows.map((item) => {
     const row = asRecord(item)
+    const riskDistribution = asRecord(row.risk_distribution)
+    const highRiskCount =
+      asNumber(row.high_risk_count) +
+      asNumber(riskDistribution.high) +
+      asNumber(riskDistribution['高风险']) +
+      asNumber(riskDistribution['较高风险'])
+    const avgRiskScore =
+      asOptionalNumber(row.avg_risk_score) ??
+      ((asOptionalNumber(row.average_risk_probability) ?? asOptionalNumber(row.avg_risk_probability) ?? 0) * 100)
     const summary: OverviewData['risk_trend_summary'][number] = {
-      term: asString(row.term),
-      avg_risk_score: asNumber(row.avg_risk_score),
-      high_risk_count: asNumber(row.high_risk_count),
+      term: asString(row.term || row.term_key),
+      avg_risk_score: avgRiskScore,
+      high_risk_count: highRiskCount,
     }
     const riskChangeDirection = asOptionalRiskChangeDirection(row.risk_change_direction)
     if (riskChangeDirection !== undefined) summary.risk_change_direction = riskChangeDirection
@@ -439,7 +464,7 @@ function normalizeRiskFactorSummary(raw: unknown) {
     const summary: OverviewData['risk_factor_summary'][number] = {
       feature,
       count: asNumber(row.count),
-      importance: asNumber(row.importance ?? row.impact),
+      importance: asNumber(row.importance ?? row.impact ?? row.average_score),
     }
     if (featureCn !== undefined) summary.feature_cn = featureCn
     return summary
