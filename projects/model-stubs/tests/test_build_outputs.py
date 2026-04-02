@@ -50,7 +50,9 @@ def test_build_student_results_outputs_risk_warning_contract() -> None:
         "risk_delta",
         "risk_change_direction",
         "dimension_scores_json",
+        "top_risk_factors",
         "top_risk_factors_json",
+        "top_protective_factors",
         "top_protective_factors_json",
         "base_risk_explanation",
         "behavior_adjustment_explanation",
@@ -70,8 +72,20 @@ def test_build_student_results_outputs_risk_warning_contract() -> None:
     assert record["risk_delta"] == results.loc[0, "risk_delta"]
     assert record["risk_change_direction"] == "rising"
     assert record["dimension_scores_json"] == results.loc[0, "dimension_scores_json"]
+    top_risk_factors = json.loads(record["top_risk_factors_json"])
+    top_protective_factors = json.loads(record["top_protective_factors_json"])
     assert record["top_risk_factors_json"] == results.loc[0, "top_risk_factors_json"]
     assert record["top_protective_factors_json"] == results.loc[0, "top_protective_factors_json"]
+    assert record["top_risk_factors"]
+    assert record["top_protective_factors"]
+    assert record["top_risk_factors"] == "、".join(
+        str(item["feature_cn"]) for item in top_risk_factors if str(item.get("feature_cn", "")).strip()
+    )
+    assert record["top_protective_factors"] == "、".join(
+        str(item["feature_cn"])
+        for item in top_protective_factors
+        if str(item.get("feature_cn", "")).strip()
+    )
     assert record["base_risk_explanation"] == results.loc[0, "base_risk_explanation"]
     assert record["behavior_adjustment_explanation"] == results.loc[0, "behavior_adjustment_explanation"]
     assert record["risk_change_explanation"] == results.loc[0, "risk_change_explanation"]

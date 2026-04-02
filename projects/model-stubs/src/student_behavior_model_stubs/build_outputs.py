@@ -27,7 +27,9 @@ _RESULT_COLUMNS = [
     "risk_delta",
     "risk_change_direction",
     "dimension_scores_json",
+    "top_risk_factors",
     "top_risk_factors_json",
+    "top_protective_factors",
     "top_protective_factors_json",
     "base_risk_explanation",
     "behavior_adjustment_explanation",
@@ -73,6 +75,15 @@ def _json_load(value: object) -> object:
     if isinstance(value, str):
         return json.loads(value)
     return value
+
+
+def _factor_names(factors: Sequence[Mapping[str, object]]) -> str:
+    names = [
+        str(item.get("feature_cn", "")).strip()
+        for item in factors
+        if str(item.get("feature_cn", "")).strip()
+    ]
+    return "、".join(names)
 
 
 def _count_distribution(values: pd.Series) -> dict[str, int]:
@@ -322,7 +333,9 @@ def build_student_results(
             "risk_delta": calibration["risk_delta"],
             "risk_change_direction": calibration["risk_change_direction"],
             "dimension_scores_json": _json_dump(dimension_scores),
+            "top_risk_factors": _factor_names(report_payload["top_risk_factors"]),
             "top_risk_factors_json": _json_dump(report_payload["top_risk_factors"]),
+            "top_protective_factors": _factor_names(report_payload["top_protective_factors"]),
             "top_protective_factors_json": _json_dump(report_payload["top_protective_factors"]),
             "base_risk_explanation": report_payload["base_risk_explanation"],
             "behavior_adjustment_explanation": report_payload["behavior_adjustment_explanation"],
