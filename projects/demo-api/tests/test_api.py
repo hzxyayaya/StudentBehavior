@@ -555,9 +555,9 @@ def test_get_student_report_includes_risk_explanations(client) -> None:
     response = client.get("/api/students/20230001/report", params={"term": "2023-1"})
     assert response.status_code == 200
     payload = response.json()
-    assert "base_risk_explanation" in payload["data"]
-    assert "behavior_adjustment_explanation" in payload["data"]
-    assert "risk_change_explanation" in payload["data"]
+    assert payload["data"]["base_risk_explanation"] == "base risk explanation"
+    assert payload["data"]["behavior_adjustment_explanation"] == "behavior adjustment explanation"
+    assert payload["data"]["risk_change_explanation"] == "risk change explanation"
     assert "intervention_plan" in payload["data"]
     assert "risk_level" in payload["data"]
     assert "risk_delta" in payload["data"]

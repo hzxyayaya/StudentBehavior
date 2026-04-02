@@ -134,9 +134,16 @@ class DemoApiStore:
                 current_row.get("intervention_advice"), field_name="intervention_advice"
             ),
             "report_text": current_row.get("report_text"),
-            "base_risk_explanation": current_row.get("base_risk_explanation"),
-            "behavior_adjustment_explanation": current_row.get("behavior_adjustment_explanation"),
-            "risk_change_explanation": current_row.get("risk_change_explanation"),
+            "base_risk_explanation": (
+                current_row.get("base_risk_explanation") or current_warning.get("base_risk_explanation")
+            ),
+            "behavior_adjustment_explanation": (
+                current_row.get("behavior_adjustment_explanation")
+                or current_warning.get("behavior_adjustment_explanation")
+            ),
+            "risk_change_explanation": (
+                current_row.get("risk_change_explanation") or current_warning.get("risk_change_explanation")
+            ),
             "intervention_plan": _parse_maybe_json_field(
                 current_row.get("intervention_plan"), field_name="intervention_plan"
             ),
