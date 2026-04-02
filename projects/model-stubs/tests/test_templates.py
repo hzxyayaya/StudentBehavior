@@ -132,10 +132,15 @@ def test_build_report_payload_returns_readable_stub_content() -> None:
         "appraisal_status_alert",
         "library_immersion",
     ]
+    assert all(factor["effect"] != "negative" for factor in payload["top_protective_factors"])
     assert payload["intervention_priority"] == 2
-    assert "基础风险" in payload["base_risk_explanation"]
+    assert "学期GPA" in payload["base_risk_explanation"]
+    assert "挂科" in payload["base_risk_explanation"]
+    assert "边缘课程" in payload["base_risk_explanation"]
+    assert "挂科占比" in payload["base_risk_explanation"]
     assert "行为调整" in payload["behavior_adjustment_explanation"]
     assert "风险变化" in payload["risk_change_explanation"]
+    assert any(token in payload["risk_change_explanation"] for token in ["挂科", "课堂", "作息", "在线学习", "体质"])
     assert "较高风险" in payload["intervention_plan"]
     assert "作息失衡风险组" in payload["report_text"]
     assert "较高风险" in payload["report_text"]

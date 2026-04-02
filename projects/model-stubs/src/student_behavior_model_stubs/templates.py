@@ -157,6 +157,27 @@ def _provenance_note(dimension_item: Mapping[str, object]) -> str | None:
     return None
 
 
+def _metric_value_by_name(
+    dimension_item: Mapping[str, object] | None,
+    metric_name: str,
+) -> str:
+    if not isinstance(dimension_item, Mapping):
+        return "未提供"
+    metrics = dimension_item.get("metrics")
+    if not isinstance(metrics, Iterable):
+        return "未提供"
+    for metric in metrics:
+        if not isinstance(metric, Mapping):
+            continue
+        if str(metric.get("metric", "")).strip() != metric_name:
+            continue
+        value = metric.get("value")
+        if value is None:
+            return "未提供"
+        return _format_metric_value(value)
+    return "未提供"
+
+
 def _build_factor(
     *,
     dimension_name: str,
@@ -180,8 +201,8 @@ def _build_factor(
 
     score = score_map[dimension_name]
     if reverse:
-        effect = "positive" if score >= 0.5 else "negative"
-        importance = round(abs(score - 0.5), 2)
+        effect = "positive" if score >= 0.5 else "neutral"
+        importance = round(max(score - 0.5, 0.0), 2)
     else:
         effect = "positive" if score < 0.5 else "negative"
         importance = round(0.75 - score * 0.5, 2)
@@ -247,22 +268,43 @@ def build_protective_factors(
     for dimension_name, feature_name in sorted(
         _PROTECTIVE_DIMENSION_TEMPLATES,
         key=lambda item: (
+            -score_map.get(item[0], -1.0),
             item[0] not in score_map,
-            -score_map.get(item[0], 0.0),
             order_map[item[0]],
         ),
     )[:3]:
-        factors.append(
-            _build_factor(
-                dimension_name=dimension_name,
-                feature_name=feature_name,
-                score_map=score_map,
-                items_by_name=items_by_name,
-                reverse=True,
-            )
+        factor = _build_factor(
+            dimension_name=dimension_name,
+            feature_name=feature_name,
+            score_map=score_map,
+            items_by_name=items_by_name,
+            reverse=True,
         )
+        if factor["effect"] == "negative":
+            factor["effect"] = "neutral"
+            factor["importance"] = 0.0
+        factors.append(factor)
 
-    return factors
+    if len(factors) < 3:
+        for dimension_name, feature_name in sorted(
+            _PROTECTIVE_DIMENSION_TEMPLATES,
+            key=lambda item: order_map[item[0]],
+        ):
+            if len(factors) == 3:
+                break
+            if any(factor["dimension_code"] == feature_name for factor in factors):
+                continue
+            factors.append(
+                _build_factor(
+                    dimension_name=dimension_name,
+                    feature_name=feature_name,
+                    score_map=score_map,
+                    items_by_name=items_by_name,
+                    reverse=True,
+                )
+            )
+
+    return factors[:3]
 
 
 def _build_priority_interventions(risk_level: str) -> list[dict[str, object]]:
@@ -374,6 +416,7 @@ def build_report_payload(
 ) -> dict[str, object]:
     dimension_scores = list(dimension_scores)
     risk_level = _format_risk_label(risk_level)
+    dimension_items_by_name = _dimension_items_by_name(dimension_scores)
     top_risk_factors = build_top_factors(
         risk_level=risk_level,
         group_segment=group_segment,
@@ -390,18 +433,38 @@ def build_report_payload(
         + [f"{item['priority']}. {item['text']}" for item in priority_interventions]
     )
     intervention_priority = _RISK_LEVEL_PRIORITY.get(risk_level, 3)
+    academic_item = dimension_items_by_name.get("学业基础表现")
+    gpa_value = _metric_value_by_name(academic_item, "term_gpa")
+    failed_count = _metric_value_by_name(academic_item, "failed_course_count")
+    borderline_count = _metric_value_by_name(academic_item, "borderline_course_count")
+    failed_ratio = _metric_value_by_name(academic_item, "failed_course_ratio")
+    academic_signal_text = (
+        f"学期GPA {gpa_value}、挂科门数 {failed_count}、边缘课程数 {borderline_count}、挂科占比 {failed_ratio}"
+    )
+    risk_driver_text = "、".join(
+        str(item["feature_cn"])
+        for item in top_risk_factors
+        if str(item.get("feature_cn", "")).strip()
+    )
+    protective_signal_text = "、".join(
+        str(item["feature_cn"])
+        for item in top_protective_factors
+        if str(item.get("feature_cn", "")).strip()
+    )
     base_risk_explanation = (
-        f"基础风险盘显示 {base_risk_score:.2f} 分，属于 {risk_level}。"
-        f" 它只反映学业结果本身，不混入行为修正。"
+        f"基础风险盘由学业结果形成，当前参考 {academic_signal_text}。"
+        f" 基础风险分 {base_risk_score:.2f}，属于 {risk_level}。"
+        f" 这里不混入作息、在线学习或体质等行为修正。"
     )
     behavior_adjustment_explanation = (
         f"行为调整为 {risk_adjustment_score:+.2f}，将基础风险修正到 {adjusted_risk_score:.2f}。"
-        f" 主要放大因素是 {', '.join(str(item['feature_cn']) for item in top_risk_factors)}；"
-        f" 保护性因素是 {', '.join(str(item['feature_cn']) for item in top_protective_factors)}。"
+        f" 主要放大因素是 {risk_driver_text}；"
+        f" 保护性因素是 {protective_signal_text}。"
     )
     risk_change_explanation = (
         f"风险变化为 {risk_delta:+.2f}，方向为 {risk_change_direction}。"
         f" 这表示当前学期相较上一学期的风险态势正在{'上升' if risk_change_direction == 'rising' else '下降' if risk_change_direction == 'falling' else '保持稳定'}。"
+        f" 变化更可能和 {risk_driver_text} 的波动有关，并受到 {protective_signal_text} 的支撑。"
     )
     report_text = _build_report_text(
         base_risk_score=base_risk_score,

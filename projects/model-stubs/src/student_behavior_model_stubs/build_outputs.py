@@ -88,7 +88,10 @@ def _count_risk_distribution(values: pd.Series) -> dict[str, int]:
 def _top_warning_factors(student_results: pd.DataFrame, limit: int = 3) -> list[dict[str, object]]:
     if student_results.empty:
         return []
-    dimension_summary = _average_dimension_scores(student_results["dimension_scores_json"])
+    dimension_summary = sorted(
+        _average_dimension_scores(student_results["dimension_scores_json"]),
+        key=lambda item: (float(item["average_score"]), str(item["dimension_code"])),
+    )
     return dimension_summary[:limit]
 
 
@@ -199,7 +202,7 @@ def build_overview_by_term(student_results: pd.DataFrame) -> dict[str, object]:
             {
                 "major_name": major_name,
                 "student_count": int(len(major_frame)),
-                "high_risk_count": int((major_frame["risk_level"] == "high").sum()),
+                "high_risk_count": int((major_frame["risk_level"] == "高风险").sum()),
                 "average_risk_probability": round(float(major_frame["risk_probability"].mean()), 2),
             }
         )

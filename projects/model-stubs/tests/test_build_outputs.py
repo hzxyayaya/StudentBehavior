@@ -132,6 +132,56 @@ def test_build_student_reports_outputs_jsonl_ready_records() -> None:
         assert "证据提示：当前维度包含 caveated/deferred 证据" in reports[0]["report_text"]
 
 
+def test_build_overview_top_warning_factors_are_ranked_by_weakness() -> None:
+    student_results = build_student_results(
+        pd.DataFrame(
+            [
+                _feature_row() | {"student_id": "20230001", "term_key": "2024-1"},
+                _feature_row()
+                | {
+                    "student_id": "20230002",
+                    "term_key": "2024-1",
+                    "academic_base_score_raw": 84.0,
+                    "class_engagement_score_raw": 78.0,
+                    "online_activeness_score_raw": 72.0,
+                    "network_habits_score_raw": 70.0,
+                    "daily_routine_boundary_score_raw": 76.0,
+                    "failed_course_count": 0,
+                },
+                _feature_row()
+                | {
+                    "student_id": "20230003",
+                    "term_key": "2024-2",
+                    "major_name": "数据科学",
+                    "academic_base_score_raw": 22.0,
+                    "class_engagement_score_raw": 20.0,
+                    "online_activeness_score_raw": 18.0,
+                    "network_habits_score_raw": 15.0,
+                    "daily_routine_boundary_score_raw": 17.0,
+                    "failed_course_count": 4,
+                },
+            ]
+        )
+    )
+
+    overview = build_overview_by_term(student_results)
+    expected_order = [
+        item["dimension_code"]
+        for item in sorted(
+            overview["dimension_summary"],
+            key=lambda item: (item["average_score"], item["dimension_code"]),
+        )[:3]
+    ]
+
+    assert [factor["dimension_code"] for factor in overview["top_warning_factors"]] == expected_order
+
+
+def test_build_student_reports_protective_factors_are_not_negative_effects() -> None:
+    reports = build_student_reports(build_student_results(pd.DataFrame([_feature_row()])))
+
+    assert all(factor["effect"] != "negative" for factor in reports[0]["top_protective_factors"])
+
+
 def test_missing_student_name_falls_back_to_student_id_placeholder() -> None:
     results = build_student_results(
         pd.DataFrame([_feature_row() | {"student_id": "20230003", "student_name": ""}])
@@ -199,6 +249,7 @@ def test_build_overview_by_term_includes_required_sections() -> None:
             ]
         )
     )
+    student_results.loc[:, "risk_level"] = ["高风险", "较高风险", "低风险"]
 
     overview = build_overview_by_term(student_results)
     expected_dimension_summary = sorted(
@@ -241,6 +292,9 @@ def test_build_overview_by_term_includes_required_sections() -> None:
     assert len(overview["intervention_priority_summary"]) == 4
     assert overview["risk_trend_summary"] == overview["trend_summary"]
     assert overview["risk_band_distribution"] == overview["risk_distribution"]
+    assert next(
+        item for item in overview["major_risk_summary"] if item["major_name"] == "软件工程"
+    )["high_risk_count"] == 1
     for group_segment, entries in overview["group_score_summary"].items():
         assert group_segment in overview["group_distribution"]
         assert [entry["dimension_code"] for entry in entries] == [
