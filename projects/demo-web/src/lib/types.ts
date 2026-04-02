@@ -7,6 +7,7 @@ export type Envelope<T> = {
 
 export type RiskLevel = 'high' | 'medium' | 'low'
 export type GroupSegment = string
+export type RiskChangeDirection = 'rising' | 'steady' | 'falling'
 
 export type DimensionMetric = {
   metric: string
@@ -54,10 +55,23 @@ export type CalibratedFactor = {
 export type OverviewData = {
   student_count: number
   risk_distribution: Array<{ risk_level: RiskLevel; count: number }>
+  risk_band_distribution: Record<string, number>
   group_distribution: Array<{ group_segment: GroupSegment; count: number }>
   dimension_summary: CalibratedDimensionScore[]
   major_risk_summary: Array<{ major_name: string; high_risk_count: number; student_count: number }>
   trend_summary: Array<{ term: string; high_risk_count: number }>
+  risk_trend_summary: Array<{
+    term: string
+    avg_risk_score: number
+    high_risk_count: number
+    risk_change_direction?: RiskChangeDirection
+  }>
+  risk_factor_summary: Array<{
+    feature: string
+    feature_cn?: string
+    count: number
+    importance: number
+  }>
 }
 
 export type GroupsData = {
@@ -65,8 +79,13 @@ export type GroupsData = {
     group_segment: GroupSegment
     student_count: number
     avg_risk_probability: number
+    avg_risk_score: number
+    avg_risk_level?: string
+    risk_change_summary?: Partial<Record<RiskChangeDirection, number>>
     avg_dimension_scores: CalibratedDimensionScore[]
     top_factors: CalibratedFactor[]
+    risk_amplifiers: Array<{ feature: string; feature_cn?: string; count: number; importance: number }>
+    protective_factors: Array<{ feature: string; feature_cn?: string; count: number; importance: number }>
   }>
 }
 

@@ -42,6 +42,7 @@ describe('demo flow links', () => {
                   { risk_level: 'medium', count: 34 },
                   { risk_level: 'low', count: 133 },
                 ],
+                risk_band_distribution: { 高风险: 12, 较高风险: 24, 一般风险: 40, 低风险: 103 },
                 group_distribution: [
                   { group_segment: '学习投入稳定组', count: 45 },
                   { group_segment: '综合发展优势组', count: 51 },
@@ -54,6 +55,14 @@ describe('demo flow links', () => {
                 trend_summary: [
                   { term: '2024-1', high_risk_count: 10 },
                   { term: '2024-2', high_risk_count: 12 },
+                ],
+                risk_trend_summary: [
+                  { term: '2024-1', avg_risk_score: 48.2, high_risk_count: 10, risk_change_direction: 'rising' },
+                  { term: '2024-2', avg_risk_score: 51.7, high_risk_count: 12, risk_change_direction: 'rising' },
+                ],
+                risk_factor_summary: [
+                  { feature: 'academic_base', feature_cn: '学业基础表现', count: 52, importance: 0.82 },
+                  { feature: 'class_engagement', feature_cn: '课堂学习投入', count: 43, importance: 0.64 },
                 ],
                 dimension_summary: [
                   {
@@ -142,6 +151,13 @@ describe('demo flow links', () => {
     expect(secondOverviewCard.text()).toContain('74分')
     expect(secondOverviewCard.text()).toContain('课堂投入一般')
     expect(secondOverviewCard.text()).toContain('出勤较稳但课堂参与仍有提升空间。')
+    expect(wrapper.text()).toContain('学业风险四档分布')
+    expect(wrapper.text()).toContain('较高风险')
+    expect(wrapper.text()).toContain('24')
+    expect(wrapper.text()).toContain('风险趋势摘要')
+    expect(wrapper.text()).toContain('2024-1')
+    expect(wrapper.text()).toContain('风险因素 Top')
+    expect(wrapper.text()).toContain('学业基础表现')
   })
 
   it('keeps warning filters in the back link on student page', async () => {
@@ -277,6 +293,9 @@ describe('demo flow links', () => {
                     group_segment: '作息失衡风险组',
                     student_count: 39,
                     avg_risk_probability: 0.62,
+                    avg_risk_score: 57.4,
+                    avg_risk_level: '较高风险',
+                    risk_change_summary: { rising: 18, steady: 14, falling: 7 },
                     avg_dimension_scores: [
                       {
                         dimension: '网络作息自律指数',
@@ -298,6 +317,22 @@ describe('demo flow links', () => {
                         label: '网络使用偏强',
                         explanation: '覆盖 39 人，重要度 0.75',
                         metrics: [{ metric: '月均上网时长', value: 66, display: '66 小时' }],
+                      },
+                    ],
+                    risk_amplifiers: [
+                      {
+                        feature: 'academic_base',
+                        feature_cn: '学业基础表现',
+                        count: 27,
+                        importance: 0.79,
+                      },
+                    ],
+                    protective_factors: [
+                      {
+                        feature: 'library_immersion',
+                        feature_cn: '图书馆沉浸度',
+                        count: 13,
+                        importance: 0.52,
                       },
                     ],
                   },
@@ -350,6 +385,8 @@ describe('demo flow links', () => {
     expect(firstGroupCard.text()).toContain('作息失衡风险组')
     expect(firstGroupCard.text()).toContain('39 人')
     expect(firstGroupCard.text()).toContain('0.62')
+    expect(firstGroupCard.text()).toContain('57.4')
+    expect(firstGroupCard.text()).toContain('较高风险')
     const dimensionRows = firstGroupCard.findAll('.dimension-row')
     const [firstDimensionRow] = dimensionRows
     if (!firstDimensionRow) {
@@ -365,6 +402,10 @@ describe('demo flow links', () => {
     expect(firstDimensionRow.text()).toContain('相对学校平均值偏差')
     expect(firstDimensionRow.text()).toContain('偏高 18%')
     expect(firstGroupCard.text()).toContain('覆盖 39 人，重要度 0.75')
+    expect(firstGroupCard.text()).toContain('风险放大因素')
+    expect(firstGroupCard.text()).toContain('学业基础表现')
+    expect(firstGroupCard.text()).toContain('保护性因素')
+    expect(firstGroupCard.text()).toContain('图书馆沉浸度')
   })
 
   it('shows incomplete calibrated fields explicitly when the backend leaves them unavailable', async () => {

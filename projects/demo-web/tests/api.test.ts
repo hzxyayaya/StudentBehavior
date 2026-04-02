@@ -71,6 +71,7 @@ describe('api client', () => {
               data: {
                 student_count: 179,
                 risk_distribution: { high: 0, medium: 0, low: 179 },
+                risk_band_distribution: { 高风险: 12, 较高风险: 21, 一般风险: 34, 低风险: 112 },
                 group_distribution: { 作息失衡风险组: 179 },
                 dimension_summary: [
                   {
@@ -102,6 +103,14 @@ describe('api client', () => {
                     },
                   ],
                 },
+                risk_trend_summary: [
+                  { term: '2024-1', avg_risk_score: 49.8, high_risk_count: 10, risk_change_direction: 'rising' },
+                  { term: '2024-2', avg_risk_score: 52.1, high_risk_count: 12, risk_change_direction: 'rising' },
+                ],
+                risk_factor_summary: [
+                  { feature: 'academic_base', feature_cn: '学业基础表现', count: 52, importance: 0.82 },
+                  { feature: 'class_engagement', feature_cn: '课堂学习投入', count: 41, importance: 0.66 },
+                ],
               },
               meta: { request_id: 'demo-request', term: '2024-2' },
             }),
@@ -121,6 +130,9 @@ describe('api client', () => {
                     group_segment: '作息失衡风险组',
                     student_count: 81,
                     avg_risk_probability: 0.38,
+                    avg_risk_score: 57.4,
+                    avg_risk_level: '较高风险',
+                    risk_change_summary: { rising: 31, steady: 40, falling: 10 },
                     avg_dimension_scores: [
                       {
                         dimension: '学业基础表现',
@@ -147,6 +159,22 @@ describe('api client', () => {
                         label: '网络使用偏强',
                         explanation: '覆盖 81 人，重要度 0.75',
                         metrics: [{ metric: '月均上网时长', value: 66, display: '66 小时' }],
+                      },
+                    ],
+                    risk_amplifiers: [
+                      {
+                        feature: 'academic_base',
+                        feature_cn: '学业基础表现',
+                        count: 51,
+                        importance: 0.79,
+                      },
+                    ],
+                    protective_factors: [
+                      {
+                        feature: 'library_immersion',
+                        feature_cn: '图书馆沉浸度',
+                        count: 29,
+                        importance: 0.52,
                       },
                     ],
                   },
@@ -243,6 +271,7 @@ describe('api client', () => {
         { risk_level: 'medium', count: 0 },
         { risk_level: 'low', count: 179 },
       ],
+      risk_band_distribution: { 高风险: 12, 较高风险: 21, 一般风险: 34, 低风险: 112 },
       group_distribution: [{ group_segment: '作息失衡风险组', count: 179 }],
       dimension_summary: [
         {
@@ -267,6 +296,14 @@ describe('api client', () => {
       ],
       major_risk_summary: [{ major_name: '应用化学', high_risk_count: 0, student_count: 7 }],
       trend_summary: [{ term: '2024-2', high_risk_count: 0 }],
+      risk_trend_summary: [
+        { term: '2024-1', avg_risk_score: 49.8, high_risk_count: 10, risk_change_direction: 'rising' },
+        { term: '2024-2', avg_risk_score: 52.1, high_risk_count: 12, risk_change_direction: 'rising' },
+      ],
+      risk_factor_summary: [
+        { feature: 'academic_base', feature_cn: '学业基础表现', count: 52, importance: 0.82 },
+        { feature: 'class_engagement', feature_cn: '课堂学习投入', count: 41, importance: 0.66 },
+      ],
     })
 
     await expect(getGroups('2024-2')).resolves.toEqual({
@@ -275,6 +312,9 @@ describe('api client', () => {
           group_segment: '作息失衡风险组',
           student_count: 81,
           avg_risk_probability: 0.38,
+          avg_risk_score: 57.4,
+          avg_risk_level: '较高风险',
+          risk_change_summary: { rising: 31, steady: 40, falling: 10 },
           avg_dimension_scores: [
             {
               dimension: '学业基础表现',
@@ -303,6 +343,22 @@ describe('api client', () => {
               count: 81,
               label: '网络使用偏强',
               metrics: [{ metric: '月均上网时长', value: 66, display: '66 小时' }],
+            },
+          ],
+          risk_amplifiers: [
+            {
+              feature: 'academic_base',
+              feature_cn: '学业基础表现',
+              count: 51,
+              importance: 0.79,
+            },
+          ],
+          protective_factors: [
+            {
+              feature: 'library_immersion',
+              feature_cn: '图书馆沉浸度',
+              count: 29,
+              importance: 0.52,
             },
           ],
         },

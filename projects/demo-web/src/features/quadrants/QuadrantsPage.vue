@@ -26,6 +26,14 @@
             <span class="muted">平均风险概率</span>
             <strong>{{ formatRisk(item.avg_risk_probability) }}</strong>
           </div>
+          <div class="group-metric">
+            <span class="muted">平均风险分</span>
+            <strong>{{ formatRiskScore(item.avg_risk_score) }}</strong>
+          </div>
+          <div class="group-metric">
+            <span class="muted">平均风险等级</span>
+            <strong>{{ item.avg_risk_level ?? '待补充' }}</strong>
+          </div>
           <div class="stack">
             <p class="muted">群体平均八维得分</p>
             <div v-for="dimension in item.avg_dimension_scores" :key="dimension.dimension" class="dimension-row">
@@ -53,6 +61,26 @@
                 </span>
               </div>
               <div v-else class="muted">暂无指标</div>
+            </div>
+          </div>
+          <div class="stack">
+            <p class="muted">风险放大因素</p>
+            <div v-if="item.risk_amplifiers.length === 0" class="muted">暂无放大因素</div>
+            <div v-for="factor in item.risk_amplifiers" :key="`${factor.feature}-amp`" class="factor-row">
+              <div class="factor-head">
+                <strong>{{ factor.feature_cn ?? factor.feature }}</strong>
+              </div>
+              <span class="muted">涉及 {{ factor.count }} 人 · 重要度 {{ factor.importance.toFixed(2) }}</span>
+            </div>
+          </div>
+          <div class="stack">
+            <p class="muted">保护性因素</p>
+            <div v-if="item.protective_factors.length === 0" class="muted">暂无保护性因素</div>
+            <div v-for="factor in item.protective_factors" :key="`${factor.feature}-pro`" class="factor-row">
+              <div class="factor-head">
+                <strong>{{ factor.feature_cn ?? factor.feature }}</strong>
+              </div>
+              <span class="muted">覆盖 {{ factor.count }} 人 · 重要度 {{ factor.importance.toFixed(2) }}</span>
             </div>
           </div>
           <div class="stack">
@@ -124,6 +152,10 @@ function dimensionTagClass(level?: string) {
 
 function formatMetric(metric: { display?: string; value: number | string }) {
   return metric.display || String(metric.value)
+}
+
+function formatRiskScore(score: number) {
+  return score.toFixed(1)
 }
 </script>
 

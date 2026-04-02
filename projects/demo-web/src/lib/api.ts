@@ -7,6 +7,7 @@ import type {
   GroupsData,
   ModelSummaryData,
   OverviewData,
+  RiskChangeDirection,
   RiskLevel,
   StudentProfileData,
   StudentReportData,
@@ -112,6 +113,7 @@ function normalizeOverviewData(raw: unknown): OverviewData {
   return {
     student_count: asNumber(data.student_count),
     risk_distribution: normalizeRiskDistribution(data.risk_distribution),
+    risk_band_distribution: normalizeRiskBandDistribution(data.risk_band_distribution),
     group_distribution: normalizeGroupDistribution(data.group_distribution),
     dimension_summary: normalizeCalibratedDimensions(data.dimension_summary),
     major_risk_summary: asArray(data.major_risk_summary).map((item) => {
@@ -123,6 +125,8 @@ function normalizeOverviewData(raw: unknown): OverviewData {
       }
     }),
     trend_summary: normalizeTrendSummary(data.trend_summary),
+    risk_trend_summary: normalizeRiskTrendSummary(data.risk_trend_summary),
+    risk_factor_summary: normalizeRiskFactorSummary(data.risk_factor_summary),
   }
 }
 
@@ -135,8 +139,13 @@ function normalizeGroupsData(raw: unknown): GroupsData {
         group_segment: asString(row.group_segment),
         student_count: asNumber(row.student_count),
         avg_risk_probability: asNumber(row.avg_risk_probability),
+        avg_risk_score: asNumber(row.avg_risk_score || asNumber(row.avg_risk_probability) * 100),
+        avg_risk_level: asOptionalString(row.avg_risk_level),
+        risk_change_summary: normalizeRiskChangeSummary(row.risk_change_summary),
         avg_dimension_scores: normalizeCalibratedDimensions(row.avg_dimension_scores),
         top_factors: asArray(row.top_factors).map(normalizeCalibratedFactor),
+        risk_amplifiers: normalizeRiskFactorSummary(row.risk_amplifiers ?? row.top_factors),
+        protective_factors: normalizeRiskFactorSummary(row.protective_factors),
       }
     }),
   }
@@ -255,6 +264,16 @@ function normalizeRiskDistribution(raw: unknown) {
   }))
 }
 
+function normalizeRiskBandDistribution(raw: unknown) {
+  const record = asRecord(raw)
+  return {
+    高风险: asNumber(record['高风险']),
+    较高风险: asNumber(record['较高风险']),
+    一般风险: asNumber(record['一般风险']),
+    低风险: asNumber(record['低风险']),
+  }
+}
+
 function normalizeGroupDistribution(raw: unknown) {
   const rows = asArray(raw)
   if (rows.length > 0) {
@@ -284,6 +303,42 @@ function normalizeTrendSummary(raw: unknown) {
       high_risk_count: asNumber(rowRiskDistribution.high),
     }
   })
+}
+
+function normalizeRiskTrendSummary(raw: unknown) {
+  return asArray(raw).map((item) => {
+    const row = asRecord(item)
+    return {
+      term: asString(row.term),
+      avg_risk_score: asNumber(row.avg_risk_score),
+      high_risk_count: asNumber(row.high_risk_count),
+      risk_change_direction: asOptionalRiskChangeDirection(row.risk_change_direction),
+    }
+  })
+}
+
+function normalizeRiskFactorSummary(raw: unknown) {
+  return asArray(raw).map((item) => {
+    const row = asRecord(item)
+    const feature = asString(row.feature || row.dimension)
+    const featureCn = asOptionalString(row.feature_cn || row.dimension)
+    return {
+      feature,
+      feature_cn: featureCn,
+      count: asNumber(row.count),
+      importance: asNumber(row.importance ?? row.impact),
+    }
+  })
+}
+
+function normalizeRiskChangeSummary(raw: unknown) {
+  const row = asRecord(raw)
+  if (Object.keys(row).length === 0) return undefined
+  return {
+    rising: asOptionalNumber(row.rising) ?? 0,
+    steady: asOptionalNumber(row.steady) ?? 0,
+    falling: asOptionalNumber(row.falling) ?? 0,
+  }
 }
 
 function normalizeDimensionMetrics(raw: unknown) {
@@ -407,4 +462,8 @@ function asRiskLevel(value: unknown): 'high' | 'medium' | 'low' {
 
 function asOptionalRiskLevel(value: unknown): RiskLevel | undefined {
   return value === 'high' || value === 'medium' || value === 'low' ? value : undefined
+}
+
+function asOptionalRiskChangeDirection(value: unknown): RiskChangeDirection | undefined {
+  return value === 'rising' || value === 'steady' || value === 'falling' ? value : undefined
 }

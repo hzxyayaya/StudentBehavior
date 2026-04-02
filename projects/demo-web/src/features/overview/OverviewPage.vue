@@ -60,6 +60,54 @@
         </div>
       </section>
 
+      <section class="overview-risk-grid">
+        <article class="panel">
+          <div class="panel-inner stack">
+            <div class="section-head">
+              <h3>学业风险四档分布</h3>
+              <span class="muted">按学业风险等级统计</span>
+            </div>
+            <div class="risk-band-grid">
+              <div v-for="item in riskBandRows" :key="item.label" class="risk-band-row">
+                <span class="muted">{{ item.label }}</span>
+                <strong>{{ item.count }}</strong>
+              </div>
+            </div>
+          </div>
+        </article>
+        <article class="panel">
+          <div class="panel-inner stack">
+            <div class="section-head">
+              <h3>风险趋势摘要</h3>
+              <span class="muted">近学期均值变化</span>
+            </div>
+            <div class="risk-trend-list">
+              <div v-for="row in riskTrendRows" :key="row.term" class="risk-trend-row">
+                <strong>{{ row.term }}</strong>
+                <span class="muted">均值 {{ row.avg_risk_score.toFixed(1) }}</span>
+                <span class="muted">高风险 {{ row.high_risk_count }}</span>
+                <span class="tag">{{ riskChangeText(row.risk_change_direction) }}</span>
+              </div>
+            </div>
+          </div>
+        </article>
+        <article class="panel">
+          <div class="panel-inner stack">
+            <div class="section-head">
+              <h3>风险因素 Top</h3>
+              <span class="muted">当前学期触发因子</span>
+            </div>
+            <div class="risk-factor-list">
+              <div v-for="factor in riskFactorRows" :key="factor.feature" class="risk-factor-row">
+                <strong>{{ factor.feature_cn || factor.feature }}</strong>
+                <span class="muted">涉及 {{ factor.count }} 人</span>
+                <span class="muted">重要度 {{ factor.importance.toFixed(2) }}</span>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
       <section class="overview-top-grid">
         <article class="panel">
           <div class="panel-inner chart-panel">
@@ -212,6 +260,17 @@ const summary = computed(() => summaryQuery.data.value)
 const term = computed(() => termStore.term.value)
 const majorRows = computed(() => overview.value?.major_risk_summary ?? [])
 const dimensionRows = computed(() => overview.value?.dimension_summary ?? [])
+const riskBandRows = computed(() => {
+  const distribution = overview.value?.risk_band_distribution ?? {}
+  return [
+    { label: '高风险', count: distribution['高风险'] ?? 0 },
+    { label: '较高风险', count: distribution['较高风险'] ?? 0 },
+    { label: '一般风险', count: distribution['一般风险'] ?? 0 },
+    { label: '低风险', count: distribution['低风险'] ?? 0 },
+  ]
+})
+const riskTrendRows = computed(() => overview.value?.risk_trend_summary ?? [])
+const riskFactorRows = computed(() => (overview.value?.risk_factor_summary ?? []).slice(0, 5))
 const totalHighRisk = computed(() => majorRows.value.reduce((sum, item) => sum + item.high_risk_count, 0))
 const totalRiskPopulation = computed(() => {
   const data = overview.value?.risk_distribution ?? []
@@ -389,6 +448,12 @@ function formatMetric(metric: { display?: string; value: number | string }) {
   return metric.display || String(metric.value)
 }
 
+function riskChangeText(direction?: string) {
+  if (direction === 'rising') return '上升'
+  if (direction === 'falling') return '下降'
+  return '持平'
+}
+
 function riskCount(level: RiskLevel) {
   return overview.value?.risk_distribution.find((item) => item.risk_level === level)?.count ?? 0
 }
@@ -485,6 +550,38 @@ function retry() {
 
 .segment-panel {
   margin-top: 12px;
+}
+
+.overview-risk-grid {
+  margin-top: 14px;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.risk-band-grid,
+.risk-trend-list,
+.risk-factor-list {
+  display: grid;
+  gap: 10px;
+}
+
+.risk-band-row,
+.risk-trend-row,
+.risk-factor-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid rgba(28, 34, 56, 0.08);
+}
+
+.risk-band-row:first-child,
+.risk-trend-row:first-child,
+.risk-factor-row:first-child {
+  border-top: 0;
+  padding-top: 0;
 }
 
 .overview-top-grid {
@@ -721,6 +818,7 @@ function retry() {
 
 @media (max-width: 1200px) {
   .dimension-detail-grid,
+  .overview-risk-grid,
   .overview-top-grid,
   .overview-grid {
     grid-template-columns: 1fr;
