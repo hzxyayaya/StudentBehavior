@@ -385,6 +385,9 @@ def _load_warning_rows(path: Path | None) -> list[dict[str, Any]]:
             row["risk_probability"] = float(risk_probability_raw)
             if not math.isfinite(row["risk_probability"]):
                 raise ValueError("warnings rows must include finite risk_probability")
+            dimension_scores_raw = row.get("dimension_scores_json")
+            if isinstance(dimension_scores_raw, str) and not dimension_scores_raw.strip():
+                row["dimension_scores_json"] = "[]"
             for key in (
                 "base_risk_score",
                 "risk_adjustment_score",
@@ -408,6 +411,10 @@ def _load_student_result_rows(repo_root: Path, warnings_path: Path | None) -> li
     frame = frame.copy()
     frame["student_id"] = frame["student_id"].astype(str)
     frame["term_key"] = frame["term_key"].astype(str)
+    if "dimension_scores_json" in frame:
+        frame["dimension_scores_json"] = frame["dimension_scores_json"].fillna("").astype(str)
+        blank_scores = frame["dimension_scores_json"].str.strip() == ""
+        frame.loc[blank_scores, "dimension_scores_json"] = "[]"
     return frame.to_dict(orient="records")
 
 

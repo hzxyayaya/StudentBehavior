@@ -933,6 +933,46 @@ def test_get_groups_rejects_non_finite_importance_in_report_factors(
         store.get_groups(term="2023-1")
 
 
+def test_get_student_profile_accepts_blank_dimension_scores_json(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230012",
+                "term_key": "2023-1",
+                "student_name": "Luna",
+                "major_name": "软件工程",
+                "group_segment": "综合发展优势组",
+                "risk_probability": 0.55,
+                "risk_level": "low",
+                "dimension_scores_json": "",
+                "top_risk_factors_json": json.dumps([], ensure_ascii=False),
+                "top_protective_factors_json": json.dumps([], ensure_ascii=False),
+                "base_risk_explanation": "base",
+                "behavior_adjustment_explanation": "adjust",
+                "risk_change_explanation": "change",
+            }
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.write_text("", encoding="utf-8")
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    payload = store.get_student_profile(student_id="20230012", term="2023-1")
+
+    assert payload["dimension_scores"] == []
+    assert payload["trend"][0]["dimension_scores"] == []
+
+
 def test_get_groups_preserves_richer_factor_summary_fields(
     tmp_path: Path, sample_artifacts_dir: Path
 ) -> None:
