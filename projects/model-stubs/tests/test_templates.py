@@ -135,13 +135,11 @@ def test_build_report_payload_returns_readable_stub_content() -> None:
     assert all(factor["effect"] != "negative" for factor in payload["top_protective_factors"])
     assert payload["intervention_priority"] == 2
     assert "学期GPA" in payload["base_risk_explanation"]
-    assert "挂科" in payload["base_risk_explanation"]
-    assert "边缘课程" in payload["base_risk_explanation"]
-    assert "挂科占比" in payload["base_risk_explanation"]
     assert "行为调整" in payload["behavior_adjustment_explanation"]
     assert "风险变化" in payload["risk_change_explanation"]
     assert any(token in payload["risk_change_explanation"] for token in ["挂科", "课堂", "作息", "在线学习", "体质"])
     assert "较高风险" in payload["intervention_plan"]
+    assert payload["top_risk_factors"][0]["feature_cn"] in payload["intervention_plan"]
     assert "作息失衡风险组" in payload["report_text"]
     assert "较高风险" in payload["report_text"]
     assert "证据提示：当前维度包含 caveated/deferred 证据" in payload["report_text"]
@@ -227,10 +225,41 @@ def test_build_report_payload_handles_sparse_dimension_scores() -> None:
     assert payload["report_text"].strip() != ""
     assert "学习投入稳定组" in payload["report_text"]
     assert "低风险" in payload["report_text"]
-    assert "暂无有效数据" in payload["report_text"]
+    assert "暂无可核对指标" in payload["report_text"]
     assert "low" not in payload["report_text"]
+    assert "仅作中性参考" in payload["report_text"]
+    assert "可作为稳定支撑" not in payload["report_text"]
     assert payload["version"] == "v1_calibrated_report"
     assert len(payload["priority_interventions"]) == 3
+
+
+def test_build_report_payload_falls_back_when_academic_metrics_are_missing() -> None:
+    payload = build_report_payload(
+        base_risk_score=16.0,
+        risk_adjustment_score=0.0,
+        adjusted_risk_score=16.0,
+        risk_delta=0.0,
+        risk_change_direction="steady",
+        risk_level="低风险",
+        group_segment="学习投入稳定组",
+        dimension_scores=[
+            {
+                "dimension": "学业基础表现",
+                "dimension_code": "academic_base",
+                "score": 0.2,
+                "level": "low",
+                "label": "学业基础预警",
+                "metrics": [],
+                "explanation": "学业基础表现处于学业基础预警。",
+                "provenance": {"has_caveated_metrics": False, "has_deferred_metrics": False},
+            }
+        ],
+    )
+
+    assert payload["base_risk_explanation"] == "学业结果指标暂缺，基础风险解释仅供参考。"
+    assert "学期GPA 未提供" not in payload["base_risk_explanation"]
+    assert "基础风险分" not in payload["base_risk_explanation"]
+    assert "仅供参考" in payload["base_risk_explanation"]
 
 
 def test_build_top_factors_prefers_calibrated_explanations_over_plain_scores() -> None:

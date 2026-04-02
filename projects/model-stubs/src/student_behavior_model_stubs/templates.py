@@ -178,6 +178,26 @@ def _metric_value_by_name(
     return "未提供"
 
 
+def _academic_signal_summary(
+    academic_item: Mapping[str, object] | None,
+) -> tuple[str, bool]:
+    metric_parts = []
+    for metric_name, label in (
+        ("term_gpa", "学期GPA"),
+        ("failed_course_count", "挂科门数"),
+        ("borderline_course_count", "边缘课程数"),
+        ("failed_course_ratio", "挂科占比"),
+    ):
+        value = _metric_value_by_name(academic_item, metric_name)
+        if value == "未提供":
+            continue
+        metric_parts.append(f"{label} {value}")
+
+    if not metric_parts:
+        return "学业结果指标暂缺，基础风险解释仅供参考。", False
+    return f"{'、'.join(metric_parts)}。", True
+
+
 def _build_factor(
     *,
     dimension_name: str,
@@ -263,16 +283,19 @@ def build_protective_factors(
     items_by_name = _dimension_items_by_name(dimension_scores)
     score_map = _dimension_score_map(dimension_scores)
     order_map = {dimension_name: index for index, (dimension_name, _) in enumerate(_PROTECTIVE_DIMENSION_TEMPLATES)}
-    factors: list[dict[str, object]] = []
-
-    for dimension_name, feature_name in sorted(
+    ranked_dimensions = sorted(
         _PROTECTIVE_DIMENSION_TEMPLATES,
         key=lambda item: (
             -score_map.get(item[0], -1.0),
             item[0] not in score_map,
             order_map[item[0]],
         ),
-    )[:3]:
+    )
+    factors: list[dict[str, object]] = []
+
+    for dimension_name, feature_name in ranked_dimensions:
+        if len(factors) == 3:
+            break
         factor = _build_factor(
             dimension_name=dimension_name,
             feature_name=feature_name,
@@ -283,7 +306,12 @@ def build_protective_factors(
         if factor["effect"] == "negative":
             factor["effect"] = "neutral"
             factor["importance"] = 0.0
-        factors.append(factor)
+        if factor["effect"] == "positive" or float(score_map.get(dimension_name, 0.0)) >= 0.5:
+            factors.append(factor)
+        elif len(factors) < 3:
+            factor["effect"] = "neutral"
+            factor["importance"] = 0.0
+            factors.append(factor)
 
     if len(factors) < 3:
         for dimension_name, feature_name in sorted(
@@ -294,15 +322,16 @@ def build_protective_factors(
                 break
             if any(factor["dimension_code"] == feature_name for factor in factors):
                 continue
-            factors.append(
-                _build_factor(
-                    dimension_name=dimension_name,
-                    feature_name=feature_name,
-                    score_map=score_map,
-                    items_by_name=items_by_name,
-                    reverse=True,
-                )
+            factor = _build_factor(
+                dimension_name=dimension_name,
+                feature_name=feature_name,
+                score_map=score_map,
+                items_by_name=items_by_name,
+                reverse=True,
             )
+            factor["effect"] = "neutral"
+            factor["importance"] = 0.0
+            factors.append(factor)
 
     return factors[:3]
 
@@ -389,14 +418,19 @@ def _build_report_text(
             dimension_name = str(factor["feature_cn"])
             dimension_item = items_by_name.get(dimension_name)
             if dimension_item is None:
-                lines.append(f"{index}. **{dimension_name}**: 暂无有效数据。")
+                note = "可作为稳定支撑。" if str(factor.get("effect", "")).strip() == "positive" else "仅作中性参考。"
+                lines.append(f"{index}. **{dimension_name}**: 暂无可核对指标，{note}")
                 continue
             label = str(dimension_item.get("label", "")).strip()
             score = round(_clamp(_coerce_float(dimension_item.get("score"), 0.5), 0.0, 1.0), 2)
             heading = f"**{dimension_name}**"
             if label:
                 heading = f"{heading}（{label}）"
-            lines.append(f"{index}. {heading}: 当前维度得分 {score:.2f}，可作为稳定支撑。")
+            if str(factor.get("effect", "")).strip() == "positive":
+                note = "可作为稳定支撑。"
+            else:
+                note = "仅作中性参考。"
+            lines.append(f"{index}. {heading}: 当前维度得分 {score:.2f}，{note}")
 
     lines.extend(["", "## 干预计划", intervention_plan])
 
@@ -428,19 +462,23 @@ def build_report_payload(
         dimension_scores=dimension_scores,
     )
     priority_interventions = _build_priority_interventions(risk_level)
+    risk_driver_names = [
+        str(item["feature_cn"])
+        for item in top_risk_factors[:2]
+        if str(item.get("feature_cn", "")).strip()
+    ]
     intervention_plan = "\n".join(
         [f"{risk_level}干预计划："]
+        + (
+            [f"聚焦维度：{ '、'.join(risk_driver_names) }。"]
+            if risk_driver_names
+            else []
+        )
         + [f"{item['priority']}. {item['text']}" for item in priority_interventions]
     )
     intervention_priority = _RISK_LEVEL_PRIORITY.get(risk_level, 3)
     academic_item = dimension_items_by_name.get("学业基础表现")
-    gpa_value = _metric_value_by_name(academic_item, "term_gpa")
-    failed_count = _metric_value_by_name(academic_item, "failed_course_count")
-    borderline_count = _metric_value_by_name(academic_item, "borderline_course_count")
-    failed_ratio = _metric_value_by_name(academic_item, "failed_course_ratio")
-    academic_signal_text = (
-        f"学期GPA {gpa_value}、挂科门数 {failed_count}、边缘课程数 {borderline_count}、挂科占比 {failed_ratio}"
-    )
+    academic_signal_text, has_academic_signal = _academic_signal_summary(academic_item)
     risk_driver_text = "、".join(
         str(item["feature_cn"])
         for item in top_risk_factors
@@ -452,9 +490,13 @@ def build_report_payload(
         if str(item.get("feature_cn", "")).strip()
     )
     base_risk_explanation = (
-        f"基础风险盘由学业结果形成，当前参考 {academic_signal_text}。"
-        f" 基础风险分 {base_risk_score:.2f}，属于 {risk_level}。"
-        f" 这里不混入作息、在线学习或体质等行为修正。"
+        (
+            f"基础风险盘由学业结果形成，当前参考 {academic_signal_text}"
+            if has_academic_signal
+            else academic_signal_text
+        )
+        + (f" 基础风险分 {base_risk_score:.2f}，属于 {risk_level}。" if has_academic_signal else "")
+        + (" 这里不混入作息、在线学习或体质等行为修正。" if has_academic_signal else "")
     )
     behavior_adjustment_explanation = (
         f"行为调整为 {risk_adjustment_score:+.2f}，将基础风险修正到 {adjusted_risk_score:.2f}。"
@@ -464,7 +506,9 @@ def build_report_payload(
     risk_change_explanation = (
         f"风险变化为 {risk_delta:+.2f}，方向为 {risk_change_direction}。"
         f" 这表示当前学期相较上一学期的风险态势正在{'上升' if risk_change_direction == 'rising' else '下降' if risk_change_direction == 'falling' else '保持稳定'}。"
-        f" 变化更可能和 {risk_driver_text} 的波动有关，并受到 {protective_signal_text} 的支撑。"
+        f" 变化更可能和 {risk_driver_text or '当前最弱维度'} 的波动有关，"
+        f"例如 {risk_driver_names[0] if risk_driver_names else '学业基础表现'}；"
+        f" 同时参考 {academic_signal_text}。"
     )
     report_text = _build_report_text(
         base_risk_score=base_risk_score,
