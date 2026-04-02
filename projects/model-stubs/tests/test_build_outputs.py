@@ -16,6 +16,7 @@ def _feature_row() -> dict[str, object]:
         "student_id": "20230002",
         "term_key": "2024-1",
         "major_name": "软件工程",
+        "term_gpa": 1.8,
         "academic_base_score_raw": 58.0,
         "class_engagement_score_raw": 40.0,
         "online_activeness_score_raw": 35.0,
@@ -25,35 +26,55 @@ def _feature_row() -> dict[str, object]:
         "physical_resilience_score_raw": 72.0,
         "appraisal_status_alert_score_raw": 64.0,
         "failed_course_count": 2,
+        "borderline_course_count": 1,
+        "failed_course_ratio": 0.2,
+        "previous_adjusted_risk_score": 54.0,
     }
 
 
-def test_build_student_results_outputs_contract_aligned_columns() -> None:
+def test_build_student_results_outputs_risk_warning_contract() -> None:
     results = build_student_results(pd.DataFrame([_feature_row()]))
     dimension_scores = json.loads(results.loc[0, "dimension_scores_json"])
 
-    assert list(results.columns) == [
+    assert {
         "student_id",
         "term_key",
         "student_name",
         "major_name",
         "group_segment",
         "risk_probability",
+        "base_risk_score",
+        "risk_adjustment_score",
+        "adjusted_risk_score",
         "risk_level",
+        "risk_delta",
+        "risk_change_direction",
         "dimension_scores_json",
-    ]
-    assert results.to_dict(orient="records") == [
-        {
-            "student_id": "20230002",
-            "term_key": "2024-1",
-            "student_name": "20230002",
-            "major_name": "软件工程",
-            "group_segment": results.loc[0, "group_segment"],
-            "risk_probability": 0.63,
-            "risk_level": "medium",
-            "dimension_scores_json": results.loc[0, "dimension_scores_json"],
-        }
-    ]
+        "top_risk_factors_json",
+        "top_protective_factors_json",
+        "base_risk_explanation",
+        "behavior_adjustment_explanation",
+        "risk_change_explanation",
+    }.issubset(results.columns)
+    record = results.iloc[0].to_dict()
+    assert record["student_id"] == "20230002"
+    assert record["term_key"] == "2024-1"
+    assert record["student_name"] == "20230002"
+    assert record["major_name"] == "软件工程"
+    assert record["group_segment"] == results.loc[0, "group_segment"]
+    assert record["risk_probability"] == 0.63
+    assert record["base_risk_score"] == results.loc[0, "base_risk_score"]
+    assert record["risk_adjustment_score"] == results.loc[0, "risk_adjustment_score"]
+    assert record["adjusted_risk_score"] == results.loc[0, "adjusted_risk_score"]
+    assert record["risk_level"] == "一般风险"
+    assert record["risk_delta"] == results.loc[0, "risk_delta"]
+    assert record["risk_change_direction"] == "rising"
+    assert record["dimension_scores_json"] == results.loc[0, "dimension_scores_json"]
+    assert record["top_risk_factors_json"] == results.loc[0, "top_risk_factors_json"]
+    assert record["top_protective_factors_json"] == results.loc[0, "top_protective_factors_json"]
+    assert record["base_risk_explanation"] == results.loc[0, "base_risk_explanation"]
+    assert record["behavior_adjustment_explanation"] == results.loc[0, "behavior_adjustment_explanation"]
+    assert record["risk_change_explanation"] == results.loc[0, "risk_change_explanation"]
     assert len(dimension_scores) == 8
     assert set(dimension_scores[0]) == {
         "dimension",
@@ -81,25 +102,30 @@ def test_build_student_reports_outputs_jsonl_ready_records() -> None:
     assert reports[0]["student_id"] == "20230002"
     assert reports[0]["term_key"] == "2024-1"
     assert reports[0]["version"] == "v1_calibrated_report"
-    assert len(reports[0]["top_factors"]) == 3
-    assert all(isinstance(factor["dimension_code"], str) and factor["dimension_code"] for factor in reports[0]["top_factors"])
+    assert len(reports[0]["top_risk_factors"]) == 3
+    assert len(reports[0]["top_protective_factors"]) == 3
+    assert all(
+        isinstance(factor["dimension_code"], str) and factor["dimension_code"]
+        for factor in reports[0]["top_risk_factors"]
+    )
     assert all(
         {"feature", "feature_cn", "effect", "importance", "dimension_code", "label", "explanation", "provenance"}
         <= set(factor)
-        for factor in reports[0]["top_factors"]
+        for factor in reports[0]["top_risk_factors"]
     )
-    assert len(reports[0]["intervention_advice"]) == 3
-    assert len(reports[0]["intervention_advice_items"]) == 3
-    assert [item["priority"] for item in reports[0]["intervention_advice_items"]] == [1, 2, 3]
-    assert [item["text"] for item in reports[0]["intervention_advice_items"]] == reports[0]["intervention_advice"]
-    assert all({"key", "priority", "text"} <= set(item) for item in reports[0]["intervention_advice_items"])
-    first_factor = reports[0]["top_factors"][0]["feature_cn"]
+    assert len(reports[0]["priority_interventions"]) == 3
+    assert reports[0]["intervention_priority"] == 3
+    assert "基础风险" in reports[0]["base_risk_explanation"]
+    assert "行为调整" in reports[0]["behavior_adjustment_explanation"]
+    assert "风险变化" in reports[0]["risk_change_explanation"]
+    assert "一般风险" in reports[0]["intervention_plan"]
+    first_factor = reports[0]["top_risk_factors"][0]["feature_cn"]
     first_dimension = next(
         item for item in _coerce_dimension_scores(results.loc[0, "dimension_scores_json"]) if item["dimension"] == first_factor
     )
-    assert reports[0]["top_factors"][0]["dimension_code"] == first_dimension["dimension_code"]
-    assert reports[0]["top_factors"][0]["label"] == first_dimension["label"]
-    assert reports[0]["top_factors"][0]["provenance"] == first_dimension["provenance"]
+    assert reports[0]["top_risk_factors"][0]["dimension_code"] == first_dimension["dimension_code"]
+    assert reports[0]["top_risk_factors"][0]["label"] == first_dimension["label"]
+    assert reports[0]["top_risk_factors"][0]["provenance"] == first_dimension["provenance"]
     assert "指标：" in reports[0]["report_text"]
     assert "当前维度得分 " in reports[0]["report_text"]
     if first_dimension["provenance"]["has_caveated_metrics"] or first_dimension["provenance"]["has_deferred_metrics"]:
@@ -199,15 +225,22 @@ def test_build_overview_by_term_includes_required_sections() -> None:
     )
     assert {
         "student_count",
-        "risk_distribution",
+        "risk_band_distribution",
         "group_distribution",
         "major_risk_summary",
-        "trend_summary",
+        "risk_trend_summary",
         "dimension_summary",
         "group_score_summary",
+        "top_warning_factors",
+        "intervention_priority_summary",
     }.issubset(overview)
-    assert isinstance(overview["trend_summary"], dict)
+    assert isinstance(overview["risk_trend_summary"], dict)
+    assert set(overview["risk_band_distribution"]) == {"高风险", "较高风险", "一般风险", "低风险"}
     assert overview["dimension_summary"] == expected_dimension_summary
+    assert len(overview["top_warning_factors"]) == 3
+    assert len(overview["intervention_priority_summary"]) == 4
+    assert overview["risk_trend_summary"] == overview["trend_summary"]
+    assert overview["risk_band_distribution"] == overview["risk_distribution"]
     for group_segment, entries in overview["group_score_summary"].items():
         assert group_segment in overview["group_distribution"]
         assert [entry["dimension_code"] for entry in entries] == [

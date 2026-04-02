@@ -1,12 +1,19 @@
 {
   "student_count": 2905,
   "risk_distribution": {
-    "high": 0,
-    "medium": 2905,
-    "low": 0
+    "高风险": 0,
+    "较高风险": 0,
+    "一般风险": 0,
+    "低风险": 2905
+  },
+  "risk_band_distribution": {
+    "高风险": 0,
+    "较高风险": 0,
+    "一般风险": 0,
+    "低风险": 2905
   },
   "group_distribution": {
-    "课堂参与薄弱组": 2905
+    "作息失衡风险组": 2905
   },
   "major_risk_summary": [
     {
@@ -371,30 +378,31 @@
         "student_count": 2440,
         "average_risk_probability": 0.52,
         "risk_distribution": {
-          "high": 0,
-          "medium": 2440,
-          "low": 0
+          "高风险": 0,
+          "较高风险": 0,
+          "一般风险": 0,
+          "低风险": 2440
         },
         "dimension_summary": [
           {
             "dimension": "学业基础表现",
             "dimension_code": "academic_base",
-            "average_score": 0.75
+            "average_score": 0.0
           },
           {
             "dimension": "综合荣誉与异动预警",
             "dimension_code": "appraisal_status_alert",
-            "average_score": 0.5
+            "average_score": 0.0
           },
           {
             "dimension": "课堂学习投入",
             "dimension_code": "class_engagement",
-            "average_score": 0.75
+            "average_score": 0.0
           },
           {
             "dimension": "早晚生活作息规律",
             "dimension_code": "daily_routine_boundary",
-            "average_score": 1.0
+            "average_score": 0.0
           },
           {
             "dimension": "图书馆沉浸度",
@@ -404,7 +412,7 @@
           {
             "dimension": "网络作息自律指数",
             "dimension_code": "network_habits",
-            "average_score": 1.0
+            "average_score": 0.0
           },
           {
             "dimension": "在线学习积极性",
@@ -423,30 +431,31 @@
         "student_count": 290,
         "average_risk_probability": 0.52,
         "risk_distribution": {
-          "high": 0,
-          "medium": 290,
-          "low": 0
+          "高风险": 0,
+          "较高风险": 0,
+          "一般风险": 0,
+          "低风险": 290
         },
         "dimension_summary": [
           {
             "dimension": "学业基础表现",
             "dimension_code": "academic_base",
-            "average_score": 0.75
+            "average_score": 0.0
           },
           {
             "dimension": "综合荣誉与异动预警",
             "dimension_code": "appraisal_status_alert",
-            "average_score": 0.5
+            "average_score": 0.0
           },
           {
             "dimension": "课堂学习投入",
             "dimension_code": "class_engagement",
-            "average_score": 0.75
+            "average_score": 0.0
           },
           {
             "dimension": "早晚生活作息规律",
             "dimension_code": "daily_routine_boundary",
-            "average_score": 1.0
+            "average_score": 0.0
           },
           {
             "dimension": "图书馆沉浸度",
@@ -456,7 +465,7 @@
           {
             "dimension": "网络作息自律指数",
             "dimension_code": "network_habits",
-            "average_score": 1.0
+            "average_score": 0.0
           },
           {
             "dimension": "在线学习积极性",
@@ -475,30 +484,31 @@
         "student_count": 175,
         "average_risk_probability": 0.52,
         "risk_distribution": {
-          "high": 0,
-          "medium": 175,
-          "low": 0
+          "高风险": 0,
+          "较高风险": 0,
+          "一般风险": 0,
+          "低风险": 175
         },
         "dimension_summary": [
           {
             "dimension": "学业基础表现",
             "dimension_code": "academic_base",
-            "average_score": 0.75
+            "average_score": 0.0
           },
           {
             "dimension": "综合荣誉与异动预警",
             "dimension_code": "appraisal_status_alert",
-            "average_score": 0.5
+            "average_score": 0.0
           },
           {
             "dimension": "课堂学习投入",
             "dimension_code": "class_engagement",
-            "average_score": 0.75
+            "average_score": 0.0
           },
           {
             "dimension": "早晚生活作息规律",
             "dimension_code": "daily_routine_boundary",
-            "average_score": 1.0
+            "average_score": 0.0
           },
           {
             "dimension": "图书馆沉浸度",
@@ -508,7 +518,170 @@
           {
             "dimension": "网络作息自律指数",
             "dimension_code": "network_habits",
-            "average_score": 1.0
+            "average_score": 0.0
+          },
+          {
+            "dimension": "在线学习积极性",
+            "dimension_code": "online_activeness",
+            "average_score": 0.0
+          },
+          {
+            "dimension": "体质及运动状况",
+            "dimension_code": "physical_resilience",
+            "average_score": 0.0
+          }
+        ]
+      }
+    ]
+  },
+  "risk_trend_summary": {
+    "terms": [
+      {
+        "term_key": "2023-2",
+        "student_count": 2440,
+        "average_risk_probability": 0.52,
+        "risk_distribution": {
+          "高风险": 0,
+          "较高风险": 0,
+          "一般风险": 0,
+          "低风险": 2440
+        },
+        "dimension_summary": [
+          {
+            "dimension": "学业基础表现",
+            "dimension_code": "academic_base",
+            "average_score": 0.0
+          },
+          {
+            "dimension": "综合荣誉与异动预警",
+            "dimension_code": "appraisal_status_alert",
+            "average_score": 0.0
+          },
+          {
+            "dimension": "课堂学习投入",
+            "dimension_code": "class_engagement",
+            "average_score": 0.0
+          },
+          {
+            "dimension": "早晚生活作息规律",
+            "dimension_code": "daily_routine_boundary",
+            "average_score": 0.0
+          },
+          {
+            "dimension": "图书馆沉浸度",
+            "dimension_code": "library_immersion",
+            "average_score": 0.0
+          },
+          {
+            "dimension": "网络作息自律指数",
+            "dimension_code": "network_habits",
+            "average_score": 0.0
+          },
+          {
+            "dimension": "在线学习积极性",
+            "dimension_code": "online_activeness",
+            "average_score": 0.0
+          },
+          {
+            "dimension": "体质及运动状况",
+            "dimension_code": "physical_resilience",
+            "average_score": 0.0
+          }
+        ]
+      },
+      {
+        "term_key": "2024-1",
+        "student_count": 290,
+        "average_risk_probability": 0.52,
+        "risk_distribution": {
+          "高风险": 0,
+          "较高风险": 0,
+          "一般风险": 0,
+          "低风险": 290
+        },
+        "dimension_summary": [
+          {
+            "dimension": "学业基础表现",
+            "dimension_code": "academic_base",
+            "average_score": 0.0
+          },
+          {
+            "dimension": "综合荣誉与异动预警",
+            "dimension_code": "appraisal_status_alert",
+            "average_score": 0.0
+          },
+          {
+            "dimension": "课堂学习投入",
+            "dimension_code": "class_engagement",
+            "average_score": 0.0
+          },
+          {
+            "dimension": "早晚生活作息规律",
+            "dimension_code": "daily_routine_boundary",
+            "average_score": 0.0
+          },
+          {
+            "dimension": "图书馆沉浸度",
+            "dimension_code": "library_immersion",
+            "average_score": 0.0
+          },
+          {
+            "dimension": "网络作息自律指数",
+            "dimension_code": "network_habits",
+            "average_score": 0.0
+          },
+          {
+            "dimension": "在线学习积极性",
+            "dimension_code": "online_activeness",
+            "average_score": 0.0
+          },
+          {
+            "dimension": "体质及运动状况",
+            "dimension_code": "physical_resilience",
+            "average_score": 0.0
+          }
+        ]
+      },
+      {
+        "term_key": "2024-2",
+        "student_count": 175,
+        "average_risk_probability": 0.52,
+        "risk_distribution": {
+          "高风险": 0,
+          "较高风险": 0,
+          "一般风险": 0,
+          "低风险": 175
+        },
+        "dimension_summary": [
+          {
+            "dimension": "学业基础表现",
+            "dimension_code": "academic_base",
+            "average_score": 0.0
+          },
+          {
+            "dimension": "综合荣誉与异动预警",
+            "dimension_code": "appraisal_status_alert",
+            "average_score": 0.0
+          },
+          {
+            "dimension": "课堂学习投入",
+            "dimension_code": "class_engagement",
+            "average_score": 0.0
+          },
+          {
+            "dimension": "早晚生活作息规律",
+            "dimension_code": "daily_routine_boundary",
+            "average_score": 0.0
+          },
+          {
+            "dimension": "图书馆沉浸度",
+            "dimension_code": "library_immersion",
+            "average_score": 0.0
+          },
+          {
+            "dimension": "网络作息自律指数",
+            "dimension_code": "network_habits",
+            "average_score": 0.0
           },
           {
             "dimension": "在线学习积极性",
@@ -528,22 +701,22 @@
     {
       "dimension": "学业基础表现",
       "dimension_code": "academic_base",
-      "average_score": 0.75
+      "average_score": 0.0
     },
     {
       "dimension": "综合荣誉与异动预警",
       "dimension_code": "appraisal_status_alert",
-      "average_score": 0.5
+      "average_score": 0.0
     },
     {
       "dimension": "课堂学习投入",
       "dimension_code": "class_engagement",
-      "average_score": 0.75
+      "average_score": 0.0
     },
     {
       "dimension": "早晚生活作息规律",
       "dimension_code": "daily_routine_boundary",
-      "average_score": 1.0
+      "average_score": 0.0
     },
     {
       "dimension": "图书馆沉浸度",
@@ -553,7 +726,7 @@
     {
       "dimension": "网络作息自律指数",
       "dimension_code": "network_habits",
-      "average_score": 1.0
+      "average_score": 0.0
     },
     {
       "dimension": "在线学习积极性",
@@ -567,26 +740,26 @@
     }
   ],
   "group_score_summary": {
-    "课堂参与薄弱组": [
+    "作息失衡风险组": [
       {
         "dimension": "学业基础表现",
         "dimension_code": "academic_base",
-        "average_score": 0.75
+        "average_score": 0.0
       },
       {
         "dimension": "综合荣誉与异动预警",
         "dimension_code": "appraisal_status_alert",
-        "average_score": 0.5
+        "average_score": 0.0
       },
       {
         "dimension": "课堂学习投入",
         "dimension_code": "class_engagement",
-        "average_score": 0.75
+        "average_score": 0.0
       },
       {
         "dimension": "早晚生活作息规律",
         "dimension_code": "daily_routine_boundary",
-        "average_score": 1.0
+        "average_score": 0.0
       },
       {
         "dimension": "图书馆沉浸度",
@@ -596,7 +769,7 @@
       {
         "dimension": "网络作息自律指数",
         "dimension_code": "network_habits",
-        "average_score": 1.0
+        "average_score": 0.0
       },
       {
         "dimension": "在线学习积极性",
@@ -609,5 +782,91 @@
         "average_score": 0.0
       }
     ]
-  }
+  },
+  "risk_factor_summary": [
+    {
+      "dimension": "学业基础表现",
+      "dimension_code": "academic_base",
+      "average_score": 0.0
+    },
+    {
+      "dimension": "综合荣誉与异动预警",
+      "dimension_code": "appraisal_status_alert",
+      "average_score": 0.0
+    },
+    {
+      "dimension": "课堂学习投入",
+      "dimension_code": "class_engagement",
+      "average_score": 0.0
+    }
+  ],
+  "top_warning_factors": [
+    {
+      "dimension": "学业基础表现",
+      "dimension_code": "academic_base",
+      "average_score": 0.0
+    },
+    {
+      "dimension": "综合荣誉与异动预警",
+      "dimension_code": "appraisal_status_alert",
+      "average_score": 0.0
+    },
+    {
+      "dimension": "课堂学习投入",
+      "dimension_code": "class_engagement",
+      "average_score": 0.0
+    }
+  ],
+  "priority_interventions": [
+    {
+      "risk_level": "高风险",
+      "priority": 1,
+      "student_count": 0,
+      "share": 0.0
+    },
+    {
+      "risk_level": "较高风险",
+      "priority": 2,
+      "student_count": 0,
+      "share": 0.0
+    },
+    {
+      "risk_level": "一般风险",
+      "priority": 3,
+      "student_count": 0,
+      "share": 0.0
+    },
+    {
+      "risk_level": "低风险",
+      "priority": 4,
+      "student_count": 2905,
+      "share": 1.0
+    }
+  ],
+  "intervention_priority_summary": [
+    {
+      "risk_level": "高风险",
+      "priority": 1,
+      "student_count": 0,
+      "share": 0.0
+    },
+    {
+      "risk_level": "较高风险",
+      "priority": 2,
+      "student_count": 0,
+      "share": 0.0
+    },
+    {
+      "risk_level": "一般风险",
+      "priority": 3,
+      "student_count": 0,
+      "share": 0.0
+    },
+    {
+      "risk_level": "低风险",
+      "priority": 4,
+      "student_count": 2905,
+      "share": 1.0
+    }
+  ]
 }
