@@ -90,3 +90,33 @@ def test_load_grade_records_supports_real_excel_columns_and_date_based_term_infe
             "source_row_hash": "grade-real-1",
         }
     ]
+
+
+def test_load_grade_records_supports_numeric_excel_date_codes_in_yyyymmdd_format():
+    df = load_fact_grades(
+        [
+            {
+                "XH": " pjxyqxbj902 ",
+                "KCH": "CS202",
+                "KCCJ": 88,
+                "JDCJ": 3.8,
+                "KSSJ": 20240902,
+                "source_file": "学生成绩.xlsx",
+                "source_row_hash": "grade-real-2",
+            }
+        ]
+    )
+
+    assert df.to_dict(orient="records") == [
+        {
+            "student_id": "pjxyqxbj902",
+            "term_key": "2024-1",
+            "course_id": "CS202",
+            "course_name": None,
+            "score": 88,
+            "gpa": 3.8,
+            "passed": True,
+            "source_file": "学生成绩.xlsx",
+            "source_row_hash": "grade-real-2",
+        }
+    ]

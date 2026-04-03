@@ -26,6 +26,7 @@ _TERM_YEAR_KEYS = ("XN", "xn", "school_year", "KKXN")
 _TERM_NO_KEYS = ("XQ", "xq", "term_no", "KKXQ")
 _COMBINED_TERM_KEYS = ("term_key", "xnxq", "XNXQ")
 _STANDARD_TERM_KEY_RE = re.compile(r"^\d{4}-[12]$")
+_DATE_YYYYMMDD_RE = re.compile(r"^(\d{4})(\d{2})(\d{2})$")
 
 
 def load_fact_grades(rows: list[dict[str, Any]]) -> pd.DataFrame:
@@ -99,6 +100,18 @@ def _normalize_timestamp(raw: Any) -> str | None:
         return None
     if isinstance(raw, float) and raw != raw:
         return None
+    text = str(raw).strip()
+    compact_match = _DATE_YYYYMMDD_RE.fullmatch(text)
+    if compact_match is not None:
+        try:
+            parsed = pd.Timestamp(
+                year=int(compact_match.group(1)),
+                month=int(compact_match.group(2)),
+                day=int(compact_match.group(3)),
+            )
+        except ValueError:
+            return None
+        return parsed.strftime("%Y-%m-%d %H:%M:%S")
     try:
         parsed = pd.to_datetime(raw, errors="coerce")
     except (TypeError, ValueError, OverflowError):

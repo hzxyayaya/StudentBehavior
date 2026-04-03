@@ -33,3 +33,7 @@ def test_guess_based_term_inference_is_rejected():
     assert infer_term_from_month_only("2024-03-01") == "2023-2"
     assert infer_term_from_month_only("2024-09-01") == "2024-1"
     assert infer_term_from_month_only("2025-01-10") == "2024-1"
+
+
+def test_infer_term_from_numeric_yyyymmdd_value():
+    assert infer_term_from_month_only(20240901) == "2024-1"
