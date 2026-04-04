@@ -313,6 +313,104 @@ class DemoApiStore:
             "disclaimer": "去向真值暂未接入",
         }
 
+    def get_result_individual_profile(self, *, student_id: str, term: str) -> dict[str, Any]:
+        profile = self.get_student_profile(student_id=student_id, term=term)
+        return {
+            "result_key": "student_individual_profile",
+            "term": term,
+            **profile,
+        }
+
+    def get_result_group_profile(self, *, term: str) -> dict[str, Any]:
+        groups = self.get_groups(term=term)
+        return {
+            "result_key": "student_group_profile",
+            "term": term,
+            "groups": groups.get("groups", []),
+        }
+
+    def get_result_behavior_patterns(self, *, term: str) -> dict[str, Any]:
+        overview = self.get_overview(term)
+        groups = self.get_groups(term=term)
+        return {
+            "result_key": "behavior_patterns",
+            "term": term,
+            "group_distribution": overview.get("group_distribution", {}),
+            "group_patterns": [
+                {
+                    "group_segment": group.get("group_segment"),
+                    "student_count": group.get("student_count"),
+                    "avg_risk_level": group.get("avg_risk_level"),
+                    "top_factors": group.get("top_factors", []),
+                }
+                for group in groups.get("groups", [])
+            ],
+        }
+
+    def get_result_risk_probability(self, *, term: str) -> dict[str, Any]:
+        overview = self.get_overview(term)
+        return {
+            "result_key": "risk_probability_layers",
+            "term": term,
+            "student_count": overview.get("student_count", 0),
+            "risk_distribution": overview.get("risk_distribution", {}),
+            "risk_band_distribution": overview.get("risk_band_distribution", {}),
+        }
+
+    def get_result_risk_warning_level(self, *, term: str) -> dict[str, Any]:
+        overview = self.get_overview(term)
+        warnings = self.list_warnings(term=term, page=1, page_size=10)
+        return {
+            "result_key": "risk_warning_levels",
+            "term": term,
+            "warning_counts": overview.get("risk_band_distribution", {}),
+            "warning_items": warnings.get("items", []),
+        }
+
+    def get_result_key_factors(self, *, term: str) -> dict[str, Any]:
+        overview = self.get_overview(term)
+        return {
+            "result_key": "key_factor_explanations",
+            "term": term,
+            "risk_factor_summary": overview.get("risk_factor_summary", []),
+            "top_warning_factors": overview.get("top_warning_factors", []),
+        }
+
+    def get_result_intervention_advice(self, *, student_id: str, term: str) -> dict[str, Any]:
+        report = self.get_student_report(student_id=student_id, term=term)
+        return {
+            "result_key": "intervention_advice",
+            "term": term,
+            "student_id": student_id,
+            "intervention_advice": report.get("intervention_advice", []),
+            "report_text": report.get("report_text"),
+            "top_factors": report.get("top_factors", []),
+        }
+
+    def get_result_term_trend(self, *, term: str) -> dict[str, Any]:
+        trajectory = self.get_trajectory_analysis(term=term)
+        return {
+            "result_key": "term_trend_analysis",
+            "term": term,
+            "risk_trend_summary": trajectory.get("risk_trend_summary", []),
+        }
+
+    def get_result_major_comparison(self, *, term: str) -> dict[str, Any]:
+        development = self.get_development_analysis(term=term)
+        return {
+            "result_key": "major_comparison",
+            "term": term,
+            "major_comparison": development.get("major_comparison", []),
+        }
+
+    def get_result_model_summary(self, *, term: str) -> dict[str, Any]:
+        model_summary = self.get_model_summary(term=term)
+        return {
+            "result_key": "model_summary",
+            "term": term,
+            **model_summary,
+        }
+
     def list_warnings(
         self,
         *,

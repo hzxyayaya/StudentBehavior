@@ -145,6 +145,111 @@ def test_get_development_analysis_returns_envelope(client) -> None:
 
 
 @pytest.mark.parametrize(
+    ("path", "params", "expected_keys"),
+    [
+        (
+            "/api/results/individual-profile",
+            {"term": "2023-1", "student_id": "20230001"},
+            {"result_key", "term", "student_id", "student_name", "dimension_scores", "trend"},
+        ),
+        (
+            "/api/results/group-profile",
+            {"term": "2023-1"},
+            {"result_key", "term", "groups"},
+        ),
+        (
+            "/api/results/behavior-patterns",
+            {"term": "2023-1"},
+            {"result_key", "term", "group_distribution", "group_patterns"},
+        ),
+        (
+            "/api/results/risk-probability",
+            {"term": "2023-1"},
+            {"result_key", "term", "risk_distribution", "risk_band_distribution", "student_count"},
+        ),
+        (
+            "/api/results/risk-warning-level",
+            {"term": "2023-1"},
+            {"result_key", "term", "warning_counts", "warning_items"},
+        ),
+        (
+            "/api/results/key-factors",
+            {"term": "2023-1"},
+            {"result_key", "term", "risk_factor_summary", "top_warning_factors"},
+        ),
+        (
+            "/api/results/intervention-advice",
+            {"term": "2023-1", "student_id": "20230001"},
+            {"result_key", "term", "student_id", "intervention_advice", "report_text"},
+        ),
+        (
+            "/api/results/term-trend",
+            {"term": "2023-1"},
+            {"result_key", "term", "risk_trend_summary"},
+        ),
+        (
+            "/api/results/major-comparison",
+            {"term": "2023-1"},
+            {"result_key", "term", "major_comparison"},
+        ),
+        (
+            "/api/results/model-summary",
+            {"term": "2023-1"},
+            {"result_key", "term", "cluster_method", "risk_model", "auc"},
+        ),
+    ],
+)
+def test_result_endpoints_return_independent_output_views(
+    client,
+    path: str,
+    params: dict[str, str],
+    expected_keys: set[str],
+) -> None:
+    response = client.get(path, params=params)
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["code"] == 200
+    assert expected_keys <= set(payload["data"])
+
+
+def test_openapi_exposes_result_output_routes(client) -> None:
+    response = client.get("/openapi.json")
+
+    assert response.status_code == 200
+    payload = response.json()
+    tag_names = {tag["name"] for tag in payload["tags"]}
+    assert "结果输出" in tag_names
+
+    result_operation = payload["paths"]["/api/results/behavior-patterns"]["get"]
+    assert result_operation["tags"] == ["结果输出"]
+    assert result_operation["summary"] == "获取四类行为模式识别结果"
+
+
+def test_result_group_profile_returns_500_for_internal_key_error(monkeypatch, sample_artifacts_dir: Path) -> None:
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=sample_artifacts_dir / "v1_student_results.csv",
+        repo_root=sample_artifacts_dir.parent.parent,
+    )
+
+    def broken_group_profile(*, term: str) -> dict:
+        raise KeyError("top_factors")
+
+    monkeypatch.setattr(store, "get_result_group_profile", broken_group_profile)
+    monkeypatch.setattr(main_module, "get_store", lambda: store)
+    client = TestClient(app)
+
+    response = client.get("/api/results/group-profile", params={"term": "2023-1"})
+
+    assert response.status_code == 500
+    payload = response.json()
+    assert payload["message"] == "artifacts unavailable"
+
+
+@pytest.mark.parametrize(
     ("term", "student_count", "risk_distribution", "group_distribution", "major_risk_summary"),
     [
         ("2023-2", 0, {"high": 0, "medium": 0, "low": 0}, {}, []),

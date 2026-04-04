@@ -31,6 +31,7 @@ app = FastAPI(
         {"name": "学生画像", "description": "单个学生的学期画像与风险趋势接口。"},
         {"name": "学生报告", "description": "单个学生的个性化报告与干预建议接口。"},
         {"name": "风险预警", "description": "学期级风险预警分页与筛选接口。"},
+        {"name": "结果输出", "description": "按比赛要求拆分的 8~10 个结果输出接口。"},
     ],
 )
 
@@ -357,6 +358,206 @@ def get_models_summary(
 
 
 @app.get(
+    "/api/results/individual-profile",
+    tags=["结果输出"],
+    summary="获取学生个体画像结果",
+    description="按结果口径输出学生个体画像，复用学生画像接口中的学生级风险与八维结果。",
+)
+def get_result_individual_profile(
+    student_id: str = Query(description="学生学号"),
+    term: str = Query(description="学期标识，例如 2024-2", examples=["2024-2"]),
+) -> Envelope[dict]:
+    try:
+        data = get_store().get_result_individual_profile(student_id=student_id, term=term)
+    except KeyError as exc:
+        return _handle_result_lookup_error(exc, term=term, student_id=student_id)
+    except FileNotFoundError as exc:
+        return _error_envelope(status_code=500, message=_missing_artifact_message(exc), term=term)
+    except ValueError:
+        return _error_envelope(status_code=500, message="artifacts unavailable", term=term)
+    return Envelope(code=200, message="OK", data=data, meta=MetaModel(request_id="demo-request", term=term))
+
+
+@app.get(
+    "/api/results/group-profile",
+    tags=["结果输出"],
+    summary="获取学生群体画像结果",
+    description="按结果口径输出群体画像与分层结果，复用群体分层接口。",
+)
+def get_result_group_profile(
+    term: str = Query(description="学期标识，例如 2024-2", examples=["2024-2"]),
+) -> Envelope[dict]:
+    try:
+        data = get_store().get_result_group_profile(term=term)
+    except KeyError as exc:
+        return _handle_result_lookup_error(exc, term=term)
+    except FileNotFoundError as exc:
+        return _error_envelope(status_code=500, message=_missing_artifact_message(exc), term=term)
+    except ValueError:
+        return _error_envelope(status_code=500, message="artifacts unavailable", term=term)
+    return Envelope(code=200, message="OK", data=data, meta=MetaModel(request_id="demo-request", term=term))
+
+
+@app.get(
+    "/api/results/behavior-patterns",
+    tags=["结果输出"],
+    summary="获取四类行为模式识别结果",
+    description="按结果口径输出行为模式识别结果，基于群体标签分布和群体主导因子汇总行为模式。",
+)
+def get_result_behavior_patterns(
+    term: str = Query(description="学期标识，例如 2024-2", examples=["2024-2"]),
+) -> Envelope[dict]:
+    try:
+        data = get_store().get_result_behavior_patterns(term=term)
+    except KeyError as exc:
+        return _handle_result_lookup_error(exc, term=term)
+    except FileNotFoundError as exc:
+        return _error_envelope(status_code=500, message=_missing_artifact_message(exc), term=term)
+    except ValueError:
+        return _error_envelope(status_code=500, message="artifacts unavailable", term=term)
+    return Envelope(code=200, message="OK", data=data, meta=MetaModel(request_id="demo-request", term=term))
+
+
+@app.get(
+    "/api/results/risk-probability",
+    tags=["结果输出"],
+    summary="获取学业风险概率分层结果",
+    description="按结果口径输出风险概率分层与风险档位人数分布。",
+)
+def get_result_risk_probability(
+    term: str = Query(description="学期标识，例如 2024-2", examples=["2024-2"]),
+) -> Envelope[dict]:
+    try:
+        data = get_store().get_result_risk_probability(term=term)
+    except KeyError as exc:
+        return _handle_result_lookup_error(exc, term=term)
+    except FileNotFoundError as exc:
+        return _error_envelope(status_code=500, message=_missing_artifact_message(exc), term=term)
+    except ValueError:
+        return _error_envelope(status_code=500, message="artifacts unavailable", term=term)
+    return Envelope(code=200, message="OK", data=data, meta=MetaModel(request_id="demo-request", term=term))
+
+
+@app.get(
+    "/api/results/risk-warning-level",
+    tags=["结果输出"],
+    summary="获取风险等级预警结果",
+    description="按结果口径输出四档预警人数统计和高优先级预警样本。",
+)
+def get_result_risk_warning_level(
+    term: str = Query(description="学期标识，例如 2024-2", examples=["2024-2"]),
+) -> Envelope[dict]:
+    try:
+        data = get_store().get_result_risk_warning_level(term=term)
+    except KeyError as exc:
+        return _handle_result_lookup_error(exc, term=term)
+    except FileNotFoundError as exc:
+        return _error_envelope(status_code=500, message=_missing_artifact_message(exc), term=term)
+    except ValueError:
+        return _error_envelope(status_code=500, message="artifacts unavailable", term=term)
+    return Envelope(code=200, message="OK", data=data, meta=MetaModel(request_id="demo-request", term=term))
+
+
+@app.get(
+    "/api/results/key-factors",
+    tags=["结果输出"],
+    summary="获取关键影响因子解释结果",
+    description="按结果口径输出当前学期的关键风险因子摘要与重点关注因子。",
+)
+def get_result_key_factors(
+    term: str = Query(description="学期标识，例如 2024-2", examples=["2024-2"]),
+) -> Envelope[dict]:
+    try:
+        data = get_store().get_result_key_factors(term=term)
+    except KeyError as exc:
+        return _handle_result_lookup_error(exc, term=term)
+    except FileNotFoundError as exc:
+        return _error_envelope(status_code=500, message=_missing_artifact_message(exc), term=term)
+    except ValueError:
+        return _error_envelope(status_code=500, message="artifacts unavailable", term=term)
+    return Envelope(code=200, message="OK", data=data, meta=MetaModel(request_id="demo-request", term=term))
+
+
+@app.get(
+    "/api/results/intervention-advice",
+    tags=["结果输出"],
+    summary="获取个性化干预建议结果",
+    description="按结果口径输出指定学生在指定学期的干预建议与报告摘要。",
+)
+def get_result_intervention_advice(
+    student_id: str = Query(description="学生学号"),
+    term: str = Query(description="学期标识，例如 2024-2", examples=["2024-2"]),
+) -> Envelope[dict]:
+    try:
+        data = get_store().get_result_intervention_advice(student_id=student_id, term=term)
+    except KeyError as exc:
+        return _handle_result_lookup_error(exc, term=term, student_id=student_id)
+    except FileNotFoundError as exc:
+        return _error_envelope(status_code=500, message=_missing_artifact_message(exc), term=term)
+    except ValueError:
+        return _error_envelope(status_code=500, message="artifacts unavailable", term=term)
+    return Envelope(code=200, message="OK", data=data, meta=MetaModel(request_id="demo-request", term=term))
+
+
+@app.get(
+    "/api/results/term-trend",
+    tags=["结果输出"],
+    summary="获取学期趋势分析结果",
+    description="按结果口径输出学期风险趋势变化摘要。",
+)
+def get_result_term_trend(
+    term: str = Query(description="学期标识，例如 2024-2", examples=["2024-2"]),
+) -> Envelope[dict]:
+    try:
+        data = get_store().get_result_term_trend(term=term)
+    except KeyError as exc:
+        return _handle_result_lookup_error(exc, term=term)
+    except FileNotFoundError as exc:
+        return _error_envelope(status_code=500, message=_missing_artifact_message(exc), term=term)
+    except ValueError:
+        return _error_envelope(status_code=500, message="artifacts unavailable", term=term)
+    return Envelope(code=200, message="OK", data=data, meta=MetaModel(request_id="demo-request", term=term))
+
+
+@app.get(
+    "/api/results/major-comparison",
+    tags=["结果输出"],
+    summary="获取专业与学院群体对比结果",
+    description="按结果口径输出专业维度的风险对比结果。",
+)
+def get_result_major_comparison(
+    term: str = Query(description="学期标识，例如 2024-2", examples=["2024-2"]),
+) -> Envelope[dict]:
+    try:
+        data = get_store().get_result_major_comparison(term=term)
+    except KeyError as exc:
+        return _handle_result_lookup_error(exc, term=term)
+    except FileNotFoundError as exc:
+        return _error_envelope(status_code=500, message=_missing_artifact_message(exc), term=term)
+    except ValueError:
+        return _error_envelope(status_code=500, message="artifacts unavailable", term=term)
+    return Envelope(code=200, message="OK", data=data, meta=MetaModel(request_id="demo-request", term=term))
+
+
+@app.get(
+    "/api/results/model-summary",
+    tags=["结果输出"],
+    summary="获取模型摘要说明结果",
+    description="按结果口径输出模型摘要，供比赛指标中的模型说明结果直接使用。",
+)
+def get_result_model_summary(
+    term: str = Query(description="学期标识，例如 2024-2", examples=["2024-2"]),
+) -> Envelope[dict]:
+    try:
+        data = get_store().get_result_model_summary(term=term)
+    except FileNotFoundError as exc:
+        return _error_envelope(status_code=500, message=_missing_artifact_message(exc), term=term)
+    except ValueError:
+        return _error_envelope(status_code=500, message="artifacts unavailable", term=term)
+    return Envelope(code=200, message="OK", data=data, meta=MetaModel(request_id="demo-request", term=term))
+
+
+@app.get(
     "/api/students/{student_id}/profile",
     tags=["学生画像"],
     summary="获取学生个体画像",
@@ -533,3 +734,15 @@ def _missing_artifact_message(exc: FileNotFoundError) -> str:
 
 def _is_unknown_term_error(exc: KeyError, term: str) -> bool:
     return len(exc.args) == 1 and exc.args[0] == term
+
+
+def _is_unknown_student_error(exc: KeyError, student_id: str, term: str) -> bool:
+    return len(exc.args) == 1 and exc.args[0] == (student_id, term)
+
+
+def _handle_result_lookup_error(exc: KeyError, *, term: str, student_id: str | None = None) -> JSONResponse:
+    if student_id is not None and _is_unknown_student_error(exc, student_id, term):
+        return _error_envelope(status_code=404, message="student not found", term=term)
+    if _is_unknown_term_error(exc, term):
+        return _error_envelope(status_code=404, message="term not found", term=term)
+    return _error_envelope(status_code=500, message="artifacts unavailable", term=term)
