@@ -279,6 +279,31 @@ def test_build_top_factors_prefers_calibrated_explanations_over_plain_scores() -
     assert "不声称深夜指标" in payload["report_text"]
 
 
+def test_build_top_factors_pushes_unavailable_dimensions_behind_available_ones() -> None:
+    scores = _dimension_scores()
+    scores[1] = {
+        **scores[1],
+        "score": 0.0,
+        "label": "当前学期无有效数据",
+        "metrics": [],
+        "explanation": "课堂学习投入当前学期无有效源表指标，暂不做该维度判定。",
+        "provenance": {"is_unavailable": True, "unavailable_reason": "no_metrics"},
+    }
+
+    factors = build_top_factors(
+        risk_level="high",
+        group_segment="作息失衡风险组",
+        dimension_scores=scores,
+    )
+
+    assert [factor["dimension_code"] for factor in factors] == [
+        "academic_base",
+        "network_habits",
+        "daily_routine_boundary",
+    ]
+    assert all(factor["dimension_code"] != "class_engagement" for factor in factors)
+
+
 def test_build_report_payload_structurally_uses_metrics_and_provenance() -> None:
     scores = _dimension_scores()
     scores[0] = {

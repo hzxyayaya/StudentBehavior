@@ -2,9 +2,9 @@
   <AppShell>
     <section class="panel">
       <div class="panel-inner stack">
-        <p class="eyebrow">群体分层</p>
-        <h2 class="title">行为模式分层</h2>
-        <p class="muted">按重点群体标签概览当前学期的群体状态，支撑后续预警筛查与学生下钻。</p>
+        <p class="eyebrow">学生个体画像与群体分层分析</p>
+        <h2 class="title">群体画像与模式分层</h2>
+        <p class="muted">按重点群体标签概览当前学期的群体状态，并与学生个体八维画像联动，支撑后续预警筛查与学生下钻。</p>
       </div>
     </section>
 

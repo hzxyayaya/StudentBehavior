@@ -681,3 +681,25 @@ def test_build_dimension_scores_handles_missing_raw_metrics() -> None:
     assert score_map["图书馆沉浸度"]["metrics"]
     assert score_map["网络作息自律指数"]["metrics"]
     assert score_map["综合荣誉与异动预警"]["metrics"]
+
+
+def test_build_dimension_scores_marks_dimensions_without_metrics_as_unavailable() -> None:
+    scores = build_dimension_scores(
+        _base_row()
+        | {
+            "video_completion_rate": None,
+            "online_test_avg_score": None,
+            "online_work_avg_score": None,
+            "online_exam_avg_score": None,
+            "platform_engagement_score": None,
+            "forum_interaction_total": None,
+        }
+    )
+
+    online = next(item for item in scores if item["dimension_code"] == "online_activeness")
+
+    assert online["metrics"] == []
+    assert online["label"] == "当前学期无有效数据"
+    assert online["explanation"] == "在线学习积极性当前学期无有效源表指标，暂不做该维度判定。"
+    assert online["provenance"]["is_unavailable"] is True
+    assert online["provenance"]["unavailable_reason"] == "no_metrics"

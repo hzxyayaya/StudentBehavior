@@ -46,6 +46,72 @@ def test_demo_login_returns_fixed_demo_session() -> None:
     assert response.json()["data"]["session_token"] == "demo-token"
 
 
+def test_scalar_docs_page_is_available(client) -> None:
+    response = client.get("/scalar")
+
+    assert response.status_code == 200
+    assert "Scalar" in response.text
+    assert "/openapi.json" in response.text
+
+
+def test_openapi_exposes_route_and_schema_descriptions(client) -> None:
+    response = client.get("/openapi.json")
+
+    assert response.status_code == 200
+    payload = response.json()
+    trajectory_operation = payload["paths"]["/api/analytics/trajectory"]["get"]
+    assert trajectory_operation["summary"] == "获取学业轨迹演化与关键行为分析"
+    assert "学期风险轨迹" in trajectory_operation["description"]
+
+    login_schema = payload["components"]["schemas"]["DemoLoginRequest"]
+    assert login_schema["properties"]["username"]["description"] == "演示登录用户名"
+    assert login_schema["properties"]["role"]["description"] == "演示账号角色"
+
+
+def test_openapi_exposes_tags_and_examples(client) -> None:
+    response = client.get("/openapi.json")
+
+    assert response.status_code == 200
+    payload = response.json()
+    tag_names = {tag["name"] for tag in payload["tags"]}
+    assert {"认证", "总览分析", "画像分层", "轨迹分析", "发展分析", "模型说明", "学生画像", "学生报告", "风险预警"} <= tag_names
+
+    warnings_operation = payload["paths"]["/api/warnings"]["get"]
+    assert warnings_operation["tags"] == ["风险预警"]
+    term_parameter = next(parameter for parameter in warnings_operation["parameters"] if parameter["name"] == "term")
+    assert term_parameter["schema"]["examples"] == ["2024-2"]
+
+    login_schema = payload["components"]["schemas"]["DemoLoginRequest"]
+    assert login_schema["example"] == {
+        "username": "demo_admin",
+        "password": "demo_only",
+        "role": "manager",
+    }
+
+
+def test_openapi_exposes_response_examples(client) -> None:
+    response = client.get("/openapi.json")
+
+    assert response.status_code == 200
+    payload = response.json()
+
+    login_examples = payload["paths"]["/api/auth/demo-login"]["post"]["responses"]["200"]["content"]["application/json"][
+        "example"
+    ]
+    assert login_examples["data"]["session_token"] == "demo-token"
+
+    trajectory_examples = payload["paths"]["/api/analytics/trajectory"]["get"]["responses"]["200"]["content"][
+        "application/json"
+    ]["example"]
+    assert trajectory_examples["data"]["term"] == "2024-2"
+    assert trajectory_examples["data"]["risk_trend_summary"][0]["term"] == "2024-1"
+
+    warning_not_found = payload["paths"]["/api/warnings"]["get"]["responses"]["404"]["content"]["application/json"][
+        "example"
+    ]
+    assert warning_not_found["message"] == "term not found"
+
+
 def test_get_overview_returns_404_for_unknown_term(client) -> None:
     response = client.get("/api/analytics/overview", params={"term": "2099-1"})
     assert response.status_code == 404
@@ -54,6 +120,28 @@ def test_get_overview_returns_404_for_unknown_term(client) -> None:
     assert payload["message"] == "term not found"
     assert payload["data"] == {}
     assert payload["meta"]["term"] == "2099-1"
+
+
+def test_get_trajectory_analysis_returns_envelope(client) -> None:
+    response = client.get("/api/analytics/trajectory", params={"term": "2023-1"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["code"] == 200
+    assert payload["meta"]["term"] == "2023-1"
+    assert payload["data"]["term"] == "2023-1"
+    assert "student_samples" in payload["data"]
+
+
+def test_get_development_analysis_returns_envelope(client) -> None:
+    response = client.get("/api/analytics/development", params={"term": "2023-1"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["code"] == 200
+    assert payload["meta"]["term"] == "2023-1"
+    assert payload["data"]["term"] == "2023-1"
+    assert payload["data"]["disclaimer"] == "去向真值暂未接入"
 
 
 @pytest.mark.parametrize(

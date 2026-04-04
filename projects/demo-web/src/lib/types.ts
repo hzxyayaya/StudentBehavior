@@ -183,3 +183,41 @@ export type ModelSummaryData = {
 export type DemoLoginData = {
   session_token: string
 }
+
+export type TrajectoryAnalysisData = {
+  term: string
+  risk_trend_summary: Array<{
+    term: string
+    avg_risk_score: number
+    high_risk_count: number
+    risk_change_direction?: RiskChangeDirection
+  }>
+  key_factors: Array<{
+    feature: string
+    feature_cn?: string
+    count: number
+    importance: number
+  }>
+  current_dimensions: CalibratedDimensionScore[]
+  group_changes: GroupsData['groups']
+  student_samples: WarningsData['items']
+}
+
+export type DevelopmentAnalysisData = {
+  term: string
+  major_comparison: OverviewData['major_risk_summary']
+  dimension_highlights: CalibratedDimensionScore[]
+  group_direction_segments: Array<
+    GroupsData['groups'][number] & {
+      direction_label?: string
+    }
+  >
+  direction_chains: Array<{
+    group_segment: string
+    direction_label?: string
+    leading_protective_factor?: string | null
+    leading_dimension?: string | null
+    avg_risk_score?: number
+  }>
+  disclaimer: string
+}

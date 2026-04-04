@@ -386,10 +386,125 @@ def test_get_overview_exposes_risk_band_distribution_and_factor_summary(
         repo_root=tmp_path,
     )
 
-    payload = store.get_overview("2024-2")
 
-    assert payload["risk_band_distribution"]["较高风险"] == 1
-    assert payload["risk_factor_summary"][0]["feature"] == "academic_base"
+def test_overview_dimension_summary_prefers_available_dimension_details(sample_store: DemoApiStore) -> None:
+    warnings_path = Path(sample_store._warnings_path)
+    rows = pd.read_csv(warnings_path)
+    rows.loc[rows["term_key"] == "2024-1", "dimension_scores_json"] = json.dumps(
+        [
+            {
+                "dimension": "课堂学习投入",
+                "dimension_code": "class_engagement",
+                "score": 0.0,
+                "level": "unavailable",
+                "label": "当前学期无有效数据",
+                "metrics": [],
+                "explanation": "课堂学习投入当前学期无有效源表指标，暂不做该维度判定。",
+                "provenance": {
+                    "is_unavailable": True,
+                    "unavailable_reason": "no_metrics",
+                },
+            },
+            {
+                "dimension": "图书馆沉浸度",
+                "dimension_code": "library_immersion",
+                "score": 0.0,
+                "level": "unavailable",
+                "label": "当前学期无有效数据",
+                "metrics": [],
+                "explanation": "图书馆沉浸度当前学期无有效源表指标，暂不做该维度判定。",
+                "provenance": {
+                    "is_unavailable": True,
+                    "unavailable_reason": "no_metrics",
+                },
+            },
+        ],
+        ensure_ascii=False,
+    )
+    rows = pd.concat(
+        [
+            rows,
+            pd.DataFrame(
+                [
+                    {
+                        "student_id": "20239999",
+                        "term_key": "2024-1",
+                        "student_name": "Faye",
+                        "major_name": "软件工程",
+                        "group_segment": "学习投入稳定组",
+                        "risk_probability": 0.42,
+                        "base_risk_score": 42.0,
+                        "risk_adjustment_score": 0.0,
+                        "adjusted_risk_score": 42.0,
+                        "risk_level": "low",
+                        "risk_delta": 0.0,
+                        "risk_change_direction": "steady",
+                        "dimension_scores_json": json.dumps(
+                            [
+                                {
+                                    "dimension": "课堂学习投入",
+                                    "dimension_code": "class_engagement",
+                                    "score": 0.64,
+                                    "level": "medium",
+                                    "label": "课堂投入稳定",
+                                    "metrics": [
+                                        {"name": "出勤率", "value": 0.93},
+                                    ],
+                                    "explanation": "课堂投入整体稳定，出勤率表现较好。",
+                                    "provenance": {"is_unavailable": False},
+                                }
+                            ],
+                            ensure_ascii=False,
+                        ),
+                        "top_risk_factors_json": "[]",
+                        "top_protective_factors_json": "[]",
+                        "base_risk_explanation": "base explanation",
+                        "behavior_adjustment_explanation": "adjustment explanation",
+                        "risk_change_explanation": "change explanation",
+                    }
+                ]
+            ),
+        ],
+        ignore_index=True,
+    )
+    rows.to_csv(warnings_path, index=False, encoding="utf-8-sig")
+
+    overview = sample_store.get_overview("2024-1")
+    dimension_summary = {
+        item["dimension_code"]: item for item in overview["dimension_summary"]
+    }
+
+    class_summary = dimension_summary["class_engagement"]
+    assert class_summary["label"] == "课堂投入稳定"
+    assert class_summary["metrics"] == [{"name": "出勤率", "value": 0.93}]
+    assert class_summary["explanation"] == "课堂投入整体稳定，出勤率表现较好。"
+    assert class_summary["provenance"] == {"is_unavailable": False}
+
+
+def test_get_trajectory_analysis_repackages_overview_groups_and_warning_samples(sample_store: DemoApiStore) -> None:
+    payload = sample_store.get_trajectory_analysis(term="2024-1")
+
+    assert payload["term"] == "2024-1"
+    assert payload["risk_trend_summary"]
+    assert payload["current_dimensions"]
+    assert payload["key_factors"]
+    assert payload["group_changes"]
+    assert payload["student_samples"]
+    assert payload["student_samples"][0]["student_id"] == "20230003"
+    assert payload["student_samples"][0]["top_risk_factors"][0]["feature_cn"] == "学业基础表现"
+
+
+def test_get_development_analysis_repackages_major_group_and_dimension_views(sample_store: DemoApiStore) -> None:
+    payload = sample_store.get_development_analysis(term="2024-1")
+
+    assert payload["term"] == "2024-1"
+    assert payload["major_comparison"]
+    assert payload["group_direction_segments"]
+    assert payload["dimension_highlights"]
+    assert payload["direction_chains"]
+    assert payload["disclaimer"] == "去向真值暂未接入"
+    assert payload["group_direction_segments"][0]["group_segment"]
+    assert "direction_label" in payload["group_direction_segments"][0]
 
 
 @pytest.mark.parametrize(
@@ -1171,6 +1286,201 @@ def test_get_overview_enriches_sparse_dimension_summary_from_warning_rows(
             "label": "课堂投入不足",
             "metrics": [{"name": "attendance_rate", "value": 0.63, "display": "63%"}],
             "explanation": "课堂到课率偏低。",
+        }
+    ]
+
+
+def test_get_overview_prefers_richer_dimension_summary_fields_across_warning_rows(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    overview_path = tmp_path / "artifacts" / "model_stubs" / "v1_overview_by_term.json"
+    overview_path.parent.mkdir(parents=True, exist_ok=True)
+    overview_payload = json.loads(
+        (sample_artifacts_dir / "v1_overview_by_term.json").read_text(encoding="utf-8")
+    )
+    overview_payload["dimension_summary"] = [
+        {
+            "dimension": "课堂学习投入",
+            "dimension_code": "class_engagement",
+            "average_score": 0.28,
+        }
+    ]
+    overview_path.write_text(json.dumps(overview_payload, ensure_ascii=False), encoding="utf-8")
+
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230001",
+                "term_key": "2024-2",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.81,
+                "risk_level": "一般风险",
+                "dimension_scores_json": json.dumps(
+                    [
+                        {
+                            "dimension": "课堂学习投入",
+                            "dimension_code": "class_engagement",
+                            "score": 0.28,
+                            "level": "low",
+                        }
+                    ],
+                    ensure_ascii=False,
+                ),
+            },
+            {
+                "student_id": "20230002",
+                "term_key": "2024-2",
+                "student_name": "Alice",
+                "major_name": "软件工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.83,
+                "risk_level": "一般风险",
+                "dimension_scores_json": json.dumps(
+                    [
+                        {
+                            "dimension": "课堂学习投入",
+                            "dimension_code": "class_engagement",
+                            "score": 0.28,
+                            "level": "low",
+                            "label": "课堂投入薄弱",
+                            "metrics": [
+                                {
+                                    "name": "attendance_rate",
+                                    "value": 0.64,
+                                    "display": "64%",
+                                }
+                            ],
+                            "explanation": "课堂到课率偏低，当前已进入关注区间。",
+                        }
+                    ],
+                    ensure_ascii=False,
+                ),
+            },
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+
+    store = DemoApiStore(
+        overview_path=overview_path,
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    payload = store.get_overview("2024-2")
+
+    assert payload["dimension_summary"] == [
+        {
+            "dimension": "课堂学习投入",
+            "dimension_code": "class_engagement",
+            "average_score": 0.28,
+            "score_count": 2,
+            "level": "low",
+            "label": "课堂投入薄弱",
+            "metrics": [{"name": "attendance_rate", "value": 0.64, "display": "64%"}],
+            "explanation": "课堂到课率偏低，当前已进入关注区间。",
+        }
+    ]
+
+
+def test_get_overview_replaces_empty_metric_placeholders_with_real_metrics(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    overview_path = tmp_path / "artifacts" / "model_stubs" / "v1_overview_by_term.json"
+    overview_path.parent.mkdir(parents=True, exist_ok=True)
+    overview_payload = json.loads(
+        (sample_artifacts_dir / "v1_overview_by_term.json").read_text(encoding="utf-8")
+    )
+    overview_payload["dimension_summary"] = [
+        {
+            "dimension": "课堂学习投入",
+            "dimension_code": "class_engagement",
+            "average_score": 0.5,
+        }
+    ]
+    overview_path.write_text(json.dumps(overview_payload, ensure_ascii=False), encoding="utf-8")
+
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230001",
+                "term_key": "2024-2",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.81,
+                "risk_level": "一般风险",
+                "dimension_scores_json": json.dumps(
+                    [
+                        {
+                            "dimension": "课堂学习投入",
+                            "dimension_code": "class_engagement",
+                            "score": 0.0,
+                            "level": "low",
+                            "label": "课堂投入薄弱",
+                            "metrics": [],
+                            "explanation": "课堂学习投入处于课堂投入薄弱，主要依据是当前可用指标有限。",
+                        }
+                    ],
+                    ensure_ascii=False,
+                ),
+            },
+            {
+                "student_id": "20230002",
+                "term_key": "2024-2",
+                "student_name": "Alice",
+                "major_name": "软件工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.83,
+                "risk_level": "一般风险",
+                "dimension_scores_json": json.dumps(
+                    [
+                        {
+                            "dimension": "课堂学习投入",
+                            "dimension_code": "class_engagement",
+                            "score": 1.0,
+                            "level": "high",
+                            "label": "课堂投入积极",
+                            "metrics": [
+                                {
+                                    "metric": "attendance_rate",
+                                    "label": "出勤率",
+                                    "value": 1.0,
+                                }
+                            ],
+                            "explanation": "课堂学习投入处于课堂投入积极，主要依据是出勤率 1.0。",
+                        }
+                    ],
+                    ensure_ascii=False,
+                ),
+            },
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+
+    store = DemoApiStore(
+        overview_path=overview_path,
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    payload = store.get_overview("2024-2")
+
+    assert payload["dimension_summary"] == [
+        {
+            "dimension": "课堂学习投入",
+            "dimension_code": "class_engagement",
+            "average_score": 0.5,
+            "score_count": 2,
+            "level": "low",
+            "label": "课堂投入薄弱",
+            "metrics": [{"metric": "attendance_rate", "label": "出勤率", "value": 1.0}],
+            "explanation": "课堂学习投入处于课堂投入薄弱，主要依据是当前可用指标有限。",
         }
     ]
 

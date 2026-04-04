@@ -5,8 +5,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createRouter as createAppRouter } from '@/app/router'
 import { useAuthStore } from '@/app/auth'
 import OverviewPage from '@/features/overview/OverviewPage.vue'
+import DevelopmentPage from '@/features/development/DevelopmentPage.vue'
 import GroupsPage from '@/features/quadrants/QuadrantsPage.vue'
 import StudentPage from '@/features/students/StudentPage.vue'
+import TrajectoryPage from '@/features/trajectory/TrajectoryPage.vue'
 import WarningsPage from '@/features/warnings/WarningsPage.vue'
 
 function createPlugins() {
@@ -794,5 +796,230 @@ describe('demo flow links', () => {
     expect(firstIncompleteCard.text()).toContain('暂无指标')
     expect(firstIncompleteCard.text()).toContain('当前维度尚未提供完整校准结果')
     expect(wrapper.text()).not.toContain('低')
+  })
+})
+
+describe('task pages', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+    sessionStorage.clear()
+  })
+
+  it('renders trajectory analysis from task endpoint data', async () => {
+    const auth = useAuthStore()
+    auth.signIn('demo-token', '演示管理员', '2024-2')
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input)
+
+        if (url.includes('/analytics/trajectory')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              code: 200,
+              message: 'OK',
+              data: {
+                term: '2024-2',
+                risk_trend_summary: [
+                  { term: '2023-2', avg_risk_score: 46.2, high_risk_count: 9, risk_change_direction: 'steady' },
+                  { term: '2024-1', avg_risk_score: 49.5, high_risk_count: 11, risk_change_direction: 'rising' },
+                  { term: '2024-2', avg_risk_score: 53.1, high_risk_count: 18, risk_change_direction: 'rising' },
+                ],
+                key_factors: [
+                  { feature: 'academic_base', feature_cn: '学业基础表现', count: 52, importance: 0.82 },
+                  { feature: 'class_engagement', feature_cn: '课堂学习投入', count: 41, importance: 0.66 },
+                ],
+                current_dimensions: [
+                  { dimension: '学业基础表现', average_score: 0.7, level: 'high', label: '学业基础稳健' },
+                  { dimension: '课堂学习投入', average_score: 0.28, level: 'medium', label: '课堂投入一般' },
+                ],
+                group_changes: [
+                  {
+                    group_segment: '作息失衡风险组',
+                    student_count: 39,
+                    avg_risk_probability: 0.71,
+                    avg_risk_score: 62.3,
+                    risk_change_summary: { rising: 18, steady: 12, falling: 9 },
+                    avg_dimension_scores: [],
+                    top_factors: [
+                      { dimension: '网络作息自律指数', explanation: '夜间活动偏高', importance: 0.81 },
+                    ],
+                    risk_amplifiers: [{ feature: 'network_habits', feature_cn: '网络作息自律指数', count: 20, importance: 0.81 }],
+                    protective_factors: [],
+                  },
+                ],
+                student_samples: [
+                  {
+                    student_id: 'pjwrqxbj901',
+                    student_name: '示例学生',
+                    major_name: '计算机科学与技术',
+                    group_segment: '作息失衡风险组',
+                    risk_level: '较高风险',
+                    risk_probability: 0.82,
+                    adjusted_risk_score: 82,
+                    risk_delta: 2,
+                    risk_change_direction: 'rising',
+                    top_risk_factors: [
+                      { feature: 'network_habits', feature_cn: '网络作息自律指数', importance: 0.81 },
+                      { feature: 'class_engagement', feature_cn: '课堂学习投入', importance: 0.66 },
+                    ],
+                    top_protective_factors: [
+                      { feature: 'academic_base', feature_cn: '学业基础表现', importance: 0.42 },
+                    ],
+                  },
+                ],
+              },
+              meta: { request_id: 'req-trajectory', term: '2024-2' },
+            }),
+          })
+        }
+
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            code: 200,
+            message: 'OK',
+            data: {
+              cluster_method: 'stub-group-rules',
+              risk_model: 'stub-risk-rules',
+              target_label: '综合测评低等级风险',
+              auc: 0.81,
+              updated_at: '2026-03-28T12:00:00+08:00',
+            },
+            meta: { request_id: 'req-summary', term: '2024-2' },
+          }),
+        })
+      }),
+    )
+
+    const { router, vueQueryPlugin } = createPlugins()
+    await router.push('/trajectory')
+    await router.isReady()
+
+    const wrapper = mount(TrajectoryPage, {
+      global: {
+        plugins: [router, vueQueryPlugin],
+        stubs: { RouterLink: RouterLinkStub, EChart: { template: '<div class="echart-stub" />' } },
+      },
+    })
+
+    await flushPromises()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('学业轨迹演化与关键行为分析')
+    expect(wrapper.text()).toContain('2024-2')
+    expect(wrapper.text()).toContain('53.1')
+    expect(wrapper.text()).toContain('学业基础表现')
+    expect(wrapper.text()).toContain('作息失衡风险组')
+    expect(wrapper.text()).toContain('网络作息自律指数')
+    expect(wrapper.text()).toContain('重点学生样本轨迹')
+    expect(wrapper.text()).toContain('示例学生')
+    expect(wrapper.text()).toContain('0.82')
+    expect(wrapper.text()).toContain('课堂学习投入')
+  })
+
+  it('renders development analysis with task endpoint data', async () => {
+    const auth = useAuthStore()
+    auth.signIn('demo-token', '演示管理员', '2024-2')
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input)
+
+        if (url.includes('/analytics/development')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              code: 200,
+              message: 'OK',
+              data: {
+                term: '2024-2',
+                major_comparison: [
+                  { major_name: '计算机科学与技术', high_risk_count: 5, student_count: 18 },
+                  { major_name: '软件工程', high_risk_count: 3, student_count: 21 },
+                ],
+                dimension_highlights: [
+                  { dimension: '学业基础表现', average_score: 0.7, level: 'high', label: '学业基础稳健' },
+                  { dimension: '图书馆沉浸度', average_score: 0.41, level: 'medium', label: '图书馆投入一般' },
+                ],
+                group_direction_segments: [
+                  {
+                    group_segment: '综合发展优势组',
+                    student_count: 51,
+                    avg_risk_probability: 0.32,
+                    avg_risk_score: 41.2,
+                    direction_label: '偏向 图书馆沉浸度',
+                    avg_dimension_scores: [
+                      { dimension: '学业基础表现', average_score: 0.78, label: '学业基础稳健' },
+                    ],
+                    top_factors: [
+                      { dimension: '图书馆沉浸度', explanation: '图书馆行为更稳定', importance: 0.67 },
+                    ],
+                    risk_amplifiers: [],
+                    protective_factors: [
+                      { feature: 'library_immersion', feature_cn: '图书馆沉浸度', count: 22, importance: 0.67 },
+                    ],
+                  },
+                ],
+                direction_chains: [
+                  {
+                    group_segment: '综合发展优势组',
+                    direction_label: '偏向 图书馆沉浸度',
+                    leading_protective_factor: '图书馆沉浸度',
+                    leading_dimension: '学业基础表现',
+                    avg_risk_score: 41.2,
+                  },
+                ],
+                disclaimer: '去向真值暂未接入',
+              },
+              meta: { request_id: 'req-development', term: '2024-2' },
+            }),
+          })
+        }
+
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            code: 200,
+            message: 'OK',
+            data: {
+              cluster_method: 'stub-group-rules',
+              risk_model: 'stub-risk-rules',
+              target_label: '综合测评低等级风险',
+              auc: 0.81,
+              updated_at: '2026-03-28T12:00:00+08:00',
+            },
+            meta: { request_id: 'req-summary', term: '2024-2' },
+          }),
+        })
+      }),
+    )
+
+    const { router, vueQueryPlugin } = createPlugins()
+    await router.push('/development')
+    await router.isReady()
+
+    const wrapper = mount(DevelopmentPage, {
+      global: {
+        plugins: [router, vueQueryPlugin],
+        stubs: { RouterLink: RouterLinkStub, EChart: { template: '<div class="echart-stub" />' } },
+      },
+    })
+
+    await flushPromises()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('发展方向与去向关联分析')
+    expect(wrapper.text()).toContain('计算机科学与技术')
+    expect(wrapper.text()).toContain('综合发展优势组')
+    expect(wrapper.text()).toContain('图书馆沉浸度')
+    expect(wrapper.text()).toContain('方向标签')
+    expect(wrapper.text()).toContain('方向解释链路')
+    expect(wrapper.text()).toContain('学业基础表现')
+    expect(wrapper.text()).toContain('平均风险分 41.2')
+    expect(wrapper.text()).toContain('去向真值暂未接入')
   })
 })

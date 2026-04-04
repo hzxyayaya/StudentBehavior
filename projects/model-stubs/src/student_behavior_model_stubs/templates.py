@@ -152,9 +152,21 @@ def _provenance_note(dimension_item: Mapping[str, object]) -> str | None:
     provenance = dimension_item.get("provenance")
     if not isinstance(provenance, Mapping):
         return None
+    if bool(provenance.get("is_unavailable")):
+        return "证据提示：当前学期未接入该维度的有效源表指标，暂不纳入强弱判断。"
     if bool(provenance.get("has_caveated_metrics")) or bool(provenance.get("has_deferred_metrics")):
         return "证据提示：当前维度包含 caveated/deferred 证据，解读时需保留口径限制。"
     return None
+
+
+def _dimension_is_available(dimension_item: Mapping[str, object] | None) -> bool:
+    if not isinstance(dimension_item, Mapping):
+        return False
+    provenance = dimension_item.get("provenance")
+    if isinstance(provenance, Mapping) and bool(provenance.get("is_unavailable")):
+        return False
+    metrics = dimension_item.get("metrics")
+    return isinstance(metrics, Iterable) and any(isinstance(metric, Mapping) for metric in metrics)
 
 
 def _metric_value_by_name(
@@ -220,6 +232,23 @@ def _build_factor(
         }
 
     score = score_map[dimension_name]
+    if not _dimension_is_available(dimension_item):
+        return {
+            "feature": feature_name,
+            "feature_cn": dimension_name,
+            "effect": "neutral",
+            "importance": 0.0,
+            "dimension_code": str(dimension_item.get("dimension_code", feature_name))
+            if isinstance(dimension_item, Mapping)
+            else feature_name,
+            "label": str(dimension_item.get("label", "")) if isinstance(dimension_item, Mapping) else "",
+            "explanation": str(dimension_item.get("explanation", ""))
+            if isinstance(dimension_item, Mapping)
+            else "",
+            "provenance": dict(dimension_item.get("provenance", {}))
+            if isinstance(dimension_item, Mapping) and isinstance(dimension_item.get("provenance"), Mapping)
+            else {},
+        }
     if reverse:
         effect = "positive" if score >= 0.5 else "neutral"
         importance = round(max(score - 0.5, 0.0), 2)
@@ -259,7 +288,11 @@ def build_top_factors(
 
     for dimension_name, feature_name in sorted(
         _DIMENSION_TEMPLATES,
-        key=lambda item: (item[0] not in score_map, score_map.get(item[0], 0.0), order_map[item[0]]),
+        key=lambda item: (
+            item[0] not in score_map or not _dimension_is_available(items_by_name.get(item[0])),
+            score_map.get(item[0], 0.0),
+            order_map[item[0]],
+        ),
     )[:3]:
         factors.append(
             _build_factor(
@@ -286,6 +319,7 @@ def build_protective_factors(
     ranked_dimensions = sorted(
         _PROTECTIVE_DIMENSION_TEMPLATES,
         key=lambda item: (
+            not _dimension_is_available(items_by_name.get(item[0])),
             -score_map.get(item[0], -1.0),
             item[0] not in score_map,
             order_map[item[0]],

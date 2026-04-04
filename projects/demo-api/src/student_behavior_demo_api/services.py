@@ -265,6 +265,54 @@ class DemoApiStore:
         )
         return {"groups": groups}
 
+    def get_trajectory_analysis(self, *, term: str) -> dict[str, Any]:
+        overview = self.get_overview(term)
+        groups = self.get_groups(term=term)
+        warnings = self.list_warnings(term=term, page=1, page_size=5)
+        return {
+            "term": term,
+            "risk_trend_summary": _build_risk_trend_summary(
+                _load_warning_rows(self._warnings_path or _resolve_warning_artifact_path(self._repo_root))
+            ),
+            "key_factors": overview.get("risk_factor_summary", []),
+            "current_dimensions": overview.get("dimension_summary", []),
+            "group_changes": groups.get("groups", []),
+            "student_samples": warnings.get("items", []),
+        }
+
+    def get_development_analysis(self, *, term: str) -> dict[str, Any]:
+        overview = self.get_overview(term)
+        groups = self.get_groups(term=term)
+        group_rows = groups.get("groups", [])
+        return {
+            "term": term,
+            "major_comparison": overview.get("major_risk_summary", []),
+            "dimension_highlights": overview.get("dimension_summary", []),
+            "group_direction_segments": [
+                {
+                    "group_segment": row.get("group_segment"),
+                    "student_count": row.get("student_count"),
+                    "avg_risk_score": row.get("avg_risk_score"),
+                    "direction_label": _resolve_group_direction_label(row),
+                    "protective_factors": row.get("protective_factors", []),
+                    "top_factors": row.get("top_factors", []),
+                    "avg_dimension_scores": row.get("avg_dimension_scores", []),
+                }
+                for row in group_rows
+            ],
+            "direction_chains": [
+                {
+                    "group_segment": row.get("group_segment"),
+                    "direction_label": _resolve_group_direction_label(row),
+                    "leading_protective_factor": _first_factor_name(row.get("protective_factors")),
+                    "leading_dimension": _first_dimension_name(row.get("avg_dimension_scores")),
+                    "avg_risk_score": row.get("avg_risk_score"),
+                }
+                for row in group_rows
+            ],
+            "disclaimer": "去向真值暂未接入",
+        }
+
     def list_warnings(
         self,
         *,
@@ -676,6 +724,7 @@ def _build_dimension_summary_entry(item: Mapping[str, Any], score: float) -> dic
         "label",
         "metrics",
         "explanation",
+        "provenance",
     ):
         optional_value = item.get(optional_key)
         if optional_value is not None:
@@ -768,6 +817,40 @@ def _build_risk_band_distribution(rows: list[Mapping[str, Any]]) -> dict[str, in
 
 def _build_risk_factor_summary(rows: list[Mapping[str, Any]]) -> list[dict[str, Any]]:
     return _aggregate_warning_factors(rows, "top_risk_factors_json")
+
+
+def _build_risk_trend_summary(rows: list[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    stats: dict[str, dict[str, float]] = {}
+    for row in rows:
+        term_key = row.get("term_key")
+        if not isinstance(term_key, str) or not term_key:
+            continue
+        risk_probability = row.get("risk_probability")
+        if not isinstance(risk_probability, (int, float)):
+            continue
+        current = stats.get(term_key)
+        if current is None:
+            stats[term_key] = {
+                "student_count": 1.0,
+                "risk_probability_total": float(risk_probability),
+                "high_risk_count": 1.0 if _normalize_risk_level(row.get("risk_level")) == "高风险" else 0.0,
+            }
+            continue
+        current["student_count"] += 1.0
+        current["risk_probability_total"] += float(risk_probability)
+        if _normalize_risk_level(row.get("risk_level")) == "高风险":
+            current["high_risk_count"] += 1.0
+
+    rows_out = [
+        {
+            "term": term_key,
+            "avg_risk_score": round((values["risk_probability_total"] / values["student_count"]) * 100, 1),
+            "high_risk_count": int(values["high_risk_count"]),
+        }
+        for term_key, values in stats.items()
+    ]
+    rows_out.sort(key=lambda item: _sort_term_key({"term_key": item["term"]}))
+    return rows_out
 
 
 def _average_numeric(
@@ -957,10 +1040,29 @@ def _register_identity_aliases(
 
 
 def _merge_summary_fields(current: dict[str, Any], incoming: Mapping[str, Any]) -> None:
+    current_is_unavailable = _summary_item_is_unavailable(current)
+    incoming_is_unavailable = _summary_item_is_unavailable(incoming)
+
+    if current_is_unavailable and not incoming_is_unavailable:
+        for key in ("level", "label", "metrics", "explanation", "provenance"):
+            if key in incoming:
+                current[key] = incoming[key]
+    elif not current_is_unavailable and incoming_is_unavailable:
+        incoming = {
+            key: value
+            for key, value in incoming.items()
+            if key not in {"level", "label", "metrics", "explanation", "provenance"}
+        }
+
     for key, value in incoming.items():
         if key in {"importance", "total", "score_count"}:
             continue
-        if key not in current and not key.startswith("_"):
+        if key.startswith("_"):
+            continue
+        if key not in current:
+            current[key] = value
+            continue
+        if current[key] in (None, "", []) and value not in (None, "", []):
             current[key] = value
     current_aliases = _identity_aliases(current)
     incoming_aliases = incoming.get("_identity_aliases", [])
@@ -975,8 +1077,55 @@ def _merge_summary_fields(current: dict[str, Any], incoming: Mapping[str, Any]) 
         current["_identity_key"] = current.get("_identity_key") or _preferred_identity_key(current)
 
 
+def _summary_item_is_unavailable(item: Mapping[str, Any]) -> bool:
+    provenance = item.get("provenance")
+    if isinstance(provenance, Mapping) and provenance.get("is_unavailable") is True:
+        return True
+    return item.get("label") == "当前学期无有效数据"
+
+
 def _copy_public_fields(item: Mapping[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in item.items() if not key.startswith("_") and key != "total"}
+
+
+def _resolve_group_direction_label(row: Mapping[str, Any]) -> str:
+    protective_name = _first_factor_name(row.get("protective_factors"))
+    top_dimension = _first_factor_dimension(row.get("top_factors"))
+    if protective_name:
+        return f"偏向 {protective_name}"
+    if top_dimension:
+        return f"偏向 {top_dimension}"
+    return "方向特征待补充"
+
+
+def _first_factor_name(raw: Any) -> str | None:
+    if not isinstance(raw, list) or not raw:
+        return None
+    first = raw[0]
+    if not isinstance(first, Mapping):
+        return None
+    value = first.get("feature_cn") or first.get("feature")
+    return value if isinstance(value, str) and value else None
+
+
+def _first_factor_dimension(raw: Any) -> str | None:
+    if not isinstance(raw, list) or not raw:
+        return None
+    first = raw[0]
+    if not isinstance(first, Mapping):
+        return None
+    value = first.get("dimension")
+    return value if isinstance(value, str) and value else None
+
+
+def _first_dimension_name(raw: Any) -> str | None:
+    if not isinstance(raw, list) or not raw:
+        return None
+    first = raw[0]
+    if not isinstance(first, Mapping):
+        return None
+    value = first.get("dimension")
+    return value if isinstance(value, str) and value else None
 
 
 def _sort_term_key(row: Mapping[str, Any]) -> tuple[int, int, str]:

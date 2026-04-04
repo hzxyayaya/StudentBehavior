@@ -1,6 +1,7 @@
 import type {
   CalibratedDimensionScore,
   CalibratedFactor,
+  DevelopmentAnalysisData,
   DimensionMetric,
   DemoLoginData,
   Envelope,
@@ -11,6 +12,7 @@ import type {
   RiskLevel,
   StudentProfileData,
   StudentReportData,
+  TrajectoryAnalysisData,
   WarningFactor,
   WarningsData,
 } from './types'
@@ -71,6 +73,14 @@ export function getOverview(term: string) {
 
 export function getGroups(term: string) {
   return request<unknown>(`/analytics/groups?term=${encodeURIComponent(term)}`).then(normalizeGroupsData)
+}
+
+export function getTrajectoryAnalysis(term: string) {
+  return request<unknown>(`/analytics/trajectory?term=${encodeURIComponent(term)}`).then(normalizeTrajectoryAnalysisData)
+}
+
+export function getDevelopmentAnalysis(term: string) {
+  return request<unknown>(`/analytics/development?term=${encodeURIComponent(term)}`).then(normalizeDevelopmentAnalysisData)
 }
 
 export function getWarnings(params: {
@@ -238,6 +248,75 @@ function normalizeStudentProfileData(raw: unknown): StudentProfileData {
   const riskChangeExplanation = asOptionalString(data.risk_change_explanation)
   if (riskChangeExplanation !== undefined) profile.risk_change_explanation = riskChangeExplanation
   return profile
+}
+
+function normalizeTrajectoryAnalysisData(raw: unknown): TrajectoryAnalysisData {
+  const data = asRecord(raw)
+  return {
+    term: asString(data.term),
+    risk_trend_summary: normalizeRiskTrendSummary(data.risk_trend_summary),
+    key_factors: normalizeRiskFactorSummary(data.key_factors),
+    current_dimensions: normalizeCalibratedDimensions(data.current_dimensions),
+    group_changes: normalizeGroupsData({ groups: data.group_changes }).groups,
+    student_samples: normalizeWarningsData({
+      items: data.student_samples,
+      page: 1,
+      page_size: asArray(data.student_samples).length,
+      total: asArray(data.student_samples).length,
+    }).items,
+  }
+}
+
+function normalizeDevelopmentAnalysisData(raw: unknown): DevelopmentAnalysisData {
+  const data = asRecord(raw)
+  const groupDirectionSegments = asArray(data.group_direction_segments).map((item) => {
+    const row = asRecord(item)
+    const [normalized] = normalizeGroupsData({ groups: [row] }).groups
+    const segment: DevelopmentAnalysisData['group_direction_segments'][number] = {
+      group_segment: normalized?.group_segment ?? '',
+      student_count: normalized?.student_count ?? 0,
+      avg_risk_probability: normalized?.avg_risk_probability ?? 0,
+      avg_risk_score: normalized?.avg_risk_score ?? 0,
+      avg_dimension_scores: normalized?.avg_dimension_scores ?? [],
+      top_factors: normalized?.top_factors ?? [],
+      risk_amplifiers: normalized?.risk_amplifiers ?? [],
+      protective_factors: normalized?.protective_factors ?? [],
+    }
+    if (normalized?.avg_risk_level !== undefined) segment.avg_risk_level = normalized.avg_risk_level
+    if (normalized?.risk_change_summary !== undefined) segment.risk_change_summary = normalized.risk_change_summary
+    const directionLabel = asOptionalString(row.direction_label)
+    if (directionLabel !== undefined) segment.direction_label = directionLabel
+    return segment
+  })
+  return {
+    term: asString(data.term),
+    major_comparison: asArray(data.major_comparison).map((item) => {
+      const row = asRecord(item)
+      return {
+        major_name: asString(row.major_name),
+        high_risk_count: asNumber(row.high_risk_count),
+        student_count: asNumber(row.student_count),
+      }
+    }),
+    dimension_highlights: normalizeCalibratedDimensions(data.dimension_highlights),
+    group_direction_segments: groupDirectionSegments,
+    direction_chains: asArray(data.direction_chains).map((item) => {
+      const row = asRecord(item)
+      const chain: DevelopmentAnalysisData['direction_chains'][number] = {
+        group_segment: asString(row.group_segment),
+      }
+      const directionLabel = asOptionalString(row.direction_label)
+      if (directionLabel !== undefined) chain.direction_label = directionLabel
+      const leadingProtectiveFactor = asOptionalString(row.leading_protective_factor)
+      if (leadingProtectiveFactor !== undefined) chain.leading_protective_factor = leadingProtectiveFactor
+      const leadingDimension = asOptionalString(row.leading_dimension)
+      if (leadingDimension !== undefined) chain.leading_dimension = leadingDimension
+      const avgRiskScore = asOptionalNumber(row.avg_risk_score)
+      if (avgRiskScore !== undefined) chain.avg_risk_score = avgRiskScore
+      return chain
+    }),
+    disclaimer: asString(data.disclaimer),
+  }
 }
 
 function normalizeStudentReportData(raw: unknown): StudentReportData {

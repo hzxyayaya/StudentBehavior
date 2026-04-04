@@ -16,7 +16,16 @@ describe('router', () => {
     const router = createAppRouter()
     await router.push('/')
     await router.isReady()
-    expect(router.currentRoute.value.path).toBe('/overview')
+    expect(router.currentRoute.value.path).toBe('/risk')
+  })
+
+  it('keeps legacy overview route as an alias to risk task', async () => {
+    const auth = useAuthStore()
+    auth.signIn('demo-token', '演示管理员', '2024-2')
+    const router = createAppRouter()
+    await router.push('/overview')
+    await router.isReady()
+    expect(router.currentRoute.value.path).toBe('/risk')
   })
 
   it('sends unauthenticated users to login', async () => {
@@ -50,6 +59,6 @@ describe('router', () => {
     await flushPromises()
 
     expect(sessionStorage.getItem('demo-token')).toBe('local-demo-token')
-    expect(router.currentRoute.value.path).toBe('/warnings')
+    expect(router.currentRoute.value.path).toBe('/risk')
   })
 })

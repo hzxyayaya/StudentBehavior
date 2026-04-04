@@ -43,6 +43,8 @@ _LEVEL_EXPLANATION_SUFFIX = {
 _DIMENSION_EXPLANATION_SUFFIX = {
     "network_habits": "当前网络使用强度需结合聚合时长观察。",
 }
+_UNAVAILABLE_LABEL = "当前学期无有效数据"
+_UNAVAILABLE_REASON = "no_metrics"
 
 _MISSING_METRIC = object()
 
@@ -271,6 +273,8 @@ def _build_explanation(
     label: str,
     metrics: list[dict[str, object]],
 ) -> str:
+    if not metrics:
+        return f"{DIMENSION_LABELS[dimension_code]}当前学期无有效源表指标，暂不做该维度判定。"
     evidence_metrics = _primary_evidence_metrics(dimension_code, metrics)
     metric_text = "、".join(
         f"{metric['label']} {_format_metric_value(metric['value'])}" for metric in evidence_metrics
@@ -308,11 +312,15 @@ def _dimension_provenance(metrics: list[dict[str, object]]) -> dict[str, object]
                 has_caveated_metrics = True
         if "caveat" in metric:
             has_caveated_metrics = True
-    return {
+    provenance = {
         "has_caveated_metrics": has_caveated_metrics,
         "has_deferred_metrics": has_deferred_metrics,
         "threshold_strategies": threshold_strategies,
     }
+    if not metrics:
+        provenance["is_unavailable"] = True
+        provenance["unavailable_reason"] = _UNAVAILABLE_REASON
+    return provenance
 
 
 def _dimension_score_map(row: Mapping[str, object]) -> dict[str, float]:
@@ -365,7 +373,7 @@ def build_dimension_scores(row: Mapping[str, object]) -> list[dict[str, object]]
         metrics, metric_scores = _build_metrics(dimension_code, row)
         score = _aggregate_dimension_score(metric_scores)
         level = _score_level(score)
-        label = _DIMENSION_BUSINESS_LABELS[dimension_code][level]
+        label = _UNAVAILABLE_LABEL if not metrics else _DIMENSION_BUSINESS_LABELS[dimension_code][level]
         dimension_scores.append(
             {
                 "dimension": DIMENSION_LABELS[dimension_code],

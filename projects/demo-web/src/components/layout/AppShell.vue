@@ -3,9 +3,10 @@
     <aside class="side-nav">
       <div class="brand">学生行为检测系统</div>
       <nav class="nav">
-        <RouterLink class="nav-link" to="/overview">总览</RouterLink>
-        <RouterLink class="nav-link" to="/groups">群体分层</RouterLink>
-        <RouterLink class="nav-link" to="/warnings">风险预警</RouterLink>
+        <RouterLink class="nav-link" to="/risk">学业风险动态感知与预警</RouterLink>
+        <RouterLink class="nav-link" to="/trajectory">学业轨迹演化与关键行为分析</RouterLink>
+        <RouterLink class="nav-link" to="/profiles">学生个体画像与群体分层分析</RouterLink>
+        <RouterLink class="nav-link" to="/development">发展方向与去向关联分析</RouterLink>
       </nav>
     </aside>
     <main class="main">

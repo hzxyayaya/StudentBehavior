@@ -2,9 +2,9 @@
   <AppShell>
     <section class="panel">
       <div class="panel-inner stack">
-        <p class="eyebrow">风险预警</p>
-        <h2 class="title">预警列表</h2>
-        <p class="muted">按真实联调学期筛选中高风险学生，并支持继续下钻到学生个体页。</p>
+        <p class="eyebrow">学业风险动态感知与预警</p>
+        <h2 class="title">风险预警列表</h2>
+        <p class="muted">按学业结果主导、行为表现调节的规则输出四档风险学生，并支持继续下钻到学生个体页。</p>
         <div class="filters">
           <select :value="term" class="select" @change="handleTermChange">
             <option v-for="item in AVAILABLE_TERMS" :key="item" :value="item">{{ item }}</option>
