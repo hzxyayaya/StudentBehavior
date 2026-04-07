@@ -53,7 +53,12 @@ class DemoApiStore:
             if row["term_key"] == term
         ]
 
-        if term != self._overview_term:
+        payload_student_count = payload.get("student_count")
+        should_use_term_fallback = term != self._overview_term
+        if isinstance(payload_student_count, int) and payload_student_count != len(term_rows):
+            should_use_term_fallback = True
+
+        if should_use_term_fallback:
             payload = _build_term_aware_overview_fallback(payload, term, term_rows)
         elif "dimension_summary" not in payload or _is_sparse_dimension_summary(payload.get("dimension_summary")):
             term_dimension_summary = _build_average_dimension_scores(term_rows)
@@ -85,6 +90,16 @@ class DemoApiStore:
             "student_name": current_row.get("student_name"),
             "major_name": current_row.get("major_name"),
             "group_segment": current_row.get("group_segment"),
+            "term_gpa": _as_float(current_row.get("term_gpa")),
+            "failed_course_count": _as_float(current_row.get("failed_course_count")),
+            "borderline_course_count": _as_float(current_row.get("borderline_course_count")),
+            "failed_course_ratio": _as_float(current_row.get("failed_course_ratio")),
+            "academic_risk_score": _as_float(current_row.get("academic_risk_score")),
+            "academic_risk_level": current_row.get("academic_risk_level"),
+            "behavior_risk_score": _as_float(current_row.get("behavior_risk_score")),
+            "behavior_risk_level": current_row.get("behavior_risk_level"),
+            "intervention_priority_score": _as_float(current_row.get("intervention_priority_score")),
+            "intervention_priority_level": current_row.get("intervention_priority_level"),
             "risk_level": current_row.get("risk_level"),
             "risk_probability": current_row.get("risk_probability"),
             "base_risk_score": _as_float(current_row.get("base_risk_score")),
@@ -130,6 +145,7 @@ class DemoApiStore:
             raise KeyError((student_id, term))
 
         return {
+            "term": term,
             "top_factors": _parse_json_field(current_row.get("top_factors"), field_name="top_factors"),
             "intervention_advice": _parse_json_field(
                 current_row.get("intervention_advice"), field_name="intervention_advice"
@@ -149,6 +165,12 @@ class DemoApiStore:
                 current_row.get("intervention_plan"), field_name="intervention_plan"
             ),
             "risk_level": current_warning.get("risk_level"),
+            "academic_risk_score": _as_float(current_warning.get("academic_risk_score")),
+            "academic_risk_level": current_warning.get("academic_risk_level"),
+            "behavior_risk_score": _as_float(current_warning.get("behavior_risk_score")),
+            "behavior_risk_level": current_warning.get("behavior_risk_level"),
+            "intervention_priority_score": _as_float(current_warning.get("intervention_priority_score")),
+            "intervention_priority_level": current_warning.get("intervention_priority_level"),
             "risk_probability": current_warning.get("risk_probability"),
             "base_risk_score": _as_float(current_warning.get("base_risk_score")),
             "risk_adjustment_score": _as_float(current_warning.get("risk_adjustment_score")),
@@ -284,9 +306,11 @@ class DemoApiStore:
         overview = self.get_overview(term)
         groups = self.get_groups(term=term)
         group_rows = groups.get("groups", [])
+        warning_rows = _load_warning_rows(self._warnings_path or _resolve_warning_artifact_path(self._repo_root))
+        term_rows = [row for row in warning_rows if row.get("term_key") == term]
         return {
             "term": term,
-            "major_comparison": overview.get("major_risk_summary", []),
+            "major_comparison": _build_major_risk_summary(term_rows),
             "dimension_highlights": overview.get("dimension_summary", []),
             "group_direction_segments": [
                 {
@@ -430,7 +454,13 @@ class DemoApiStore:
             row
             for row in warning_rows
             if row["term_key"] == term
-            and (allowed_levels is None or _normalize_risk_level(row.get("risk_level")) in allowed_levels)
+            and (
+                allowed_levels is None
+                or _normalize_risk_level(
+                    row.get("intervention_priority_level") or row.get("risk_level")
+                )
+                in allowed_levels
+            )
             and (group_segment is None or row["group_segment"] == group_segment)
             and (major_name is None or row["major_name"] == major_name)
             and (
@@ -438,7 +468,15 @@ class DemoApiStore:
                 or row.get("risk_change_direction") == risk_change_direction
             )
         ]
-        filtered_rows.sort(key=lambda row: (-row["risk_probability"], row["student_id"]))
+        filtered_rows.sort(
+            key=lambda row: (
+                -_warning_level_priority(
+                    row.get("intervention_priority_level") or row.get("risk_level")
+                ),
+                -_as_float(row.get("intervention_priority_score") or row.get("adjusted_risk_score") or row.get("risk_probability")) if _as_float(row.get("intervention_priority_score") or row.get("adjusted_risk_score") or row.get("risk_probability")) is not None else float("inf"),
+                row["student_id"],
+            )
+        )
 
         start_index = (page - 1) * page_size
         end_index = start_index + page_size
@@ -449,6 +487,16 @@ class DemoApiStore:
                 "major_name": row.get("major_name"),
                 "group_segment": row.get("group_segment"),
                 "risk_probability": row.get("risk_probability"),
+                "term_gpa": _as_float(row.get("term_gpa")),
+                "failed_course_count": _as_float(row.get("failed_course_count")),
+                "borderline_course_count": _as_float(row.get("borderline_course_count")),
+                "failed_course_ratio": _as_float(row.get("failed_course_ratio")),
+                "academic_risk_score": _as_float(row.get("academic_risk_score")),
+                "academic_risk_level": row.get("academic_risk_level"),
+                "behavior_risk_score": _as_float(row.get("behavior_risk_score")),
+                "behavior_risk_level": row.get("behavior_risk_level"),
+                "intervention_priority_score": _as_float(row.get("intervention_priority_score")),
+                "intervention_priority_level": row.get("intervention_priority_level"),
                 "base_risk_score": _as_float(row.get("base_risk_score")),
                 "risk_adjustment_score": _as_float(row.get("risk_adjustment_score")),
                 "adjusted_risk_score": _as_float(row.get("adjusted_risk_score")),
@@ -856,7 +904,9 @@ def _build_major_risk_summary(rows: list[Mapping[str, Any]]) -> list[dict[str, A
     stats: dict[str, dict[str, float]] = {}
     for row in rows:
         major_name = row.get("major_name")
-        risk_level = _normalize_risk_level(row.get("risk_level")) or row.get("risk_level")
+        risk_level = _normalize_risk_level(
+            row.get("intervention_priority_level") or row.get("risk_level")
+        ) or row.get("intervention_priority_level") or row.get("risk_level")
         risk_probability = row.get("risk_probability")
         if not isinstance(major_name, str) or not major_name:
             continue
@@ -868,25 +918,37 @@ def _build_major_risk_summary(rows: list[Mapping[str, Any]]) -> list[dict[str, A
                 "student_count": 1.0,
                 "high_risk_count": 1.0 if risk_level == "高风险" else 0.0,
                 "risk_probability_total": float(risk_probability),
+                "elevated_risk_count": 1.0 if _warning_level_priority(risk_level) >= 3 else 0.0,
             }
             continue
         current["student_count"] += 1.0
         current["risk_probability_total"] += float(risk_probability)
         if risk_level == "高风险":
             current["high_risk_count"] += 1.0
+        if _warning_level_priority(risk_level) >= 3:
+            current["elevated_risk_count"] += 1.0
 
     summaries = [
         {
             "major_name": major_name,
             "student_count": int(values["student_count"]),
             "high_risk_count": int(values["high_risk_count"]),
+            "elevated_risk_count": int(values["elevated_risk_count"]),
+            "elevated_risk_ratio": round(values["elevated_risk_count"] / values["student_count"], 4),
             "average_risk_probability": round(
                 values["risk_probability_total"] / values["student_count"], 2
             ),
         }
         for major_name, values in stats.items()
     ]
-    summaries.sort(key=lambda item: item["major_name"])
+    summaries.sort(
+        key=lambda item: (
+            -item["elevated_risk_ratio"],
+            -item["elevated_risk_count"],
+            -item["average_risk_probability"],
+            item["major_name"],
+        )
+    )
     return summaries
 
 
@@ -926,6 +988,9 @@ def _build_risk_trend_summary(rows: list[Mapping[str, Any]]) -> list[dict[str, A
         risk_probability = row.get("risk_probability")
         if not isinstance(risk_probability, (int, float)):
             continue
+        normalized_level = _normalize_risk_level(
+            row.get("intervention_priority_level") or row.get("risk_level")
+        )
         current = stats.get(term_key)
         if current is None:
             stats[term_key] = {
@@ -933,17 +998,21 @@ def _build_risk_trend_summary(rows: list[Mapping[str, Any]]) -> list[dict[str, A
                 "risk_probability_total": float(risk_probability),
                 "high_risk_count": 1.0 if _normalize_risk_level(row.get("risk_level")) == "高风险" else 0.0,
             }
+            stats[term_key]["elevated_risk_count"] = 1.0 if _warning_level_priority(normalized_level) >= 3 else 0.0
             continue
         current["student_count"] += 1.0
         current["risk_probability_total"] += float(risk_probability)
         if _normalize_risk_level(row.get("risk_level")) == "高风险":
             current["high_risk_count"] += 1.0
+        if _warning_level_priority(normalized_level) >= 3:
+            current["elevated_risk_count"] += 1.0
 
     rows_out = [
         {
             "term": term_key,
             "avg_risk_score": round((values["risk_probability_total"] / values["student_count"]) * 100, 1),
             "high_risk_count": int(values["high_risk_count"]),
+            "elevated_risk_count": int(values["elevated_risk_count"]),
         }
         for term_key, values in stats.items()
     ]
@@ -1065,6 +1134,17 @@ def _risk_level_severity(level: str) -> int:
     return -1
 
 
+def _warning_level_priority(level: Any) -> int:
+    normalized = _normalize_risk_level(level)
+    order = {
+        "高风险": 4,
+        "较高风险": 3,
+        "一般风险": 2,
+        "低风险": 1,
+    }
+    return order.get(normalized or "", 0)
+
+
 def _finalize_dimension_summary(value: Mapping[str, Any]) -> dict[str, Any]:
     summary = _copy_public_fields(value)
     summary["average_score"] = round(float(value["total"]) / int(value["score_count"]), 2)
@@ -1077,9 +1157,9 @@ def _resolve_allowed_risk_levels(risk_level: str | None) -> set[str] | None:
         return None
     normalized = _normalize_risk_level(risk_level) or risk_level
     if normalized == "高风险":
-        if risk_level == "较高风险":
-            return {"较高风险"}
-        return {"高风险", "较高风险"}
+        return {"高风险"}
+    if normalized == "较高风险":
+        return {"较高风险"}
     if normalized == "一般风险":
         return {"一般风险"}
     if normalized == "低风险":

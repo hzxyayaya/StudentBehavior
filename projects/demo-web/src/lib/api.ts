@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   CalibratedDimensionScore,
   CalibratedFactor,
   DevelopmentAnalysisData,
@@ -120,6 +120,50 @@ export function getModelSummary(term: string) {
   return request<ModelSummaryData>(`/models/summary?term=${encodeURIComponent(term)}`)
 }
 
+export function getResultIndividualProfile(studentId: string, term: string) {
+  return request<Record<string, unknown>>(
+    `/results/individual-profile?student_id=${encodeURIComponent(studentId)}&term=${encodeURIComponent(term)}`,
+  )
+}
+
+export function getResultGroupProfile(term: string) {
+  return request<Record<string, unknown>>(`/results/group-profile?term=${encodeURIComponent(term)}`)
+}
+
+export function getResultBehaviorPatterns(term: string) {
+  return request<Record<string, unknown>>(`/results/behavior-patterns?term=${encodeURIComponent(term)}`)
+}
+
+export function getResultRiskProbability(term: string) {
+  return request<Record<string, unknown>>(`/results/risk-probability?term=${encodeURIComponent(term)}`)
+}
+
+export function getResultRiskWarningLevel(term: string) {
+  return request<Record<string, unknown>>(`/results/risk-warning-level?term=${encodeURIComponent(term)}`)
+}
+
+export function getResultKeyFactors(term: string) {
+  return request<Record<string, unknown>>(`/results/key-factors?term=${encodeURIComponent(term)}`)
+}
+
+export function getResultInterventionAdvice(studentId: string, term: string) {
+  return request<Record<string, unknown>>(
+    `/results/intervention-advice?student_id=${encodeURIComponent(studentId)}&term=${encodeURIComponent(term)}`,
+  )
+}
+
+export function getResultTermTrend(term: string) {
+  return request<Record<string, unknown>>(`/results/term-trend?term=${encodeURIComponent(term)}`)
+}
+
+export function getResultMajorComparison(term: string) {
+  return request<Record<string, unknown>>(`/results/major-comparison?term=${encodeURIComponent(term)}`)
+}
+
+export function getResultModelSummary(term: string) {
+  return request<Record<string, unknown>>(`/results/model-summary?term=${encodeURIComponent(term)}`)
+}
+
 function normalizeOverviewData(raw: unknown): OverviewData {
   const data = asRecord(raw)
 
@@ -134,7 +178,10 @@ function normalizeOverviewData(raw: unknown): OverviewData {
       return {
         major_name: asString(row.major_name),
         high_risk_count: asNumber(row.high_risk_count),
+        elevated_risk_count: asOptionalNumber(row.elevated_risk_count),
+        elevated_risk_ratio: asOptionalNumber(row.elevated_risk_ratio),
         student_count: asNumber(row.student_count),
+        average_risk_probability: asOptionalNumber(row.average_risk_probability),
       }
     }),
     trend_summary: normalizeTrendSummary(data.trend_summary),
@@ -182,8 +229,28 @@ function normalizeWarningsData(raw: unknown): WarningsData {
         top_risk_factors: normalizeWarningFactors(row.top_risk_factors),
         top_protective_factors: normalizeWarningFactors(row.top_protective_factors),
       }
+      const termGpa = asOptionalNumber(row.term_gpa)
+      if (termGpa !== undefined) warning.term_gpa = termGpa
+      const failedCourseCount = asOptionalNumber(row.failed_course_count)
+      if (failedCourseCount !== undefined) warning.failed_course_count = failedCourseCount
+      const borderlineCourseCount = asOptionalNumber(row.borderline_course_count)
+      if (borderlineCourseCount !== undefined) warning.borderline_course_count = borderlineCourseCount
+      const failedCourseRatio = asOptionalNumber(row.failed_course_ratio)
+      if (failedCourseRatio !== undefined) warning.failed_course_ratio = failedCourseRatio
       const baseRiskScore = asOptionalNumber(row.base_risk_score)
       if (baseRiskScore !== undefined) warning.base_risk_score = baseRiskScore
+      const academicRiskScore = asOptionalNumber(row.academic_risk_score)
+      if (academicRiskScore !== undefined) warning.academic_risk_score = academicRiskScore
+      const academicRiskLevel = asOptionalRiskLevel(row.academic_risk_level)
+      if (academicRiskLevel !== undefined) warning.academic_risk_level = academicRiskLevel
+      const behaviorRiskScore = asOptionalNumber(row.behavior_risk_score)
+      if (behaviorRiskScore !== undefined) warning.behavior_risk_score = behaviorRiskScore
+      const behaviorRiskLevel = asOptionalRiskLevel(row.behavior_risk_level)
+      if (behaviorRiskLevel !== undefined) warning.behavior_risk_level = behaviorRiskLevel
+      const interventionPriorityScore = asOptionalNumber(row.intervention_priority_score)
+      if (interventionPriorityScore !== undefined) warning.intervention_priority_score = interventionPriorityScore
+      const interventionPriorityLevel = asOptionalRiskLevel(row.intervention_priority_level)
+      if (interventionPriorityLevel !== undefined) warning.intervention_priority_level = interventionPriorityLevel
       const riskAdjustmentScore = asOptionalNumber(row.risk_adjustment_score)
       if (riskAdjustmentScore !== undefined) warning.risk_adjustment_score = riskAdjustmentScore
       const adjustedRiskScore = asOptionalNumber(row.adjusted_risk_score)
@@ -231,8 +298,28 @@ function normalizeStudentProfileData(raw: unknown): StudentProfileData {
       return trendRow
     }),
   }
+  const termGpa = asOptionalNumber(data.term_gpa)
+  if (termGpa !== undefined) profile.term_gpa = termGpa
+  const failedCourseCount = asOptionalNumber(data.failed_course_count)
+  if (failedCourseCount !== undefined) profile.failed_course_count = failedCourseCount
+  const borderlineCourseCount = asOptionalNumber(data.borderline_course_count)
+  if (borderlineCourseCount !== undefined) profile.borderline_course_count = borderlineCourseCount
+  const failedCourseRatio = asOptionalNumber(data.failed_course_ratio)
+  if (failedCourseRatio !== undefined) profile.failed_course_ratio = failedCourseRatio
   const baseRiskScore = asOptionalNumber(data.base_risk_score)
   if (baseRiskScore !== undefined) profile.base_risk_score = baseRiskScore
+  const academicRiskScore = asOptionalNumber(data.academic_risk_score)
+  if (academicRiskScore !== undefined) profile.academic_risk_score = academicRiskScore
+  const academicRiskLevel = asOptionalRiskLevel(data.academic_risk_level)
+  if (academicRiskLevel !== undefined) profile.academic_risk_level = academicRiskLevel
+  const behaviorRiskScore = asOptionalNumber(data.behavior_risk_score)
+  if (behaviorRiskScore !== undefined) profile.behavior_risk_score = behaviorRiskScore
+  const behaviorRiskLevel = asOptionalRiskLevel(data.behavior_risk_level)
+  if (behaviorRiskLevel !== undefined) profile.behavior_risk_level = behaviorRiskLevel
+  const interventionPriorityScore = asOptionalNumber(data.intervention_priority_score)
+  if (interventionPriorityScore !== undefined) profile.intervention_priority_score = interventionPriorityScore
+  const interventionPriorityLevel = asOptionalRiskLevel(data.intervention_priority_level)
+  if (interventionPriorityLevel !== undefined) profile.intervention_priority_level = interventionPriorityLevel
   const riskAdjustmentScore = asOptionalNumber(data.risk_adjustment_score)
   if (riskAdjustmentScore !== undefined) profile.risk_adjustment_score = riskAdjustmentScore
   const adjustedRiskScore = asOptionalNumber(data.adjusted_risk_score)
@@ -295,7 +382,10 @@ function normalizeDevelopmentAnalysisData(raw: unknown): DevelopmentAnalysisData
       return {
         major_name: asString(row.major_name),
         high_risk_count: asNumber(row.high_risk_count),
+        elevated_risk_count: asOptionalNumber(row.elevated_risk_count),
+        elevated_risk_ratio: asOptionalNumber(row.elevated_risk_ratio),
         student_count: asNumber(row.student_count),
+        average_risk_probability: asOptionalNumber(row.average_risk_probability),
       }
     }),
     dimension_highlights: normalizeCalibratedDimensions(data.dimension_highlights),
@@ -327,6 +417,8 @@ function normalizeStudentReportData(raw: unknown): StudentReportData {
     report_text: asString(data.report_text),
   }
   const baseRiskExplanation = asOptionalString(data.base_risk_explanation)
+  const reportTerm = asOptionalString(data.term)
+  if (reportTerm !== undefined) report.term = reportTerm
   if (baseRiskExplanation !== undefined) report.base_risk_explanation = baseRiskExplanation
   const behaviorAdjustmentExplanation = asOptionalString(data.behavior_adjustment_explanation)
   if (behaviorAdjustmentExplanation !== undefined) report.behavior_adjustment_explanation = behaviorAdjustmentExplanation
@@ -449,9 +541,9 @@ function normalizeRiskDistribution(raw: unknown) {
     })
   }
   const record = asRecord(raw)
-  const localizedHigh = asNumber(record['高风险']) + asNumber(record['较高风险'])
-  const localizedMedium = asNumber(record['一般风险'])
-  const localizedLow = asNumber(record['低风险'])
+  const localizedHigh = asNumber(record['high']) + asNumber(record['高风险']) + asNumber(record['较高风险'])
+  const localizedMedium = asNumber(record['medium']) + asNumber(record['一般风险'])
+  const localizedLow = asNumber(record['low']) + asNumber(record['低风险'])
   if (localizedHigh || localizedMedium || localizedLow) {
     return [
       { risk_level: 'high' as const, count: localizedHigh },
@@ -468,10 +560,10 @@ function normalizeRiskDistribution(raw: unknown) {
 function normalizeRiskBandDistribution(raw: unknown) {
   const record = asRecord(raw)
   return {
-    高风险: asNumber(record['高风险']),
+    高风险: asNumber(record['高风险']) + asNumber(record['high']),
     较高风险: asNumber(record['较高风险']),
-    一般风险: asNumber(record['一般风险']),
-    低风险: asNumber(record['低风险']),
+    一般风险: asNumber(record['一般风险']) + asNumber(record['medium']),
+    低风险: asNumber(record['低风险']) + asNumber(record['low']),
   }
 }
 
@@ -521,6 +613,7 @@ function normalizeRiskTrendSummary(raw: unknown) {
       asNumber(riskDistribution.high) +
       asNumber(riskDistribution['高风险']) +
       asNumber(riskDistribution['较高风险'])
+    const elevatedRiskCount = asOptionalNumber(row.elevated_risk_count) ?? highRiskCount
     const avgRiskScore =
       asOptionalNumber(row.avg_risk_score) ??
       ((asOptionalNumber(row.average_risk_probability) ?? asOptionalNumber(row.avg_risk_probability) ?? 0) * 100)
@@ -529,6 +622,7 @@ function normalizeRiskTrendSummary(raw: unknown) {
       avg_risk_score: avgRiskScore,
       high_risk_count: highRiskCount,
     }
+    if (elevatedRiskCount !== undefined) summary.elevated_risk_count = elevatedRiskCount
     const riskChangeDirection = asOptionalRiskChangeDirection(row.risk_change_direction)
     if (riskChangeDirection !== undefined) summary.risk_change_direction = riskChangeDirection
     return summary
@@ -595,7 +689,7 @@ function normalizeCalibratedFactor(raw: unknown): CalibratedFactor {
       asOptionalString(row.explanation) ||
       (count !== undefined || importance !== undefined
         ? `${dimension} 是当前重点关注维度，${buildFactorExplanation(count, importance)}`
-        : `${dimension} 是当前重点关注维度`),
+        : `${dimension} 是当前重点关注维度。`),
     direction,
     impact: impact ?? importance ?? 0,
   }
@@ -638,7 +732,7 @@ function buildFactorExplanation(count?: number, importance?: number) {
   if (count !== undefined && importance !== undefined) return `覆盖 ${count} 人，重要度 ${importance.toFixed(2)}`
   if (count !== undefined) return `覆盖 ${count} 人`
   if (importance !== undefined) return `重要度 ${importance.toFixed(2)}`
-  return '当前群体的主要影响因子'
+  return '当前群体的主要影响因素'
 }
 
 function asArray(value: unknown) {
@@ -694,3 +788,4 @@ function asOptionalRiskLevel(value: unknown): RiskLevel | undefined {
 function asOptionalRiskChangeDirection(value: unknown): RiskChangeDirection | undefined {
   return value === 'rising' || value === 'steady' || value === 'falling' ? value : undefined
 }
+

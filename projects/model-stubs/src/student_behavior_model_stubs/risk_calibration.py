@@ -116,6 +116,28 @@ def compute_risk_adjustment_score(
     return round(adjustment, 2)
 
 
+def compute_behavior_risk_score(
+    row: Mapping[str, object],
+    dimension_scores: Sequence[Mapping[str, object]],
+) -> float:
+    non_academic_scores: list[float] = []
+    for item in dimension_scores:
+        dimension_code = str(item.get("dimension_code", ""))
+        if dimension_code == "academic_base":
+            continue
+        if not _has_usable_evidence(row, dimension_code):
+            continue
+        score = _dimension_score(item)
+        if score is not None:
+            non_academic_scores.append(score)
+
+    if not non_academic_scores:
+        return 0.0
+
+    average_score = sum(non_academic_scores) / len(non_academic_scores)
+    return round(_clamp((1.0 - average_score) * 100.0, _MIN_SCORE, _MAX_SCORE), 2)
+
+
 def compute_adjusted_risk_score(base_risk_score: float, risk_adjustment_score: float) -> float:
     return round(_clamp(base_risk_score + risk_adjustment_score, _MIN_SCORE, _MAX_SCORE), 2)
 
@@ -161,7 +183,12 @@ def build_risk_calibration(
 ) -> dict[str, object]:
     base_risk_score = compute_base_risk_score(row)
     risk_adjustment_score = compute_risk_adjustment_score(row, dimension_scores)
+    behavior_risk_score = compute_behavior_risk_score(row, dimension_scores)
     adjusted_risk_score = compute_adjusted_risk_score(base_risk_score, risk_adjustment_score)
+    intervention_priority_score = round(
+        _clamp(max(base_risk_score, behavior_risk_score, adjusted_risk_score), _MIN_SCORE, _MAX_SCORE),
+        2,
+    )
     previous_adjusted_risk_score = _previous_adjusted_risk_score(row)
     if previous_adjusted_risk_score is None:
         risk_delta = 0.0
@@ -172,8 +199,14 @@ def build_risk_calibration(
 
     return {
         "base_risk_score": base_risk_score,
+        "academic_risk_score": base_risk_score,
+        "academic_risk_level": map_adjusted_risk_level(base_risk_score),
+        "behavior_risk_score": behavior_risk_score,
+        "behavior_risk_level": map_adjusted_risk_level(behavior_risk_score),
         "risk_adjustment_score": risk_adjustment_score,
         "adjusted_risk_score": adjusted_risk_score,
+        "intervention_priority_score": intervention_priority_score,
+        "intervention_priority_level": map_adjusted_risk_level(intervention_priority_score),
         "risk_level": map_adjusted_risk_level(adjusted_risk_score),
         "risk_delta": risk_delta,
         "risk_change_direction": risk_change_direction,

@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="student-page">
     <section class="panel header-panel">
       <div class="panel-inner header-inner">
@@ -6,129 +6,168 @@
         <div class="title-wrap">
           <h1>{{ profile?.student_name || studentId }}</h1>
           <p class="muted">{{ profile?.major_name || '学生详情' }}</p>
+          <div v-if="availableTerms.length" class="term-switch">
+            <button
+              v-for="item in availableTerms"
+              :key="item"
+              type="button"
+              class="term-switch-btn"
+              :class="{ active: item === term }"
+              :disabled="isSwitchingTerm && item === pendingTerm"
+              @click="setStudentTerm(item)"
+            >
+              {{ isSwitchingTerm && item === pendingTerm ? '切换中...' : item }}
+            </button>
+          </div>
         </div>
         <div class="tag-row" v-if="profile">
           <span class="tag">{{ term }}</span>
-          <span class="tag" :class="riskTagClass">{{ riskLabel(profile.risk_level) }}</span>
+          <span class="tag" :class="riskTagClass">{{ riskLabel(profile.intervention_priority_level ?? profile.risk_level) }}</span>
           <span class="tag">{{ profile.group_segment }}</span>
         </div>
       </div>
     </section>
 
-    <LoadingState v-if="profileQuery.isLoading.value || reportQuery.isLoading.value" label="正在加载学生详情..." />
-    <ErrorState v-else-if="errorMessage" title="学生详情加载失败" :description="errorMessage" @retry="retry" />
-    <EmptyState v-else-if="!profile || !report" title="暂无学生详情数据" description="请切换学期后重试" />
-    <template v-else>
-      <section class="grid-3">
-        <article class="card-kpi panel">
-          <div class="muted">风险等级</div>
-          <div class="kpi-value" :class="riskClass">{{ riskLabel(profile.risk_level) }}</div>
+    <section v-if="profile" class="panel academic-panel">
+      <div class="panel-inner">
+        <div class="academic-strip">
+          <div class="academic-chip">
+            <span class="academic-chip-label">GPA</span>
+            <strong class="academic-chip-value">
+              <span>{{ formatAcademicValue(profile.term_gpa, 2) }}</span>
+              <small class="academic-chip-unit">/4.5</small>
+            </strong>
+          </div>
+          <div class="academic-chip">
+            <span class="academic-chip-label">挂科数</span>
+            <strong class="academic-chip-value">
+              <span>{{ formatAcademicCount(profile.failed_course_count) }}</span>
+              <small class="academic-chip-unit">门</small>
+            </strong>
+          </div>
+          <div class="academic-chip">
+            <span class="academic-chip-label">临界数</span>
+            <strong class="academic-chip-value">
+              <span>{{ formatAcademicCount(profile.borderline_course_count) }}</span>
+              <small class="academic-chip-unit">门</small>
+            </strong>
+          </div>
+          <div class="academic-chip">
+            <span class="academic-chip-label">挂科占比</span>
+            <strong class="academic-chip-value">
+              <span>{{ formatAcademicRatio(profile.failed_course_ratio).replace('%', '') }}</span>
+              <small v-if="formatAcademicRatio(profile.failed_course_ratio).includes('%')" class="academic-chip-unit">%</small>
+            </strong>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <Transition name="overview-stage">
+      <LoadingState
+        v-if="isInitialLoading"
+        key="loading"
+        label="正在加载学生详情..."
+      />
+      <ErrorState
+        v-else-if="errorMessage"
+        key="error"
+        title="学生详情加载失败"
+        :description="errorMessage"
+        @retry="retry"
+      />
+      <EmptyState v-else-if="!profile || !report" key="empty" title="暂无学生详情数据" description="请切换学期后重试" />
+
+      <div v-else key="content">
+        <section class="profile-main-row stage stage-1">
+        <article class="panel summary-panel">
+          <div class="panel-inner stack">
+            <h3>风险概览</h3>
+            <div class="summary-metrics-grid">
+              <div class="metric-card">
+                <span class="muted">干预优先级</span>
+                <strong :class="riskClass">{{ riskLabel(profile.intervention_priority_level ?? profile.risk_level) }}</strong>
+              </div>
+              <div class="metric-card">
+                <span class="muted">学业风险</span>
+                <strong>{{ riskLabel(profile.academic_risk_level ?? profile.risk_level) }}</strong>
+              </div>
+              <div class="metric-card">
+                <span class="muted">行为风险</span>
+                <strong>{{ riskLabel(profile.behavior_risk_level ?? profile.risk_level) }}</strong>
+              </div>
+              <div class="metric-card">
+                <span class="muted">干预分级分</span>
+                <strong>{{ formatRiskScore(profile.intervention_priority_score ?? report.adjusted_risk_score ?? profile.adjusted_risk_score) }}</strong>
+              </div>
+              <div class="metric-card">
+                <span class="muted">风险概率</span>
+                <strong>{{ formatRisk(profile.risk_probability) }}</strong>
+              </div>
+              <div class="metric-card">
+                <span class="muted">风险变化</span>
+                <strong>{{ formatSignedRisk(report.risk_delta ?? profile.risk_delta) }}</strong>
+              </div>
+            </div>
+          </div>
         </article>
-        <article class="card-kpi panel">
-          <div class="muted">风险分</div>
-          <div class="kpi-value">{{ formatRiskScore(report.adjusted_risk_score ?? profile.adjusted_risk_score) }}</div>
-        </article>
-        <article class="card-kpi panel">
-          <div class="muted">风险变化</div>
-          <div class="kpi-value">{{ formatSignedRisk(report.risk_delta ?? profile.risk_delta) }}</div>
+
+        <article class="panel radar-panel">
+          <div class="panel-inner stack">
+            <div class="panel-head">
+              <h3>八维评分雷达</h3>
+              <button class="btn secondary detail-toggle" type="button" @click="showRadarDetails = !showRadarDetails">
+                {{ showRadarDetails ? '收起' : '详情' }}
+              </button>
+            </div>
+            <EChart v-if="!showRadarDetails" :option="dimensionRadarOption" height="340px" />
+            <div v-else class="radar-detail-grid">
+              <article v-for="item in simplifiedDimensionRows" :key="item.dimension" class="radar-detail-item">
+                <div class="radar-detail-head">
+                  <strong>{{ item.dimension }}</strong>
+                  <span class="tag" :class="detailDimensionTagClass(item.level)">{{ detailDimensionLevelText(item.level) }}</span>
+                </div>
+                <div class="radar-detail-meta">
+                  <span>{{ Math.round(item.score * 100) }}分</span>
+                  <span class="muted">{{ item.label ?? '待补充' }}</span>
+                </div>
+              </article>
+            </div>
+          </div>
         </article>
       </section>
 
-      <section class="grid-3 detail-grid">
-        <article class="card-kpi panel">
-          <div class="muted">风险概率</div>
-          <div class="kpi-value">{{ formatRisk(profile.risk_probability) }}</div>
-        </article>
-        <article class="card-kpi panel">
-          <div class="muted">所属群体标签</div>
-          <div class="kpi-value">{{ profile.group_segment }}</div>
-        </article>
-        <article class="card-kpi panel">
-          <div class="muted">变化方向</div>
-          <div class="kpi-value">{{ riskChangeText(report.risk_change_direction ?? profile.risk_change_direction) }}</div>
-        </article>
-      </section>
-
-      <section class="grid-2 detail-grid">
+      <section class="profile-third-row stage stage-2">
         <article class="panel">
-          <div class="panel-inner">
+          <div class="panel-inner stack">
             <h3>学期趋势</h3>
             <EChart :option="trendLineOption" height="300px" />
           </div>
         </article>
 
-        <article class="panel">
-          <div class="panel-inner">
-            <h3>维度评分</h3>
-            <EChart :option="dimensionBarOption" height="300px" />
+        <article class="panel explain-panel">
+          <div class="panel-inner stack">
+            <h3>风险说明</h3>
+            <div class="explain-stack">
+              <section class="explain-item">
+                <h4>基础风险解释</h4>
+                <p class="muted">{{ shortText(report.base_risk_explanation || profile.base_risk_explanation, '暂无基础风险解释') }}</p>
+              </section>
+              <section class="explain-item">
+                <h4>行为调整解释</h4>
+                <p class="muted">{{ shortText(report.behavior_adjustment_explanation || profile.behavior_adjustment_explanation, '暂无行为调整解释') }}</p>
+              </section>
+              <section class="explain-item">
+                <h4>风险变化说明</h4>
+                <p class="muted">{{ shortText(report.risk_change_explanation || profile.risk_change_explanation, '暂无风险变化说明') }}</p>
+              </section>
+            </div>
           </div>
         </article>
-      </section>
 
-      <section class="grid-3 detail-grid">
         <article class="panel">
           <div class="panel-inner stack">
-            <h3>基础风险解释</h3>
-            <p class="muted">{{ report.base_risk_explanation || profile.base_risk_explanation || '暂无基础风险解释' }}</p>
-          </div>
-        </article>
-        <article class="panel">
-          <div class="panel-inner stack">
-            <h3>行为调整解释</h3>
-            <p class="muted">
-              {{ report.behavior_adjustment_explanation || profile.behavior_adjustment_explanation || '暂无行为调整解释' }}
-            </p>
-          </div>
-        </article>
-        <article class="panel">
-          <div class="panel-inner stack">
-            <h3>风险变化说明</h3>
-            <p class="muted">{{ report.risk_change_explanation || profile.risk_change_explanation || '暂无风险变化说明' }}</p>
-          </div>
-        </article>
-      </section>
-
-      <section class="panel">
-        <div class="panel-inner stack">
-          <div class="panel-head">
-            <h3>八维画像明细</h3>
-            <span class="muted">按学生当前学期结果展示</span>
-          </div>
-          <div class="dimension-card-grid">
-            <article v-for="item in profile.dimension_scores" :key="item.dimension" class="dimension-card">
-              <div class="dimension-card-head">
-                <div class="dimension-card-title">
-                  <strong>{{ item.dimension }}</strong>
-                  <span class="muted">{{ item.label ?? '待补充' }}</span>
-                </div>
-                <div class="dimension-card-score">
-                  <span class="tag" :class="dimensionTagClass(item.level)">
-                    {{ dimensionLevelText(item.level) }}
-                  </span>
-                  <span class="muted">{{ Math.round(item.score * 100) }}分</span>
-                </div>
-              </div>
-              <p class="muted dimension-explanation">
-                {{ item.explanation ?? '当前维度尚未提供完整校准结果' }}
-              </p>
-              <div class="dimension-track">
-                <div class="dimension-fill" :style="{ width: `${item.score * 100}%` }"></div>
-              </div>
-              <div v-if="item.metrics?.length" class="dimension-metrics">
-                <span v-for="metric in item.metrics?.slice(0, 3) ?? []" :key="metric.metric" class="tag">
-                  {{ metric.metric }} {{ formatMetric(metric) }}
-                </span>
-              </div>
-              <div v-else class="muted">暂无指标</div>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <section class="grid-2">
-        <article class="panel">
-          <div class="panel-inner stack">
-            <h3>关键影响因子</h3>
+            <h3>关键影响因素</h3>
             <div v-for="item in report.top_factors" :key="item.dimension" class="factor-row">
               <div class="factor-head">
                 <strong>{{ item.dimension }}</strong>
@@ -143,6 +182,9 @@
             </div>
           </div>
         </article>
+      </section>
+
+      <section class="detail-grid stage stage-3">
         <article class="panel">
           <div class="panel-inner stack">
             <h3>干预建议</h3>
@@ -155,21 +197,23 @@
             </div>
             <div class="summary-box">
               <p class="muted">报告摘要</p>
-              <strong>{{ report.report_text }}</strong>
+              <div class="markdown-report" v-html="reportMarkdownHtml"></div>
             </div>
           </div>
         </article>
       </section>
-    </template>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
-import { useQuery } from '@tanstack/vue-query'
+import { computed, ref, watch } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import type { EChartsOption } from 'echarts'
 
+import { AVAILABLE_TERMS } from '@/app/term'
 import EChart from '@/components/charts/EChart.vue'
 import EmptyState from '@/components/state/EmptyState.vue'
 import ErrorState from '@/components/state/ErrorState.vue'
@@ -179,6 +223,8 @@ import { formatApiErrorMessage, formatRisk } from '@/lib/format'
 import { parseWarningQuery, buildWarningQuery } from '@/features/warnings/query'
 
 const route = useRoute()
+const router = useRouter()
+const queryClient = useQueryClient()
 
 const studentId = computed(() => String(route.params.studentId ?? ''))
 const term = computed(() => String(route.query.term ?? '2024-2'))
@@ -187,23 +233,45 @@ const warningState = computed(() => parseWarningQuery(route.query))
 const profileQuery = useQuery({
   queryKey: computed(() => ['student-profile', studentId.value, term.value]),
   queryFn: () => getStudentProfile(studentId.value, term.value),
+  placeholderData: (previousData) => previousData,
+  staleTime: 0,
+  refetchOnMount: 'always',
 })
 
 const reportQuery = useQuery({
   queryKey: computed(() => ['student-report', studentId.value, term.value]),
   queryFn: () => getStudentReport(studentId.value, term.value),
+  placeholderData: (previousData) => previousData,
+  staleTime: 0,
+  refetchOnMount: 'always',
 })
 
 const profile = computed(() => profileQuery.data.value)
 const report = computed(() => reportQuery.data.value)
+const stableAvailableTerms = ref<string[]>([term.value])
+const pendingTerm = ref<string | null>(null)
+const pendingTermStartedAt = ref(0)
+
+const availableTerms = computed(() => {
+  const trendTerms = (profile.value?.trend ?? [])
+    .map((item) => item.term)
+    .filter((value): value is string => typeof value === 'string' && value.length > 0)
+  if (!trendTerms.length && stableAvailableTerms.value.length > 1) return stableAvailableTerms.value
+  const merged = Array.from(new Set([term.value, ...trendTerms]))
+  const nextTerms = AVAILABLE_TERMS.filter((item) => merged.includes(item))
+  return nextTerms.length ? nextTerms : stableAvailableTerms.value
+})
+const showRadarDetails = ref(false)
+const reportMarkdownHtml = computed(() => renderMarkdown(report.value?.report_text || '暂无报告摘要'))
 const interventionPlanLines = computed(() => {
   const plan = report.value?.intervention_plan
   if (typeof plan === 'string') {
-    return plan.split('\n').map((line) => line.trim()).filter(Boolean)
+    return plan
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
   }
-  if (Array.isArray(plan)) {
-    return plan.filter(Boolean)
-  }
+  if (Array.isArray(plan)) return plan.filter(Boolean)
   return []
 })
 
@@ -211,11 +279,66 @@ const errorMessage = computed(() => {
   const firstError = profileQuery.error.value ?? reportQuery.error.value
   return firstError ? formatApiErrorMessage(firstError, '当前学生详情暂不可用，请稍后重试') : ''
 })
+const isInitialLoading = computed(
+  () =>
+    (profileQuery.isLoading.value || reportQuery.isLoading.value) &&
+    (!profile.value || !report.value),
+)
+const isSwitchingTerm = computed(
+  () =>
+    pendingTerm.value !== null &&
+    pendingTerm.value === term.value &&
+    reportQuery.dataUpdatedAt.value <= pendingTermStartedAt.value,
+)
+
+watch(
+  availableTerms,
+  (nextTerms) => {
+    if (nextTerms.length > 1) stableAvailableTerms.value = nextTerms
+  },
+  { immediate: true },
+)
+
+watch(
+  () => [term.value, reportQuery.dataUpdatedAt.value] as const,
+  ([currentTerm, reportUpdatedAt]) => {
+    if (
+      pendingTerm.value &&
+      pendingTerm.value === currentTerm &&
+      reportUpdatedAt > pendingTermStartedAt.value
+    ) {
+      pendingTerm.value = null
+      pendingTermStartedAt.value = 0
+    }
+  },
+  { immediate: true },
+)
+
+watch(
+  () => [studentId.value, availableTerms.value.join('|')] as const,
+  ([currentStudentId, termKey]) => {
+    if (!currentStudentId || !termKey) return
+    const termsToPrefetch = availableTerms.value.filter((item) => item !== term.value)
+    for (const prefetchTerm of termsToPrefetch) {
+      void queryClient.prefetchQuery({
+        queryKey: ['student-profile', currentStudentId, prefetchTerm],
+        queryFn: () => getStudentProfile(currentStudentId, prefetchTerm),
+        staleTime: 5 * 60 * 1000,
+      })
+      void queryClient.prefetchQuery({
+        queryKey: ['student-report', currentStudentId, prefetchTerm],
+        queryFn: () => getStudentReport(currentStudentId, prefetchTerm),
+        staleTime: 5 * 60 * 1000,
+      })
+    }
+  },
+  { immediate: true },
+)
 
 const trendLineOption = computed<EChartsOption>(() => {
   const rows = profile.value?.trend ?? []
   return {
-    color: ['#ff4b00'],
+    color: ['#6750A4'],
     tooltip: { trigger: 'axis' },
     xAxis: {
       type: 'category',
@@ -232,58 +355,86 @@ const trendLineOption = computed<EChartsOption>(() => {
       {
         type: 'line',
         smooth: true,
-        symbolSize: 8,
-        areaStyle: { color: 'rgba(255, 75, 0, 0.12)' },
+        symbolSize: 7,
+        areaStyle: { color: 'rgba(103, 80, 164, 0.12)' },
         data: rows.map((item) => item.risk_probability ?? null),
       },
     ],
   }
 })
 
-const dimensionBarOption = computed<EChartsOption>(() => {
+const dimensionRadarOption = computed<EChartsOption>(() => {
   const rows = profile.value?.dimension_scores ?? []
+  const indicators = rows.slice(0, 8).map((item) => ({ name: item.dimension, max: 1 }))
+  const values = rows.slice(0, 8).map((item) => item.score ?? 0)
+
   return {
     color: ['#3b82f6'],
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    xAxis: {
-      type: 'category',
-      data: rows.map((item) => item.dimension),
-      axisLabel: { interval: 0, rotate: 18 },
-      axisLine: { lineStyle: { color: '#d9dee6' } },
+    tooltip: { trigger: 'item' },
+    radar: {
+      radius: '66%',
+      indicator: indicators,
+      splitNumber: 4,
+      splitLine: { lineStyle: { color: 'rgba(59, 130, 246, 0.25)' } },
+      splitArea: { areaStyle: { color: ['rgba(59,130,246,0.02)', 'rgba(59,130,246,0.05)'] } },
+      axisLine: { lineStyle: { color: 'rgba(59, 130, 246, 0.35)' } },
     },
-    yAxis: {
-      type: 'value',
-      min: 0,
-      max: 1,
-      splitLine: { lineStyle: { color: '#eef1f5' } },
-    },
-    series: [{ type: 'bar', barWidth: 24, data: rows.map((item) => item.score) }],
+    series: [
+      {
+        type: 'radar',
+        data: [
+          {
+            value: values,
+            name: '八维评分',
+            areaStyle: { color: 'rgba(59, 130, 246, 0.22)' },
+            lineStyle: { width: 2 },
+            symbol: 'circle',
+            symbolSize: 6,
+          },
+        ],
+      },
+    ],
   }
 })
 
+const simplifiedDimensionRows = computed(() => (profile.value?.dimension_scores ?? []).slice(0, 8))
+
 const riskClass = computed(() => {
-  const level = profile.value?.risk_level
+  const level = profile.value?.intervention_priority_level ?? profile.value?.risk_level
   if (level === 'high' || level === '高风险' || level === '较高风险') return 'risk-high'
   if (level === 'medium' || level === '一般风险') return 'risk-medium'
   return 'risk-low'
 })
 
 const riskTagClass = computed(() => {
-  const level = profile.value?.risk_level
+  const level = profile.value?.intervention_priority_level ?? profile.value?.risk_level
   if (level === 'high' || level === '高风险' || level === '较高风险') return 'tag-high'
   if (level === 'medium' || level === '一般风险') return 'tag-medium'
   return 'tag-low'
 })
 
-function dimensionLevelText(level?: string) {
+const backToWarningsTarget = computed(() => {
+  if (route.query.source === 'warnings') {
+    return { path: '/warnings', query: buildWarningQuery(warningState.value) }
+  }
+  return { path: '/warnings', query: { term: term.value } }
+})
+
+function shortText(text: string | undefined, fallback: string) {
+  const value = (text ?? '').trim()
+  if (!value) return fallback
+  return value
+}
+
+function detailDimensionLevelText(level?: string) {
   if (!level) return '待补充'
   if (level === 'high') return '高'
   if (level === 'medium') return '中'
   return '低'
 }
 
-function dimensionTagClass(level?: string) {
-  if (!level) return 'pending'
+function detailDimensionTagClass(level?: string) {
+  if (!level) return 'tag-pending'
   if (level === 'high') return 'tag-high'
   if (level === 'medium') return 'tag-medium'
   return 'tag-low'
@@ -292,12 +443,6 @@ function dimensionTagClass(level?: string) {
 function formatMetric(metric: { display?: string; value: number | string }) {
   return metric.display || String(metric.value)
 }
-const backToWarningsTarget = computed(() => {
-  if (route.query.source === 'warnings') {
-    return { path: '/warnings', query: buildWarningQuery(warningState.value) }
-  }
-  return { path: '/warnings', query: { term: term.value } }
-})
 
 function riskLabel(level: string) {
   if (level === 'high' || level === '高风险') return '高风险'
@@ -318,6 +463,21 @@ function formatRiskScore(value?: number) {
   return value.toFixed(1)
 }
 
+function formatAcademicValue(value?: number, digits = 1) {
+  if (typeof value !== 'number') return '--'
+  return value.toFixed(digits)
+}
+
+function formatAcademicCount(value?: number) {
+  if (typeof value !== 'number') return '--'
+  return Math.round(value).toString()
+}
+
+function formatAcademicRatio(value?: number) {
+  if (typeof value !== 'number') return '--'
+  return `${(value * 100).toFixed(1)}%`
+}
+
 function formatSignedRisk(value?: number) {
   if (typeof value !== 'number') return '--'
   return `${value > 0 ? '+' : ''}${value.toFixed(1)}`
@@ -326,6 +486,93 @@ function formatSignedRisk(value?: number) {
 function retry() {
   profileQuery.refetch()
   reportQuery.refetch()
+}
+
+function setStudentTerm(nextTerm: string) {
+  if (nextTerm === term.value) return
+  pendingTerm.value = nextTerm
+  pendingTermStartedAt.value = Date.now()
+  router.replace({
+    path: `/students/${studentId.value}`,
+    query: {
+      ...route.query,
+      term: nextTerm,
+    },
+  })
+}
+
+function renderMarkdown(source: string) {
+  const normalized = source.replace(/\r\n/g, '\n').trim()
+  if (!normalized) return '<p>暂无报告摘要</p>'
+
+  const lines = normalized.split('\n')
+  const html: string[] = []
+  let listItems: string[] = []
+  let paragraphLines: string[] = []
+
+  const flushList = () => {
+    if (!listItems.length) return
+    html.push(`<ul>${listItems.map((item) => `<li>${renderInlineMarkdown(item)}</li>`).join('')}</ul>`)
+    listItems = []
+  }
+
+  const flushParagraph = () => {
+    if (!paragraphLines.length) return
+    html.push(`<p>${paragraphLines.map((line) => renderInlineMarkdown(line)).join('<br>')}</p>`)
+    paragraphLines = []
+  }
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim()
+
+    if (!line) {
+      flushList()
+      flushParagraph()
+      continue
+    }
+
+    const heading = line.match(/^(#{1,3})\s*(.+)$/)
+    if (heading) {
+      flushList()
+      flushParagraph()
+      const marker = heading[1] ?? '#'
+      const headingText = heading[2] ?? line.replace(/^#+\s*/, '')
+      html.push(`<h${marker.length}>${renderInlineMarkdown(headingText)}</h${marker.length}>`)
+      continue
+    }
+
+    const listItem = line.match(/^[-*]\s+(.+)$/)
+    if (listItem) {
+      flushParagraph()
+      listItems.push(listItem[1] ?? line.replace(/^[-*]\s+/, ''))
+      continue
+    }
+
+    flushList()
+    paragraphLines.push(line)
+  }
+
+  flushList()
+  flushParagraph()
+
+  return html.join('')
+}
+
+function renderInlineMarkdown(source: string) {
+  let html = escapeHtml(source)
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>')
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+  html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>')
+  return html
+}
+
+function escapeHtml(source: string) {
+  return source
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
 }
 </script>
 
@@ -363,10 +610,256 @@ function retry() {
   margin: 4px 0 0;
 }
 
+.academic-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.academic-panel {
+  margin-bottom: 16px;
+}
+
+.academic-chip {
+  display: grid;
+  align-content: space-between;
+  min-height: 78px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid #dbe4f0;
+  background: #f8fbff;
+  color: #334155;
+  text-align: left;
+}
+
+.academic-chip-label {
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.academic-chip-value {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  color: #1e293b;
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.academic-chip-unit {
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.term-switch {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.term-switch-btn {
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid #dbe3ee;
+  background: #fff;
+  color: #556070;
+  font-size: 0.84rem;
+  font-weight: 600;
+  transition: all 180ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.term-switch-btn.active {
+  background: #6750a4;
+  border-color: #6750a4;
+  color: #fff;
+}
+
 .tag-row {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.profile-main-row {
+  display: grid;
+  grid-template-columns: 2fr 3fr;
+  gap: 16px;
+}
+
+.summary-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.metric-card {
+  padding: 12px;
+  border: 1px solid #edf1f6;
+  border-radius: 12px;
+  background: #fafbfd;
+  display: grid;
+  gap: 6px;
+  opacity: 0;
+  animation: slideFromTop 460ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.metric-card strong {
+  font-size: 1.2rem;
+}
+
+.summary-metrics-grid .metric-card:nth-child(odd) {
+  animation-name: slideFromLeft;
+}
+
+.summary-metrics-grid .metric-card:nth-child(even) {
+  animation-name: slideFromRight;
+}
+
+.summary-metrics-grid .metric-card:nth-child(1) {
+  animation-delay: 220ms;
+}
+
+.summary-metrics-grid .metric-card:nth-child(2) {
+  animation-delay: 280ms;
+}
+
+.summary-metrics-grid .metric-card:nth-child(3) {
+  animation-delay: 340ms;
+}
+
+.summary-metrics-grid .metric-card:nth-child(4) {
+  animation-delay: 400ms;
+}
+
+.summary-metrics-grid .metric-card:nth-child(5) {
+  animation-delay: 460ms;
+}
+
+.summary-metrics-grid .metric-card:nth-child(6) {
+  animation-delay: 520ms;
+}
+
+.radar-panel :deep(canvas) {
+  border-radius: 12px;
+}
+
+.detail-toggle {
+  min-height: 34px;
+  padding: 0 14px;
+}
+
+.radar-detail-grid {
+  margin-top: -2px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.radar-detail-item {
+  border: 1px solid #edf1f6;
+  border-radius: 10px;
+  background: #fafbfd;
+  padding: 8px 10px;
+  display: grid;
+  gap: 6px;
+  opacity: 0;
+  animation: slideFromBottom 420ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.radar-detail-item:nth-child(odd) {
+  animation-delay: 220ms;
+}
+
+.radar-detail-item:nth-child(even) {
+  animation-delay: 300ms;
+}
+
+.radar-detail-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.radar-detail-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.86rem;
+}
+
+.profile-second-row {
+  margin-top: 16px;
+}
+
+.profile-third-row {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: 3fr 4fr 3fr;
+  gap: 16px;
+}
+
+.detail-grid {
+  margin-top: 16px;
+}
+
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.dimension-metrics,
+.factor-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.explain-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.explain-item {
+  border: 1px solid #edf1f6;
+  border-radius: 12px;
+  background: #fafbfd;
+  padding: 10px 12px;
+  opacity: 0;
+  animation: slideFromLeft 480ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.explain-item:nth-child(1) {
+  animation-delay: 240ms;
+}
+
+.explain-item:nth-child(2) {
+  animation-delay: 320ms;
+}
+
+.explain-item:nth-child(3) {
+  animation-delay: 400ms;
+}
+
+.explain-item h4 {
+  margin: 0 0 6px;
+  font-size: 0.98rem;
+}
+
+.explain-item p {
+  margin: 0;
 }
 
 .tag-high {
@@ -387,7 +880,7 @@ function retry() {
   background: #22b573;
 }
 
-.tag.pending {
+.tag-pending {
   color: #667085;
   border-color: #d0d5dd;
   background: #f2f4f7;
@@ -405,83 +898,27 @@ function retry() {
   color: #22b573;
 }
 
-.detail-grid {
-  margin-top: 16px;
-  margin-bottom: 16px;
-}
-
 h3 {
   margin: 0 0 10px;
-}
-
-.panel-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: center;
-}
-
-.dimension-card-grid {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.dimension-card {
-  border: 1px solid #edf1f6;
-  border-radius: 12px;
-  background: #fafbfd;
-  padding: 12px 14px;
-  display: grid;
-  gap: 8px;
-}
-
-.dimension-card-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: center;
-}
-
-.dimension-card-title {
-  display: grid;
-  gap: 4px;
-}
-
-.dimension-card-score {
-  display: grid;
-  gap: 6px;
-  justify-items: end;
-  white-space: nowrap;
-}
-
-.dimension-explanation {
-  margin: 0;
-}
-
-.dimension-track {
-  height: 10px;
-  border-radius: 999px;
-  background: #e9eef5;
-  overflow: hidden;
-}
-
-.dimension-fill {
-  height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
-}
-
-.dimension-metrics,
-.factor-metrics {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
 }
 
 .factor-row {
   border-top: 1px solid #edf1f6;
   padding: 10px 0;
+  opacity: 0;
+  animation: slideFromRight 500ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.factor-row:nth-child(2) {
+  animation-delay: 250ms;
+}
+
+.factor-row:nth-child(3) {
+  animation-delay: 330ms;
+}
+
+.factor-row:nth-child(4) {
+  animation-delay: 410ms;
 }
 
 .factor-head {
@@ -510,15 +947,131 @@ h3 {
   border: 1px solid #edf1f6;
   background: #fafbfd;
   padding: 10px 12px;
+  opacity: 0;
+  animation: slideFromBottom 520ms cubic-bezier(0.2, 0, 0, 1) 280ms both;
 }
 
 .summary-box p {
   margin: 0 0 6px;
 }
 
+.markdown-report {
+  color: #2a3447;
+  line-height: 1.75;
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+.markdown-report :deep(h1),
+.markdown-report :deep(h2),
+.markdown-report :deep(h3),
+.markdown-report :deep(p),
+.markdown-report :deep(ul) {
+  margin: 0 0 8px;
+}
+
+.markdown-report :deep(h1),
+.markdown-report :deep(h2),
+.markdown-report :deep(h3) {
+  color: #192235;
+  font-size: 1rem;
+}
+
+.markdown-report :deep(ul) {
+  padding-left: 18px;
+}
+
+.markdown-report :deep(code) {
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(81, 101, 133, 0.12);
+  color: #2f4669;
+  font-size: 0.92em;
+}
+
 .plan-line {
   margin: 0;
   white-space: pre-wrap;
+}
+
+.stage {
+  opacity: 0;
+  animation-duration: 560ms;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  animation-fill-mode: both;
+  will-change: transform, opacity;
+}
+
+.stage-1 {
+  animation-name: slideFromTop;
+  animation-delay: 80ms;
+}
+
+.stage-2 {
+  animation-name: slideFromLeft;
+  animation-delay: 200ms;
+}
+
+.stage-3 {
+  animation-name: slideFromRight;
+  animation-delay: 320ms;
+}
+
+.overview-stage-enter-active,
+.overview-stage-leave-active {
+  transition: opacity 220ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.overview-stage-enter-from {
+  opacity: 0;
+}
+
+.overview-stage-leave-to {
+  opacity: 0;
+}
+
+@keyframes slideFromTop {
+  from {
+    opacity: 0;
+    transform: translateY(-18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideFromLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideFromBottom {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 980px) {
@@ -527,8 +1080,40 @@ h3 {
     align-items: start;
   }
 
-  .dimension-card-grid {
+  .profile-main-row,
+  .profile-third-row {
     grid-template-columns: 1fr;
+  }
+
+  .summary-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .academic-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .radar-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overview-stage-enter-active,
+  .overview-stage-leave-active,
+  .stage,
+  .stage-1,
+  .stage-2,
+  .stage-3,
+  .metric-card,
+  .radar-detail-item,
+  .explain-item,
+  .factor-row,
+  .summary-box {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
   }
 }
 </style>
