@@ -36,55 +36,14 @@ export function formatWarningLevelLabel(level: string | RiskLevel) {
 }
 
 export function getWarningLevelFilterPlan(level: string) {
-  if (level === '高风险' || level === '较高风险') {
-    return {
-      apiRiskLevel: 'high',
-      exactRiskLevel: level,
-      needsClientExactFiltering: true,
-    } as const
-  }
-  if (level === '一般风险') {
-    return {
-      apiRiskLevel: 'medium',
-      exactRiskLevel: level,
-      needsClientExactFiltering: false,
-    } as const
-  }
-  if (level === '低风险') {
-    return {
-      apiRiskLevel: 'low',
-      exactRiskLevel: level,
-      needsClientExactFiltering: false,
-    } as const
-  }
-  if (level === 'high' || level === 'medium' || level === 'low') {
+  if (level) {
     return {
       apiRiskLevel: level,
-      exactRiskLevel: '',
-      needsClientExactFiltering: false,
     } as const
   }
   return {
     apiRiskLevel: null,
-    exactRiskLevel: '',
-    needsClientExactFiltering: false,
   } as const
-}
-
-export function matchesSelectedWarningLevel(selectedLevel: string, itemLevel: string | RiskLevel) {
-  if (!selectedLevel) return true
-
-  const normalizedItemLevel = formatWarningLevelLabel(itemLevel)
-  if (selectedLevel === 'high') {
-    return normalizedItemLevel === '高风险' || normalizedItemLevel === '较高风险'
-  }
-  if (selectedLevel === 'medium') {
-    return normalizedItemLevel === '一般风险'
-  }
-  if (selectedLevel === 'low') {
-    return normalizedItemLevel === '低风险'
-  }
-  return normalizedItemLevel === selectedLevel
 }
 
 export function parseWarningQuery(query: LocationQuery): WarningFilterState {

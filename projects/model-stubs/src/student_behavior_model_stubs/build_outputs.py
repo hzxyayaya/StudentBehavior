@@ -20,6 +20,16 @@ _RESULT_COLUMNS = [
     "major_name",
     "group_segment",
     "risk_probability",
+    "term_gpa",
+    "failed_course_count",
+    "borderline_course_count",
+    "failed_course_ratio",
+    "academic_risk_score",
+    "academic_risk_level",
+    "behavior_risk_score",
+    "behavior_risk_level",
+    "intervention_priority_score",
+    "intervention_priority_level",
     "base_risk_score",
     "risk_adjustment_score",
     "adjusted_risk_score",
@@ -75,6 +85,18 @@ def _json_load(value: object) -> object:
     if isinstance(value, str):
         return json.loads(value)
     return value
+
+
+def _numeric_value(row: Mapping[str, object], *keys: str) -> float | None:
+    for key in keys:
+        value = row.get(key)
+        if value is None or pd.isna(value):
+            continue
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            continue
+    return None
 
 
 def _factor_names(factors: Sequence[Mapping[str, object]]) -> str:
@@ -195,12 +217,14 @@ def build_overview_by_term(student_results: pd.DataFrame) -> dict[str, object]:
         }
 
     ordered_results = student_results.copy()
-    ordered_results["risk_level"] = ordered_results["risk_level"].fillna("").astype(str)
+    overview_level_column = "intervention_priority_level" if "intervention_priority_level" in ordered_results.columns else "risk_level"
+    overview_score_column = "intervention_priority_score" if "intervention_priority_score" in ordered_results.columns else "adjusted_risk_score"
+    ordered_results["risk_level"] = ordered_results[overview_level_column].fillna("").astype(str)
     ordered_results["group_segment"] = ordered_results["group_segment"].fillna("").astype(str)
     ordered_results["major_name"] = ordered_results["major_name"].fillna("").astype(str)
     ordered_results["term_key"] = ordered_results["term_key"].fillna("").astype(str)
     ordered_results["risk_probability"] = pd.to_numeric(
-        ordered_results["risk_probability"], errors="coerce"
+        ordered_results.get(overview_score_column, ordered_results["risk_probability"]), errors="coerce"
     ).fillna(0.0)
 
     major_risk_summary: list[dict[str, object]] = []
@@ -214,7 +238,7 @@ def build_overview_by_term(student_results: pd.DataFrame) -> dict[str, object]:
                 "major_name": major_name,
                 "student_count": int(len(major_frame)),
                 "high_risk_count": int((major_frame["risk_level"] == "高风险").sum()),
-                "average_risk_probability": round(float(major_frame["risk_probability"].mean()), 2),
+                "average_risk_probability": round(float(major_frame["risk_probability"].mean() / 100.0), 2),
             }
         )
 
@@ -229,7 +253,7 @@ def build_overview_by_term(student_results: pd.DataFrame) -> dict[str, object]:
             {
                 "term_key": term_key,
                 "student_count": int(len(term_frame)),
-                "average_risk_probability": round(float(term_frame["risk_probability"].mean()), 2),
+                "average_risk_probability": round(float(term_frame["risk_probability"].mean() / 100.0), 2),
                 "risk_distribution": risk_distribution,
                 "dimension_summary": _average_dimension_scores(term_frame["dimension_scores_json"]),
             }
@@ -326,6 +350,16 @@ def build_student_results(
             "major_name": _normalized_text(row.get("major_name")) or "",
             "group_segment": compute_group_segment(row),
             "risk_probability": risk_probability,
+            "term_gpa": _numeric_value(row, "term_gpa", "avg_gpa", "avg_gpa_metric"),
+            "failed_course_count": _numeric_value(row, "failed_course_count"),
+            "borderline_course_count": _numeric_value(row, "borderline_course_count"),
+            "failed_course_ratio": _numeric_value(row, "failed_course_ratio"),
+            "academic_risk_score": calibration["academic_risk_score"],
+            "academic_risk_level": calibration["academic_risk_level"],
+            "behavior_risk_score": calibration["behavior_risk_score"],
+            "behavior_risk_level": calibration["behavior_risk_level"],
+            "intervention_priority_score": calibration["intervention_priority_score"],
+            "intervention_priority_level": calibration["intervention_priority_level"],
             "base_risk_score": calibration["base_risk_score"],
             "risk_adjustment_score": calibration["risk_adjustment_score"],
             "adjusted_risk_score": calibration["adjusted_risk_score"],

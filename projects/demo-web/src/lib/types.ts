@@ -65,12 +65,20 @@ export type OverviewData = {
   risk_band_distribution: Record<string, number>
   group_distribution: Array<{ group_segment: GroupSegment; count: number }>
   dimension_summary: CalibratedDimensionScore[]
-  major_risk_summary: Array<{ major_name: string; high_risk_count: number; student_count: number }>
+  major_risk_summary: Array<{
+    major_name: string
+    high_risk_count: number
+    elevated_risk_count?: number
+    elevated_risk_ratio?: number
+    student_count: number
+    average_risk_probability?: number
+  }>
   trend_summary: Array<{ term: string; high_risk_count: number }>
   risk_trend_summary: Array<{
     term: string
     avg_risk_score: number
     high_risk_count: number
+    elevated_risk_count?: number
     risk_change_direction?: RiskChangeDirection
   }>
   risk_factor_summary: Array<{
@@ -104,6 +112,16 @@ export type WarningsData = {
     group_segment: GroupSegment
     risk_level: RiskLevel
     risk_probability: number
+    term_gpa?: number
+    failed_course_count?: number
+    borderline_course_count?: number
+    failed_course_ratio?: number
+    academic_risk_score?: number
+    academic_risk_level?: RiskLevel
+    behavior_risk_score?: number
+    behavior_risk_level?: RiskLevel
+    intervention_priority_score?: number
+    intervention_priority_level?: RiskLevel
     base_risk_score?: number
     risk_adjustment_score?: number
     adjusted_risk_score?: number
@@ -124,6 +142,16 @@ export type StudentProfileData = {
   group_segment: GroupSegment
   risk_level: RiskLevel
   risk_probability: number
+  term_gpa?: number
+  failed_course_count?: number
+  borderline_course_count?: number
+  failed_course_ratio?: number
+  academic_risk_score?: number
+  academic_risk_level?: RiskLevel
+  behavior_risk_score?: number
+  behavior_risk_level?: RiskLevel
+  intervention_priority_score?: number
+  intervention_priority_level?: RiskLevel
   base_risk_score?: number
   risk_adjustment_score?: number
   adjusted_risk_score?: number
@@ -145,6 +173,7 @@ export type StudentProfileData = {
 }
 
 export type StudentReportData = {
+  term?: string
   top_factors: CalibratedFactor[]
   base_risk_explanation?: string
   behavior_adjustment_explanation?: string
@@ -190,6 +219,7 @@ export type TrajectoryAnalysisData = {
     term: string
     avg_risk_score: number
     high_risk_count: number
+    elevated_risk_count?: number
     risk_change_direction?: RiskChangeDirection
   }>
   key_factors: Array<{

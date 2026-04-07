@@ -1,4 +1,4 @@
-import { createRouter as createVueRouter, createWebHistory } from 'vue-router'
+﻿import { createRouter as createVueRouter, createWebHistory } from 'vue-router'
 
 import { useAuthStore } from './auth'
 import LoginPage from '@/features/auth/LoginPage.vue'
@@ -13,19 +13,19 @@ export function createRouter() {
   const router = createVueRouter({
     history: createWebHistory(),
     routes: [
-      { path: '/', redirect: '/risk' },
+      { path: '/', redirect: '/overview' },
       { path: '/login', component: LoginPage },
-      { path: '/risk', component: WarningsPage, meta: { requiresAuth: true } },
+      { path: '/overview', component: OverviewPage, meta: { requiresAuth: true } },
+      { path: '/warnings', component: WarningsPage, meta: { requiresAuth: true } },
       { path: '/trajectory', component: TrajectoryPage, meta: { requiresAuth: true } },
       { path: '/profiles', component: GroupsPage, meta: { requiresAuth: true } },
       { path: '/development', component: DevelopmentPage, meta: { requiresAuth: true } },
-      { path: '/overview', redirect: '/risk' },
+      { path: '/students/:studentId', component: StudentPage, meta: { requiresAuth: true } },
+      { path: '/risk-overview', redirect: '/overview' },
+      { path: '/risk', redirect: '/warnings' },
       { path: '/groups', redirect: '/profiles' },
       { path: '/quadrants', redirect: '/profiles' },
-      { path: '/warnings', redirect: '/risk' },
-      { path: '/risk-overview', component: OverviewPage, meta: { requiresAuth: true } },
-      { path: '/students/:studentId', component: StudentPage, meta: { requiresAuth: true } },
-      { path: '/:pathMatch(.*)*', redirect: '/risk' },
+      { path: '/:pathMatch(.*)*', redirect: '/overview' },
     ],
   })
 

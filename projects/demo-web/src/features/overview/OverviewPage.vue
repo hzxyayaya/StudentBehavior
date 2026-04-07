@@ -1,137 +1,295 @@
-<template>
-  <AppShell>
-    <section class="panel tab-panel">
-      <div class="panel-inner">
-        <p class="term-note">学期</p>
-        <div class="term-tabs">
-          <button
-            v-for="item in AVAILABLE_TERMS"
-            :key="item"
-            type="button"
-            class="term-tab"
-            :class="{ active: item === term }"
-            @click="setTerm(item)"
-          >
-            {{ item }}
-          </button>
-        </div>
-      </div>
-    </section>
-
-    <LoadingState v-if="overviewQuery.isLoading.value || summaryQuery.isLoading.value" label="正在加载总览..." />
-    <ErrorState v-else-if="errorMessage" title="总览加载失败" :description="errorMessage" @retry="retry" />
+﻿<template>
+  <Transition name="overview-stage" mode="out-in">
+    <LoadingState
+      v-if="overviewQuery.isLoading.value || summaryQuery.isLoading.value"
+      key="loading"
+      label="正在加载总览..."
+    />
+    <ErrorState v-else-if="errorMessage" key="error" title="总览加载失败" :description="errorMessage" @retry="retry" />
     <EmptyState
       v-else-if="!overview || !summary"
+      key="empty"
       title="当前学期暂无可展示数据"
       description="请切换学期后重试"
     />
-    <template v-else>
-      <section class="grid-3">
-        <article class="card-kpi panel">
-          <div class="muted">高风险</div>
-          <div class="kpi-value risk-high">{{ riskCount('high') }}</div>
-        </article>
-        <article class="card-kpi panel">
-          <div class="muted">中风险</div>
-          <div class="kpi-value risk-medium">{{ riskCount('medium') }}</div>
-        </article>
-        <article class="card-kpi panel">
-          <div class="muted">低风险</div>
-          <div class="kpi-value risk-low">{{ riskCount('low') }}</div>
+
+    <div v-else key="content" class="overview-content">
+      <section class="risk-overview-layer stage stage-1">
+        <article class="panel">
+          <div class="panel-inner stack">
+            <div class="section-head">
+              <div class="section-title-with-icon">
+                <span class="section-icon danger" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M12 4.75 19 17.25H5L12 4.75Z"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                    <path
+                      d="M12 9v4.5M12 15.75h.01"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </span>
+                <h3>干预优先级分级概览</h3>
+              </div>
+              <span class="muted">共 {{ totalRiskPopulation }} 人</span>
+            </div>
+
+            <div class="risk-kpi-grid">
+              <div
+                v-for="item in riskBandCards"
+                :key="item.key"
+                class="card-kpi risk-kpi-card"
+                :class="riskCardClass(item.key)"
+              >
+                <RiskCardParticles :variant="item.key as 'low' | 'medium' | 'higher' | 'high'" />
+                <div class="risk-card-main">
+                  <div class="risk-card-copy">
+                    <div class="muted">{{ item.label }}</div>
+                    <div class="kpi-value">{{ item.count }}</div>
+                  </div>
+
+                  <div class="risk-card-icon" aria-hidden="true">
+                    <svg v-if="item.key === 'low'" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M12 4.75 18 7v4.8c0 3.42-2.22 6.42-6 7.45-3.78-1.03-6-4.03-6-7.45V7l6-2.25Z"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="m9.2 11.95 1.85 1.85 3.75-4.1"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                    <svg v-else-if="item.key === 'medium'" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M12 4.75 19 17.25H5L12 4.75Z"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M12 9v4.5M12 15.75h.01"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                    <svg v-else-if="item.key === 'higher'" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M12 4.75 19 17.25H5L12 4.75Z"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <path
+                        d="M12 9v4.5M12 15.75h.01"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                    <svg v-else viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M12 5.25a4 4 0 0 0-4 4v1.9c0 .55-.17 1.08-.48 1.53l-1.22 1.82a.9.9 0 0 0 .74 1.4h9.92a.9.9 0 0 0 .74-1.4l-1.22-1.82a2.7 2.7 0 0 1-.48-1.53v-1.9a4 4 0 0 0-4-4Z"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <path d="M10 18.25a2 2 0 0 0 4 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </article>
       </section>
 
-      <section class="panel segment-panel">
-        <div class="panel-inner">
-          <div class="segment-head">
-            <h3>风险占比</h3>
-            <span class="muted">总人数：{{ totalRiskPopulation }}</span>
+      <section class="middle-layout stage stage-2">
+        <article class="panel portrait-panel">
+          <div class="panel-inner chart-panel">
+            <div class="section-head">
+              <div class="section-title-with-icon">
+                <span class="section-icon brand" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M12 5.75 17.75 9v6L12 18.25 6.25 15V9L12 5.75Z"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                    <path
+                      d="M12 5.75V12m0 0 5.75-3M12 12l-5.75-3"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    />
+                  </svg>
+                </span>
+                <h3>八维整体画像</h3>
+              </div>
+              <div class="portrait-head-actions">
+                <span class="muted">当前学期全体学生平均得分</span>
+                <div class="portrait-tabs" role="tablist" aria-label="八维画像视图切换">
+                  <button
+                    v-for="tab in portraitTabs"
+                    :key="tab.key"
+                    class="portrait-tab"
+                    :class="{ active: activePortraitTab === tab.key }"
+                    type="button"
+                    role="tab"
+                    :aria-selected="activePortraitTab === tab.key"
+                    @click="activePortraitTab = tab.key"
+                  >
+                    {{ tab.label }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="portrait-stage">
+              <div v-if="activePortraitTab === 'bar'" class="portrait-chart-wrap">
+                <EChart :option="dimensionBarOption" height="100%" />
+              </div>
+              <div v-else-if="activePortraitTab === 'radar'" class="portrait-chart-wrap">
+                <EChart :option="dimensionRadarOption" height="100%" />
+              </div>
+              <div v-else class="dimension-summary-grid">
+                <article v-for="item in dimensionRows" :key="`summary-${item.dimension}`" class="dimension-summary-card">
+                  <div class="dimension-summary-head">
+                    <strong>{{ item.dimension }}</strong>
+                    <span class="tag" :class="dimensionTagClass(item.level)">
+                      {{ dimensionLevelText(item.level) }}
+                    </span>
+                  </div>
+                  <div class="dimension-summary-score">{{ Math.round(item.score * 100) }}分</div>
+                  <div class="dimension-summary-label">{{ item.label ?? '待补充说明' }}</div>
+                </article>
+              </div>
+            </div>
           </div>
-          <div class="segment-track">
-            <div class="segment high" :style="{ width: `${riskPercent.high}%` }"></div>
-            <div class="segment medium" :style="{ width: `${riskPercent.medium}%` }"></div>
-            <div class="segment low" :style="{ width: `${riskPercent.low}%` }"></div>
-          </div>
-          <div class="segment-legend">
-            <span class="legend-item"><i class="dot high"></i>高风险 {{ riskPercent.high.toFixed(1) }}%</span>
-            <span class="legend-item"><i class="dot medium"></i>中风险 {{ riskPercent.medium.toFixed(1) }}%</span>
-            <span class="legend-item"><i class="dot low"></i>低风险 {{ riskPercent.low.toFixed(1) }}%</span>
-          </div>
+        </article>
+
+        <div class="right-column">
+          <article class="panel right-card right-group-card">
+            <div class="panel-inner right-group-inner">
+              <div class="right-group-top">
+                <section class="right-subcard">
+                  <div class="subcard-title">
+                    <span class="section-icon amber" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none">
+                        <path
+                          d="M5 17.25h14M6.5 14.75 10 11.25l3 2.5 4.5-6"
+                          stroke="currentColor"
+                          stroke-width="1.8"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        />
+                      </svg>
+                    </span>
+                    <h3>趋势</h3>
+                  </div>
+                  <div v-for="row in riskTrendRows" :key="row.term" class="simple-row">
+                    <span>{{ row.term }}</span>
+                    <strong>
+                      {{ row.avg_risk_score.toFixed(1) }} 分 · {{ row.high_risk_count }} 人
+                      <span class="trend-indicator" :class="trendClass(row.risk_change_direction)">
+                        {{ trendSymbol(row.risk_change_direction) }}
+                      </span>
+                    </strong>
+                  </div>
+                </section>
+              </div>
+
+              <section class="right-subcard right-subcard-bottom">
+                <div class="subcard-title">
+                  <span class="section-icon brand" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M6.5 16.5 10 13l2.5 2.5 5-6"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <path d="M5 18.25h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                    </svg>
+                  </span>
+                  <h3>当前学期 Top 影响因素</h3>
+                </div>
+                <div v-for="factor in riskFactorRows" :key="factor.feature" class="simple-row">
+                  <span>{{ factor.feature_cn || factor.feature }}</span>
+                  <strong>{{ factor.count }} 人 · 权重 {{ factor.importance.toFixed(2) }}</strong>
+                </div>
+              </section>
+            </div>
+          </article>
         </div>
       </section>
 
-      <section class="overview-risk-grid">
-        <article class="panel">
-          <div class="panel-inner stack">
-            <div class="section-head">
-              <h3>学业风险四档分布</h3>
-              <span class="muted">按学业风险等级统计</span>
+      <section class="panel dimension-detail-panel stage stage-3">
+        <div class="panel-inner">
+          <details class="dimension-details">
+            <summary>八维结果明细</summary>
+            <div class="dimension-detail-grid">
+              <article v-for="item in dimensionRows" :key="item.dimension" class="dimension-detail-card">
+                <div class="dimension-detail-head">
+                  <div class="dimension-detail-copy">
+                    <strong>{{ item.dimension }}</strong>
+                    <p class="muted">{{ item.explanation ?? '当前维度暂无完整说明' }}</p>
+                  </div>
+                  <div class="dimension-detail-score">
+                    <span class="tag" :class="dimensionTagClass(item.level)">
+                      {{ dimensionLevelText(item.level) }}
+                    </span>
+                    <strong>{{ Math.round(item.score * 100) }}分</strong>
+                  </div>
+                </div>
+                <div class="dimension-label">{{ item.label ?? '待补充' }}</div>
+                <div v-if="item.metrics?.length" class="dimension-metrics">
+                  <span v-for="metric in item.metrics?.slice(0, 3) ?? []" :key="metric.metric" class="tag">
+                    {{ metric.metric }} {{ formatMetric(metric) }}
+                  </span>
+                </div>
+                <div v-else class="muted">暂无指标</div>
+              </article>
             </div>
-            <div class="risk-band-grid">
-              <div v-for="item in riskBandRows" :key="item.label" class="risk-band-row">
-                <span class="muted">{{ item.label }}</span>
-                <strong>{{ item.count }}</strong>
-              </div>
-            </div>
-          </div>
-        </article>
-        <article class="panel">
-          <div class="panel-inner stack">
-            <div class="section-head">
-              <h3>风险趋势摘要</h3>
-              <span class="muted">近学期均值变化</span>
-            </div>
-            <div class="risk-trend-list">
-              <div v-for="row in riskTrendRows" :key="row.term" class="risk-trend-row">
-                <strong>{{ row.term }}</strong>
-                <span class="muted">均值 {{ row.avg_risk_score.toFixed(1) }}</span>
-                <span class="muted">高风险 {{ row.high_risk_count }}</span>
-                <span class="tag">{{ riskChangeText(row.risk_change_direction) }}</span>
-              </div>
-            </div>
-          </div>
-        </article>
-        <article class="panel">
-          <div class="panel-inner stack">
-            <div class="section-head">
-              <h3>风险因素 Top</h3>
-              <span class="muted">当前学期触发因子</span>
-            </div>
-            <div class="risk-factor-list">
-              <div v-for="factor in riskFactorRows" :key="factor.feature" class="risk-factor-row">
-                <strong>{{ factor.feature_cn || factor.feature }}</strong>
-                <span class="muted">涉及 {{ factor.count }} 人</span>
-                <span class="muted">重要度 {{ factor.importance.toFixed(2) }}</span>
-              </div>
-            </div>
-          </div>
-        </article>
+          </details>
+        </div>
       </section>
 
-      <section class="overview-top-grid">
-        <article class="panel">
-          <div class="panel-inner chart-panel">
-            <div class="section-head">
-              <h3>八维总体画像</h3>
-              <span class="muted">当前学期全体学生平均得分</span>
-            </div>
-            <EChart :option="dimensionBarOption" height="280px" />
-          </div>
-        </article>
-        <article class="panel">
-          <div class="panel-inner stack">
-            <div class="section-head">
-              <h3>模型摘要说明</h3>
-              <span class="muted">当前总览口径</span>
-            </div>
+      <section class="panel dimension-detail-panel stage stage-4">
+        <div class="panel-inner">
+          <details class="dimension-details">
+            <summary>模型信息</summary>
             <div class="summary-list">
-              <div class="summary-row">
-                <span class="muted">聚类口径</span>
-                <strong>{{ summary.cluster_method }}</strong>
-              </div>
               <div class="summary-row">
                 <span class="muted">风险模型</span>
                 <strong>{{ summary.risk_model }}</strong>
+              </div>
+              <div class="summary-row">
+                <span class="muted">聚类口径</span>
+                <strong>{{ summary.cluster_method }}</strong>
               </div>
               <div class="summary-row">
                 <span class="muted">目标标签</span>
@@ -146,94 +304,21 @@
                 <strong>{{ summary.updated_at }}</strong>
               </div>
             </div>
-          </div>
-        </article>
-      </section>
-
-      <section class="panel dimension-detail-panel">
-        <div class="panel-inner stack">
-          <div class="section-head">
-            <h3>八维结果明细</h3>
-            <span class="muted">标签、指标与解释一并展示</span>
-          </div>
-          <div class="dimension-detail-grid">
-            <article v-for="item in dimensionRows" :key="item.dimension" class="dimension-detail-card">
-              <div class="dimension-detail-head">
-                <div class="dimension-detail-copy">
-                  <strong>{{ item.dimension }}</strong>
-                  <p class="muted">{{ item.explanation ?? '当前维度尚未提供完整校准结果' }}</p>
-                </div>
-                <div class="dimension-detail-score">
-                  <span class="tag" :class="dimensionTagClass(item.level)">
-                    {{ dimensionLevelText(item.level) }}
-                  </span>
-                  <strong>{{ Math.round(item.score * 100) }}分</strong>
-                </div>
-              </div>
-              <div class="dimension-label">{{ item.label ?? '待补充' }}</div>
-              <div v-if="item.metrics?.length" class="dimension-metrics">
-                <span v-for="metric in item.metrics?.slice(0, 3) ?? []" :key="metric.metric" class="tag">
-                  {{ metric.metric }} {{ formatMetric(metric) }}
-                </span>
-              </div>
-              <div v-else class="muted">暂无指标</div>
-            </article>
-          </div>
+          </details>
         </div>
       </section>
-
-      <section class="overview-grid">
-        <article class="panel major-panel">
-          <div class="panel-inner major-content">
-            <h3>专业高风险摘要</h3>
-            <div class="major-body">
-              <EChart :option="majorPieOption" height="260px" @chart-click="handleMajorPieClick" />
-              <div ref="majorListEl" class="major-list">
-                <RouterLink
-                  v-for="row in majorRows"
-                  :key="row.major_name"
-                  class="major-row"
-                  :data-major="row.major_name"
-                  :class="{ active: row.major_name === activeMajor }"
-                  :to="buildMajorWarningLink(row.major_name)"
-                  @click="handleMajorRowClick(row.major_name)"
-                >
-                  <span>{{ row.major_name }}</span>
-                  <strong>{{ row.high_risk_count }} 人</strong>
-                </RouterLink>
-              </div>
-            </div>
-          </div>
-        </article>
-
-        <div class="right-stack">
-          <article class="panel">
-            <div class="panel-inner chart-panel">
-              <h3>学期趋势</h3>
-              <EChart :option="trendLineOption" height="250px" />
-            </div>
-          </article>
-          <article class="panel">
-            <div class="panel-inner chart-panel">
-              <h3>重点群体分布</h3>
-              <EChart :option="groupBarOption" height="250px" />
-            </div>
-          </article>
-        </div>
-      </section>
-    </template>
-  </AppShell>
+    </div>
+  </Transition>
 </template>
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import type { EChartsOption } from 'echarts'
-import { RouterLink } from 'vue-router'
 
-import { AVAILABLE_TERMS, useTermStore } from '@/app/term'
-import AppShell from '@/components/layout/AppShell.vue'
+import { useTermStore } from '@/app/term'
 import EChart from '@/components/charts/EChart.vue'
+import RiskCardParticles from '@/components/layout/RiskCardParticles.vue'
 import EmptyState from '@/components/state/EmptyState.vue'
 import ErrorState from '@/components/state/ErrorState.vue'
 import LoadingState from '@/components/state/LoadingState.vue'
@@ -242,8 +327,6 @@ import { formatApiErrorMessage } from '@/lib/format'
 import type { RiskLevel } from '@/lib/types'
 
 const termStore = useTermStore()
-const activeMajor = ref('')
-const majorListEl = ref<HTMLElement | null>(null)
 
 const overviewQuery = useQuery({
   queryKey: computed(() => ['overview', termStore.term.value]),
@@ -257,156 +340,56 @@ const summaryQuery = useQuery({
 
 const overview = computed(() => overviewQuery.data.value)
 const summary = computed(() => summaryQuery.data.value)
-const term = computed(() => termStore.term.value)
-const majorRows = computed(() => overview.value?.major_risk_summary ?? [])
 const dimensionRows = computed(() => overview.value?.dimension_summary ?? [])
+const activePortraitTab = ref<'bar' | 'radar' | 'detail'>('bar')
+const portraitTabs = [
+  { key: 'bar', label: '柱状图' },
+  { key: 'radar', label: '雷达图' },
+  { key: 'detail', label: '详细数据' },
+] as const
+
 const riskBandRows = computed(() => {
   const distribution = overview.value?.risk_band_distribution ?? {}
+  const rawValues = Object.values(distribution).filter((value): value is number => typeof value === 'number')
+  const fallbackHigh = overview.value?.risk_distribution.find((item) => item.risk_level === 'high')?.count ?? 0
+  const fallbackMedium = overview.value?.risk_distribution.find((item) => item.risk_level === 'medium')?.count ?? 0
+  const fallbackLow = overview.value?.risk_distribution.find((item) => item.risk_level === 'low')?.count ?? 0
+  const high = rawValues[0] ?? fallbackHigh
+  const higher = rawValues[1] ?? 0
+  const medium = rawValues[2] ?? fallbackMedium
+  const low = rawValues[3] ?? fallbackLow
   return [
-    { label: '高风险', count: distribution['高风险'] ?? 0 },
-    { label: '较高风险', count: distribution['较高风险'] ?? 0 },
-    { label: '一般风险', count: distribution['一般风险'] ?? 0 },
-    { label: '低风险', count: distribution['低风险'] ?? 0 },
+    { key: 'high', label: '高优先', count: high },
+    { key: 'higher', label: '较高优先', count: higher },
+    { key: 'medium', label: '一般优先', count: medium },
+    { key: 'low', label: '低优先', count: low },
   ]
 })
-const riskTrendRows = computed(() => overview.value?.risk_trend_summary ?? [])
-const riskFactorRows = computed(() => (overview.value?.risk_factor_summary ?? []).slice(0, 5))
-const totalHighRisk = computed(() => majorRows.value.reduce((sum, item) => sum + item.high_risk_count, 0))
-const totalRiskPopulation = computed(() => {
-  const data = overview.value?.risk_distribution ?? []
-  return data.reduce((sum, item) => sum + item.count, 0)
+
+const riskBandCards = computed(() => {
+  const rows = riskBandRows.value
+  return [
+    { key: 'low', label: '低优先', count: rows.find((item) => item.key === 'low')?.count ?? 0 },
+    { key: 'medium', label: '一般优先', count: rows.find((item) => item.key === 'medium')?.count ?? 0 },
+    { key: 'higher', label: '较高优先', count: rows.find((item) => item.key === 'higher')?.count ?? 0 },
+    { key: 'high', label: '高优先', count: rows.find((item) => item.key === 'high')?.count ?? 0 },
+  ]
 })
-const riskPercent = computed(() => {
-  const total = totalRiskPopulation.value || 1
-  return {
-    high: (riskCount('high') / total) * 100,
-    medium: (riskCount('medium') / total) * 100,
-    low: (riskCount('low') / total) * 100,
-  }
-})
+
+const riskTrendRows = computed(() => (overview.value?.risk_trend_summary ?? []).slice(0, 3))
+const riskFactorRows = computed(() => (overview.value?.risk_factor_summary ?? []).slice(0, 3))
+const totalRiskPopulation = computed(() => riskBandRows.value.reduce((sum, item) => sum + item.count, 0))
 
 const errorMessage = computed(() => {
   const firstError = overviewQuery.error.value ?? summaryQuery.error.value
   return firstError ? formatApiErrorMessage(firstError, '当前总览数据暂不可用，请稍后重试') : ''
 })
 
-const majorPieOption = computed<EChartsOption>(() => {
-  const rows = majorRows.value
-  return {
-    color: ['#ff4b00', '#f97316', '#3b82f6', '#22b573', '#ef4444', '#f59e0b', '#8b5cf6'],
-    tooltip: {
-      trigger: 'item',
-      formatter: (params: any) =>
-        `${params?.name ?? ''}<br/>高风险人数：${params?.value ?? 0} 人<br/>占比：${params?.percent ?? 0}%`,
-    },
-    title: {
-      text: `${totalHighRisk.value}`,
-      subtext: '高风险总人数',
-      left: 'center',
-      top: 'center',
-      textStyle: {
-        color: '#ff4b00',
-        fontSize: 28,
-        fontWeight: 700,
-      },
-      subtextStyle: {
-        color: '#7f8896',
-        fontSize: 13,
-      },
-      itemGap: 6,
-    },
-    series: [
-      {
-        name: '专业高风险',
-        type: 'pie',
-        selectedMode: 'single',
-        selectedOffset: 14,
-        radius: ['35%', '68%'],
-        center: ['50%', '50%'],
-        itemStyle: { borderColor: '#fff', borderWidth: 2 },
-        label: { show: false },
-        emphasis: {
-          scale: true,
-          scaleSize: 10,
-          itemStyle: {
-            shadowBlur: 24,
-            shadowColor: 'rgba(255, 75, 0, 0.35)',
-          },
-        },
-        data: rows.map((item) => ({
-          name: item.major_name,
-          value: item.high_risk_count,
-          selected: activeMajor.value ? item.major_name === activeMajor.value : false,
-          itemStyle: {
-            opacity: !activeMajor.value || item.major_name === activeMajor.value ? 1 : 0.4,
-          },
-        })),
-      },
-    ],
-  }
-})
-
-const trendLineOption = computed<EChartsOption>(() => {
-  const rows = overview.value?.trend_summary ?? []
-  return {
-    color: ['#ff4b00'],
-    tooltip: { trigger: 'axis' },
-    xAxis: {
-      type: 'category',
-      data: rows.map((item) => item.term),
-      axisLine: { lineStyle: { color: '#d9dee6' } },
-    },
-    yAxis: {
-      type: 'value',
-      splitLine: { lineStyle: { color: '#eef1f5' } },
-    },
-    series: [
-      {
-        type: 'line',
-        smooth: true,
-        symbolSize: 8,
-        lineStyle: { width: 3 },
-        areaStyle: { color: 'rgba(255, 75, 0, 0.14)' },
-        data: rows.map((item) => item.high_risk_count),
-      },
-    ],
-  }
-})
-
-const groupBarOption = computed<EChartsOption>(() => {
-  const rows = overview.value?.group_distribution ?? []
-  return {
-    color: ['#3b82f6', '#ff4b00', '#22b573', '#f59e0b'],
-    grid: { left: 92, right: 20, top: 16, bottom: 18, containLabel: true },
-    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    xAxis: {
-      type: 'value',
-      splitLine: { lineStyle: { color: '#eef1f5' } },
-      axisLine: { lineStyle: { color: '#d9dee6' } },
-    },
-    yAxis: {
-      type: 'category',
-      data: rows.map((item) => item.group_segment),
-      axisLine: { lineStyle: { color: '#d9dee6' } },
-      axisTick: { show: false },
-      axisLabel: { interval: 0, margin: 10 },
-    },
-    series: [
-      {
-        type: 'bar',
-        barWidth: 24,
-        barCategoryGap: '10%',
-        data: rows.map((item) => item.count),
-      },
-    ],
-  }
-})
-
 const dimensionBarOption = computed<EChartsOption>(() => {
   const rows = dimensionRows.value
   return {
-    color: ['#ff4b00'],
-    grid: { left: 56, right: 18, top: 12, bottom: 60 },
+    color: ['#6750A4'],
+    grid: { left: 56, right: 18, top: 12, bottom: 70 },
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
     xAxis: {
       type: 'category',
@@ -420,11 +403,70 @@ const dimensionBarOption = computed<EChartsOption>(() => {
       max: 1,
       splitLine: { lineStyle: { color: '#eef1f5' } },
     },
+    series: [{ type: 'bar', barWidth: 24, data: rows.map((item) => item.score) }],
+  }
+})
+
+const dimensionRadarOption = computed<EChartsOption>(() => {
+  const rows = dimensionRows.value
+  return {
+    color: ['#6750A4'],
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: 'rgba(31, 23, 46, 0.92)',
+      borderWidth: 0,
+      textStyle: { color: '#fff' },
+    },
+    radar: {
+      radius: '68%',
+      center: ['50%', '54%'],
+      splitNumber: 4,
+      axisName: {
+        color: '#514a61',
+        fontSize: 12,
+      },
+      splitArea: {
+        areaStyle: {
+          color: ['rgba(103, 80, 164, 0.02)', 'rgba(103, 80, 164, 0.04)'],
+        },
+      },
+      splitLine: {
+        lineStyle: {
+          color: 'rgba(103, 80, 164, 0.14)',
+        },
+      },
+      axisLine: {
+        lineStyle: {
+          color: 'rgba(103, 80, 164, 0.14)',
+        },
+      },
+      indicator: rows.map((item) => ({
+        name: item.dimension,
+        max: 1,
+      })),
+    },
     series: [
       {
-        type: 'bar',
-        barWidth: 26,
-        data: rows.map((item) => item.score),
+        type: 'radar',
+        symbol: 'circle',
+        symbolSize: 7,
+        data: [
+          {
+            value: rows.map((item) => Number(item.score.toFixed(3))),
+            areaStyle: {
+              color: 'rgba(103, 80, 164, 0.18)',
+            },
+            lineStyle: {
+              color: '#6750A4',
+              width: 2.4,
+            },
+            itemStyle: {
+              color: '#ffffff',
+              borderColor: '#6750A4',
+              borderWidth: 2,
+            },
+          },
+        ],
       },
     ],
   }
@@ -448,49 +490,23 @@ function formatMetric(metric: { display?: string; value: number | string }) {
   return metric.display || String(metric.value)
 }
 
-function riskChangeText(direction?: string) {
-  if (direction === 'rising') return '上升'
-  if (direction === 'falling') return '下降'
-  return '持平'
+function trendSymbol(direction?: string) {
+  if (direction === 'falling') return '↓'
+  if (direction === 'rising') return '↑'
+  return '→'
 }
 
-function riskCount(level: RiskLevel) {
-  return overview.value?.risk_distribution.find((item) => item.risk_level === level)?.count ?? 0
+function trendClass(direction?: string) {
+  if (direction === 'falling') return 'trend-down'
+  if (direction === 'rising') return 'trend-up'
+  return 'trend-steady'
 }
 
-function setTerm(nextTerm: string) {
-  termStore.setTerm(nextTerm)
-  activeMajor.value = ''
-}
-
-function handleMajorPieClick(params: unknown) {
-  const name = (params as { name?: string } | undefined)?.name
-  if (!name) return
-  scrollMajorRow(name)
-}
-
-function handleMajorRowClick(name: string) {
-  scrollMajorRow(name)
-}
-
-function buildMajorWarningLink(majorName: string) {
-  return {
-    path: '/warnings',
-    query: {
-      term: termStore.term.value,
-      risk_level: 'high',
-      major_name: majorName,
-    },
-  }
-}
-
-function scrollMajorRow(name: string) {
-  activeMajor.value = name
-  const listEl = majorListEl.value
-  if (!listEl) return
-  const target = listEl.querySelector<HTMLElement>(`[data-major="${CSS.escape(name)}"]`)
-  if (!target) return
-  target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+function riskCardClass(key: string) {
+  if (key === 'low') return 'risk-card-low'
+  if (key === 'medium') return 'risk-card-medium'
+  if (key === 'higher') return 'risk-card-higher'
+  return 'risk-card-high'
 }
 
 function retry() {
@@ -500,99 +516,457 @@ function retry() {
 </script>
 
 <style scoped>
-.tab-panel {
-  margin-bottom: 14px;
-}
-
-.term-note {
-  margin: 0 0 10px;
-  color: #7f8896;
-  font-size: 0.9rem;
-}
-
-.term-tabs {
-  display: flex;
+.section-title-with-icon,
+.subcard-title {
+  display: inline-flex;
+  align-items: center;
   gap: 10px;
+}
+
+.section-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  flex: 0 0 auto;
+}
+
+.section-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.section-icon.brand {
+  background: rgba(109, 79, 210, 0.1);
+  color: #5d3fc0;
+  border-color: rgba(109, 79, 210, 0.14);
+}
+
+.section-icon.danger {
+  background: rgba(226, 67, 91, 0.1);
+  color: #c7324b;
+  border-color: rgba(226, 67, 91, 0.14);
+}
+
+.section-icon.mint {
+  background: rgba(15, 118, 110, 0.1);
+  color: #0f766e;
+  border-color: rgba(15, 118, 110, 0.14);
+}
+
+.section-icon.amber {
+  background: rgba(217, 122, 21, 0.12);
+  color: #bf690d;
+  border-color: rgba(217, 122, 21, 0.14);
+}
+
+.overview-content {
+  display: grid;
+}
+
+.risk-overview-layer {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.middle-layout {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.right-column {
+  display: grid;
+  gap: 8px;
+}
+
+.right-group-inner {
+  display: grid;
+  gap: 14px;
+}
+
+.right-group-top {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.right-subcard {
+  min-height: 100%;
+  padding: 16px 16px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(28, 34, 56, 0.08);
+  background: rgba(250, 251, 253, 0.82);
+}
+
+.right-subcard h3 {
+  margin: 0 0 10px;
+}
+
+.right-card {
+  box-shadow: none;
+  transition: transform 240ms cubic-bezier(0.2, 0, 0, 1), box-shadow 240ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.right-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(29, 25, 43, 0.12);
+}
+
+.stage {
+  opacity: 0;
+  animation-duration: 560ms;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  animation-fill-mode: both;
+  will-change: transform, opacity;
+}
+
+.stage-1 {
+  animation-name: slideFromTop;
+  animation-delay: 70ms;
+}
+
+.stage-2 {
+  animation-name: slideFromLeft;
+  animation-delay: 190ms;
+}
+
+.stage-3 {
+  animation-name: slideFromRight;
+  animation-delay: 320ms;
+}
+
+.stage-4 {
+  animation-name: slideFromBottom;
+  animation-delay: 440ms;
+}
+
+.right-group-card {
+  opacity: 0;
+  animation: slideFromRight 560ms cubic-bezier(0.2, 0, 0, 1) 460ms both;
+}
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.section-head h3,
+.chart-panel h3 {
+  margin: 0;
+}
+
+.risk-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.risk-kpi-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 96px;
+  isolation: isolate;
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(207, 213, 224, 0.72);
+  border-right-width: 6px;
+  border-radius: 0;
+  box-shadow: 0 8px 24px rgba(149, 157, 165, 0.1);
+  transition: transform 240ms cubic-bezier(0.2, 0, 0, 1), box-shadow 240ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.risk-kpi-card > :not(.risk-card-particles) {
+  position: relative;
+  z-index: 1;
+}
+
+.risk-card-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 100%;
+}
+
+.risk-card-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.risk-card-icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+  flex: 0 0 auto;
+}
+
+.risk-card-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.risk-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(149, 157, 165, 0.14);
+}
+
+.risk-kpi-card:active {
+  transform: scale(0.98);
+}
+
+.risk-card-particles {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.risk-card-particles :deep(canvas) {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.risk-card-low {
+  color: #166534;
+}
+
+.risk-card-medium {
+  color: #1e40af;
+}
+
+.risk-card-higher {
+  color: #9a3412;
+}
+
+.risk-card-high {
+  color: #9f1239;
+}
+
+.risk-kpi-card .muted {
+  color: #5f6779;
+  opacity: 1;
+}
+
+.risk-kpi-card .kpi-value {
+  color: currentColor;
+}
+
+.risk-card-low {
+  border-right-color: #166534;
+}
+
+.risk-card-medium {
+  border-right-color: #1e40af;
+}
+
+.risk-card-higher {
+  border-right-color: #9a3412;
+}
+
+.risk-card-high {
+  border-right-color: #9f1239;
+}
+
+.portrait-panel .panel-inner {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto 1fr;
+}
+
+.portrait-head-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
-.term-tab {
-  border: 1px solid #e3e8ef;
-  background: #fff;
-  color: #4e5868;
+.portrait-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.portrait-tab {
+  min-height: 34px;
+  padding: 0 14px;
   border-radius: 999px;
-  padding: 8px 14px;
+  border: 1px solid rgba(103, 80, 164, 0.14);
+  background: rgba(247, 243, 252, 0.82);
+  color: #5b5270;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: all 200ms cubic-bezier(0.2, 0, 0, 1);
 }
 
-.term-tab.active {
-  background: #ff4b00;
-  border-color: #ff4b00;
+.portrait-tab:hover {
+  border-color: rgba(103, 80, 164, 0.28);
+  background: rgba(239, 232, 249, 0.9);
+}
+
+.portrait-tab.active {
+  background: #6750a4;
+  border-color: #6750a4;
   color: #fff;
+  box-shadow: 0 8px 18px rgba(103, 80, 164, 0.2);
 }
 
-.risk-high {
-  color: var(--danger);
+.portrait-chart-wrap {
+  min-height: 100%;
+  height: 100%;
 }
 
-.risk-medium {
-  color: var(--warning);
+.portrait-stage {
+  height: 340px;
+  min-height: 340px;
 }
 
-.risk-low {
-  color: var(--success);
-}
-
-.tag.pending {
-  color: #667085;
-  border-color: #d0d5dd;
-  background: #f2f4f7;
-}
-
-.segment-panel {
-  margin-top: 12px;
-}
-
-.overview-risk-grid {
-  margin-top: 14px;
+.dimension-summary-grid {
+  height: 100%;
+  overflow: auto;
+  padding-right: 4px;
   display: grid;
-  gap: 16px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-content: start;
 }
 
-.risk-band-grid,
-.risk-trend-list,
-.risk-factor-list {
+.dimension-summary-card {
+  min-height: 108px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(28, 34, 56, 0.08);
+  background: rgba(250, 251, 253, 0.88);
+  display: grid;
+  gap: 8px;
+}
+
+.dimension-summary-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: start;
+}
+
+.dimension-summary-score {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #241a37;
+}
+
+.dimension-summary-label {
+  color: #6b637a;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.summary-list {
   display: grid;
   gap: 10px;
 }
 
-.risk-band-row,
-.risk-trend-row,
-.risk-factor-row {
+.summary-row {
   display: flex;
   justify-content: space-between;
-  gap: 8px;
-  align-items: center;
-  padding: 8px 0;
+  gap: 12px;
+  align-items: start;
+  padding: 10px 0;
   border-top: 1px solid rgba(28, 34, 56, 0.08);
+  transition: background-color 180ms cubic-bezier(0.2, 0, 0, 1);
 }
 
-.risk-band-row:first-child,
-.risk-trend-row:first-child,
-.risk-factor-row:first-child {
+.summary-row:hover {
+  background: rgba(103, 80, 164, 0.06);
+}
+
+.summary-row:first-child {
   border-top: 0;
   padding-top: 0;
 }
 
-.overview-top-grid {
-  margin-top: 14px;
-  display: grid;
-  gap: 16px;
-  grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.8fr);
+.simple-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 0;
+  border-top: 1px solid rgba(28, 34, 56, 0.08);
+  font-size: 0.88rem;
+  transition: transform 180ms cubic-bezier(0.2, 0, 0, 1), background-color 180ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.simple-row:hover {
+  transform: translateX(2px);
+  background: rgba(103, 80, 164, 0.06);
+}
+
+.trend-indicator {
+  margin-left: 6px;
+  font-weight: 700;
+}
+
+.trend-up {
+  color: #2e7d32;
+}
+
+.trend-down {
+  color: #c62828;
+}
+
+.trend-steady {
+  color: #ef6c00;
+}
+
+.simple-row:first-of-type {
+  border-top: 0;
 }
 
 .dimension-detail-panel {
   margin-top: 16px;
+}
+
+.dimension-details > summary {
+  cursor: pointer;
+  list-style: none;
+  font-weight: 700;
+  padding: 6px 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dimension-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.dimension-details > summary::after {
+  content: '▸';
+  color: #6750a4;
+  font-size: 0.92rem;
+  transition: transform 220ms cubic-bezier(0.2, 0, 0, 1), color 220ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.dimension-details[open] > summary::after {
+  content: '▾';
+  transform: translateY(1px);
+}
+
+.dimension-details > summary:hover::after {
+  color: #513b90;
 }
 
 .dimension-detail-grid {
@@ -608,6 +982,12 @@ function retry() {
   padding: 14px 16px;
   display: grid;
   gap: 10px;
+  transition: transform 220ms cubic-bezier(0.2, 0, 0, 1), box-shadow 220ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.dimension-detail-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(29, 25, 43, 0.12);
 }
 
 .dimension-detail-head {
@@ -643,200 +1023,107 @@ function retry() {
   gap: 8px;
 }
 
-.section-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: center;
+.tag.pending {
+  color: #667085;
+  border-color: #d0d5dd;
+  background: #f2f4f7;
 }
 
-.section-head h3 {
-  margin: 0;
+.overview-stage-enter-active,
+.overview-stage-leave-active {
+  transition: opacity 220ms cubic-bezier(0.2, 0, 0, 1);
 }
 
-.summary-list {
-  display: grid;
-  gap: 10px;
+.overview-stage-enter-from {
+  opacity: 0;
 }
 
-.summary-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: start;
-  padding: 10px 0;
-  border-top: 1px solid rgba(28, 34, 56, 0.08);
+.overview-stage-leave-to {
+  opacity: 0;
 }
 
-.summary-row:first-child {
-  border-top: 0;
-  padding-top: 0;
+@keyframes slideFromTop {
+  from {
+    opacity: 0;
+    transform: translateY(-22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.segment-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
+@keyframes slideFromLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
-.segment-head h3 {
-  margin: 0;
+@keyframes slideFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
-.segment-track {
-  height: 16px;
-  border-radius: 999px;
-  overflow: hidden;
-  border: 1px solid #eceff4;
-  background: #f7f9fc;
-  display: flex;
+@keyframes slideFromBottom {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.segment {
-  height: 100%;
-  min-width: 0;
-}
-
-.segment.high {
-  background: #ef4444;
-}
-
-.segment.medium {
-  background: #f59e0b;
-}
-
-.segment.low {
-  background: #22b573;
-}
-
-.segment-legend {
-  margin-top: 10px;
-  display: flex;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-
-.legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: #5f6977;
-  font-size: 0.9rem;
-}
-
-.dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-.dot.high {
-  background: #ef4444;
-}
-
-.dot.medium {
-  background: #f59e0b;
-}
-
-.dot.low {
-  background: #22b573;
-}
-
-.overview-grid {
-  margin-top: 14px;
-  display: grid;
-  gap: 16px;
-  grid-template-columns: minmax(400px, 1.1fr) minmax(0, 1fr);
-}
-
-.major-panel {
-  min-height: 560px;
-  max-height: 560px;
-}
-
-.major-content {
-  display: grid;
-  gap: 14px;
-  height: 100%;
-}
-
-.major-content h3,
-.chart-panel h3 {
-  margin: 0;
-}
-
-.major-body {
-  display: grid;
-  grid-template-columns: 48% 52%;
-  gap: 14px;
-  align-items: stretch;
-  min-height: 0;
-  height: 100%;
-}
-
-.major-list {
-  border: 1px solid #eceff4;
-  border-radius: 12px;
-  max-height: 470px;
-  overflow: auto;
-  padding: 8px;
-}
-
-.major-row {
-  width: 100%;
-  border: 1px solid transparent;
-  background: #fff;
-  border-radius: 10px;
-  padding: 10px 12px;
-  text-align: left;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.major-row:hover {
-  background: #fff5f1;
-}
-
-.major-row.active {
-  border-color: #ffb294;
-  background: #fff1eb;
-}
-
-.right-stack {
-  display: grid;
-  gap: 16px;
-}
-
-.chart-panel {
-  display: grid;
-  gap: 8px;
-}
-
-@media (max-width: 1200px) {
+@media (max-width: 960px) {
+  .risk-overview-layer,
+  .middle-layout,
+  .right-group-top,
   .dimension-detail-grid,
-  .overview-risk-grid,
-  .overview-top-grid,
-  .overview-grid {
+  .dimension-summary-grid {
     grid-template-columns: 1fr;
   }
 
-  .major-panel {
-    min-height: 520px;
-    max-height: none;
+  .risk-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .portrait-head-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 }
 
-@media (max-width: 880px) {
-  .major-body {
-    grid-template-columns: 1fr;
-  }
-
-  .major-list {
-    max-height: 240px;
+@media (prefers-reduced-motion: reduce) {
+  .overview-stage-enter-active,
+  .overview-stage-leave-active,
+  .stage,
+  .stage-1,
+  .stage-2,
+  .stage-3,
+  .stage-4,
+  .right-group-card,
+  .right-card,
+  .risk-kpi-card,
+  .summary-row,
+  .simple-row,
+  .dimension-details > summary::after,
+  .dimension-detail-card {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
   }
 }
 </style>
+

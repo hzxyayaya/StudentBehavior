@@ -1,13 +1,15 @@
 import { computed, ref } from 'vue'
 
+const DEFAULT_DISPLAY_NAME = '系统管理员'
+
 const token = ref<string | null>(sessionStorage.getItem('demo-token'))
-const displayName = ref(sessionStorage.getItem('demo-display-name') ?? '系统管理员')
+const displayName = ref(sessionStorage.getItem('demo-display-name') ?? DEFAULT_DISPLAY_NAME)
 
 export function useAuthStore() {
   const isAuthenticated = computed(() => token.value !== null)
 
   function signIn(nextToken: string, nextDisplayName: string | null | undefined, term: string) {
-    const safeDisplayName = nextDisplayName?.trim() ? nextDisplayName : '系统管理员'
+    const safeDisplayName = nextDisplayName?.trim() ? nextDisplayName : DEFAULT_DISPLAY_NAME
     token.value = nextToken
     displayName.value = safeDisplayName
     sessionStorage.setItem('demo-token', nextToken)
@@ -17,7 +19,7 @@ export function useAuthStore() {
 
   function signOut() {
     token.value = null
-    displayName.value = '系统管理员'
+    displayName.value = DEFAULT_DISPLAY_NAME
     sessionStorage.removeItem('demo-token')
     sessionStorage.removeItem('demo-display-name')
   }
