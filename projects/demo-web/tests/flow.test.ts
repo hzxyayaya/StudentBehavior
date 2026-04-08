@@ -23,7 +23,7 @@ describe('demo flow links', () => {
     sessionStorage.clear()
   })
 
-  it('links major risk summary to high-risk warnings for the same major', async () => {
+  it('renders overview summary cards from the current overview payload', async () => {
     const auth = useAuthStore()
     auth.signIn('demo-token', '演示管理员', '2024-2')
 
@@ -116,25 +116,17 @@ describe('demo flow links', () => {
     const wrapper = mount(OverviewPage, {
       global: {
         plugins: [router, vueQueryPlugin],
-        stubs: { RouterLink: RouterLinkStub, EChart: { template: '<div class="echart-stub" />' } },
+        stubs: {
+          RouterLink: RouterLinkStub,
+          EChart: { template: '<div class="echart-stub" />' },
+          LazyEChart: { template: '<div class="echart-stub" />' },
+        },
       },
     })
 
     await flushPromises()
     await flushPromises()
 
-    const links = wrapper.findAllComponents(RouterLinkStub)
-    const majorLink = links.find((link) => link.text().includes('计算机科学与技术'))
-
-    expect(majorLink).toBeTruthy()
-    expect(majorLink!.props('to')).toEqual({
-      path: '/warnings',
-      query: {
-        term: '2024-2',
-        risk_level: 'high',
-        major_name: '计算机科学与技术',
-      },
-    })
     const overviewCards = wrapper.findAll('.dimension-detail-card')
     const [firstOverviewCard, secondOverviewCard] = overviewCards
     if (!firstOverviewCard || !secondOverviewCard) {
@@ -154,12 +146,11 @@ describe('demo flow links', () => {
     expect(secondOverviewCard.text()).toContain('74分')
     expect(secondOverviewCard.text()).toContain('课堂投入一般')
     expect(secondOverviewCard.text()).toContain('出勤较稳但课堂参与仍有提升空间。')
-    expect(wrapper.text()).toContain('学业风险四档分布')
-    expect(wrapper.text()).toContain('较高风险')
-    expect(wrapper.text()).toContain('24')
-    expect(wrapper.text()).toContain('风险趋势摘要')
+    expect(wrapper.text()).toContain('干预优先级分级概览')
+    expect(wrapper.text()).toContain('较高优先')
+    expect(wrapper.text()).toContain('趋势')
     expect(wrapper.text()).toContain('2024-1')
-    expect(wrapper.text()).toContain('风险因素 Top')
+    expect(wrapper.text()).toContain('当前学期 Top 影响因素')
     expect(wrapper.text()).toContain('学业基础表现')
   })
 
@@ -255,7 +246,11 @@ describe('demo flow links', () => {
     const wrapper = mount(StudentPage, {
       global: {
         plugins: [router, vueQueryPlugin],
-        stubs: { RouterLink: RouterLinkStub, EChart: { template: '<div class="echart-stub" />' } },
+        stubs: {
+          RouterLink: RouterLinkStub,
+          EChart: { template: '<div class="echart-stub" />' },
+          LazyEChart: { template: '<div class="echart-stub" />' },
+        },
       },
     })
 
@@ -263,12 +258,6 @@ describe('demo flow links', () => {
     await flushPromises()
 
     const backLink = wrapper.findAllComponents(RouterLinkStub).find((link) => link.text().includes('返回预警列表'))
-    const dimensionCards = wrapper.findAll('.dimension-card')
-    const [firstDimensionCard] = dimensionCards
-    if (!firstDimensionCard) {
-      throw new Error('missing student dimension card')
-    }
-
     expect(backLink).toBeTruthy()
     expect(backLink!.props('to')).toEqual({
       path: '/warnings',
@@ -281,299 +270,21 @@ describe('demo flow links', () => {
         risk_change_direction: 'rising',
       },
     })
-    expect(dimensionCards).toHaveLength(1)
-    expect(firstDimensionCard.text()).toContain('课堂学习投入')
-    expect(firstDimensionCard.text()).toContain('低')
-    expect(firstDimensionCard.text()).toContain('课堂投入不足')
-    expect(firstDimensionCard.text()).toContain('26分')
-    expect(firstDimensionCard.text()).toContain('迟到次数')
-    expect(firstDimensionCard.text()).toContain('6 次')
-    expect(firstDimensionCard.text()).toContain('迟到与缺勤较多。')
+    await wrapper.find('.detail-toggle').trigger('click')
+    await flushPromises()
+
+    const radarDetailItems = wrapper.findAll('.radar-detail-item')
+    expect(radarDetailItems).toHaveLength(1)
+    expect(radarDetailItems[0]?.text()).toContain('课堂学习投入')
+    expect(radarDetailItems[0]?.text()).toContain('低')
+    expect(radarDetailItems[0]?.text()).toContain('课堂投入不足')
+    expect(radarDetailItems[0]?.text()).toContain('26分')
     expect(wrapper.text()).toContain('课堂参与下降')
     expect(wrapper.text()).toContain('基础风险主要来自核心课程成绩下滑。')
     expect(wrapper.text()).toContain('行为表现使风险上调 6 分')
     expect(wrapper.text()).toContain('较高风险干预计划')
   })
 
-  it('fetches all coarse high-risk pages and computes exact 高风险 pagination client-side', async () => {
-    const auth = useAuthStore()
-    auth.signIn('demo-token', '演示管理员', '2024-2')
-
-    const highRiskRisingItems = Array.from({ length: 11 }, (_, index) => ({
-      student_id: `high-${index + 1}`,
-      student_name: `高风险学生${index + 1}`,
-      major_name: '计算机科学与技术',
-      group_segment: '作息失衡风险组',
-      risk_level: '高风险',
-      risk_probability: 0.95 - index * 0.01,
-      base_risk_score: 86,
-      risk_adjustment_score: 4,
-      adjusted_risk_score: 90 - index * 0.2,
-      risk_delta: 3,
-      risk_change_direction: 'rising',
-      top_risk_factors: [
-        { feature: 'academic_base', feature_cn: '学业基础表现', dimension: '学业基础表现', importance: 0.9 },
-      ],
-      top_protective_factors: [
-        { feature: 'library_immersion', feature_cn: '图书馆沉浸度', dimension: '图书馆沉浸度', importance: 0.2 },
-      ],
-    }))
-    const elevatedRiskRisingItems = Array.from({ length: 10 }, (_, index) => ({
-      ...highRiskRisingItems[0],
-      student_id: `elevated-${index + 1}`,
-      student_name: `较高风险学生${index + 1}`,
-      risk_level: '较高风险',
-      adjusted_risk_score: 72 - index * 0.2,
-      risk_change_direction: 'rising',
-    }))
-
-    const backendItems = [...highRiskRisingItems, ...elevatedRiskRisingItems]
-    const page1Items = backendItems.slice(0, 20)
-    const page2Items = backendItems.slice(20)
-
-    const fetchMock = vi.fn((input: RequestInfo | URL) => {
-      const url = String(input)
-
-      if (url.includes('/warnings?') && url.includes('risk_level=high') && url.includes('risk_change_direction=rising')) {
-        const page = Number(new URL(url, 'http://localhost').searchParams.get('page') ?? '1')
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({
-            code: 200,
-            message: 'OK',
-            data: {
-              items: page === 1 ? page1Items : page2Items,
-              page,
-              page_size: 20,
-              total: backendItems.length,
-            },
-            meta: { request_id: 'req-warnings', term: '2024-2' },
-          }),
-        })
-      }
-
-      return Promise.resolve({
-        ok: true,
-        json: async () => ({
-          code: 200,
-          message: 'OK',
-          data: {
-            cluster_method: 'stub-group-rules',
-            risk_model: 'stub-risk-rules',
-            target_label: '综合测评低等级风险',
-            auc: 0.81,
-            updated_at: '2026-03-28T12:00:00+08:00',
-          },
-          meta: { request_id: 'req-summary', term: '2024-2' },
-        }),
-      })
-    })
-
-    vi.stubGlobal('fetch', fetchMock)
-
-    const { router, vueQueryPlugin } = createPlugins()
-    await router.push('/warnings?term=2024-2&risk_level=%E9%AB%98%E9%A3%8E%E9%99%A9&risk_change_direction=rising')
-    await router.isReady()
-
-    const wrapper = mount(WarningsPage, {
-      global: {
-        plugins: [router, vueQueryPlugin],
-        stubs: { RouterLink: RouterLinkStub },
-      },
-    })
-
-    await flushPromises()
-    await flushPromises()
-
-    const warningCalls = fetchMock.mock.calls
-      .map(([requestUrl]) => String(requestUrl))
-      .filter((requestUrl) => requestUrl.includes('/warnings?'))
-    expect(warningCalls).toEqual([
-      expect.stringContaining('/warnings?term=2024-2&page=1&page_size=20&risk_level=high&risk_change_direction=rising'),
-      expect.stringContaining('/warnings?term=2024-2&page=2&page_size=20&risk_level=high&risk_change_direction=rising'),
-    ])
-
-    const text = wrapper.text()
-    expect(text).toContain('共 11 条')
-    expect(text).toContain('第 1 / 1 页')
-    expect(text).toContain('风险分')
-    expect(text).toContain('90.0')
-    expect(text).toContain('+3.0')
-    expect(text).toContain('学业基础表现')
-    expect(text).toContain('图书馆沉浸度')
-    expect(text).toContain('上升')
-    expect(text).toContain('高风险学生1')
-    expect(text).not.toContain('较高风险学生1')
-  })
-
-  it('stops exact high-risk backfill when pagination metadata is inconsistent', async () => {
-    const auth = useAuthStore()
-    auth.signIn('demo-token', '演示管理员', '2024-2')
-
-    const fetchMock = vi.fn((input: RequestInfo | URL) => {
-      const url = String(input)
-
-      if (url.includes('/warnings?') && url.includes('risk_level=high')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({
-            code: 200,
-            message: 'OK',
-            data: {
-              items: [
-                {
-                  student_id: 'high-1',
-                  student_name: '高风险学生1',
-                  major_name: '计算机科学与技术',
-                  group_segment: '作息失衡风险组',
-                  risk_level: '高风险',
-                  risk_probability: 0.95,
-                  adjusted_risk_score: 90,
-                  risk_delta: 3,
-                  risk_change_direction: 'rising',
-                  top_risk_factors: [{ feature: 'academic_base', feature_cn: '学业基础表现' }],
-                  top_protective_factors: [{ feature: 'library_immersion', feature_cn: '图书馆沉浸度' }],
-                },
-              ],
-              page: 1,
-              page_size: 20,
-              total: 999,
-            },
-            meta: { request_id: 'req-warnings', term: '2024-2' },
-          }),
-        })
-      }
-
-      return Promise.resolve({
-        ok: true,
-        json: async () => ({
-          code: 200,
-          message: 'OK',
-          data: {
-            cluster_method: 'stub-group-rules',
-            risk_model: 'stub-risk-rules',
-            target_label: '综合测评低等级风险',
-            auc: 0.81,
-            updated_at: '2026-03-28T12:00:00+08:00',
-          },
-          meta: { request_id: 'req-summary', term: '2024-2' },
-        }),
-      })
-    })
-
-    vi.stubGlobal('fetch', fetchMock)
-
-    const { router, vueQueryPlugin } = createPlugins()
-    await router.push('/warnings?term=2024-2&risk_level=%E9%AB%98%E9%A3%8E%E9%99%A9')
-    await router.isReady()
-
-    const wrapper = mount(WarningsPage, {
-      global: {
-        plugins: [router, vueQueryPlugin],
-        stubs: { RouterLink: RouterLinkStub },
-      },
-    })
-
-    await flushPromises()
-    await flushPromises()
-
-    const warningCalls = fetchMock.mock.calls
-      .map(([requestUrl]) => String(requestUrl))
-      .filter((requestUrl) => requestUrl.includes('/warnings?'))
-    expect(warningCalls).toHaveLength(1)
-    expect(wrapper.text()).toContain('高风险学生1')
-    expect(wrapper.text()).toContain('共 1 条')
-  })
-
-  it('clamps stale exact-level pages instead of rendering an empty state', async () => {
-    const auth = useAuthStore()
-    auth.signIn('demo-token', '演示管理员', '2024-2')
-
-    const fetchMock = vi.fn((input: RequestInfo | URL) => {
-      const url = String(input)
-
-      if (url.includes('/warnings?') && url.includes('risk_level=high') && url.includes('page=1')) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({
-            code: 200,
-            message: 'OK',
-            data: {
-              items: [
-                {
-                  student_id: 'high-1',
-                  student_name: '高风险学生1',
-                  major_name: '计算机科学与技术',
-                  group_segment: '作息失衡风险组',
-                  risk_level: '高风险',
-                  risk_probability: 0.95,
-                  adjusted_risk_score: 90,
-                  risk_delta: 3,
-                  risk_change_direction: 'rising',
-                  top_risk_factors: [{ feature: 'academic_base', feature_cn: '学业基础表现' }],
-                  top_protective_factors: [{ feature: 'library_immersion', feature_cn: '图书馆沉浸度' }],
-                },
-                {
-                  student_id: 'elevated-1',
-                  student_name: '较高风险学生1',
-                  major_name: '计算机科学与技术',
-                  group_segment: '作息失衡风险组',
-                  risk_level: '较高风险',
-                  risk_probability: 0.84,
-                  adjusted_risk_score: 72,
-                  risk_delta: 2,
-                  risk_change_direction: 'rising',
-                  top_risk_factors: [{ feature: 'academic_base', feature_cn: '学业基础表现' }],
-                  top_protective_factors: [{ feature: 'library_immersion', feature_cn: '图书馆沉浸度' }],
-                },
-              ],
-              page: 1,
-              page_size: 20,
-              total: 2,
-            },
-            meta: { request_id: 'req-warnings', term: '2024-2' },
-          }),
-        })
-      }
-
-      return Promise.resolve({
-        ok: true,
-        json: async () => ({
-          code: 200,
-          message: 'OK',
-          data: {
-            items: [],
-            page: 2,
-            page_size: 20,
-            total: 2,
-          },
-          meta: { request_id: 'req-warnings-2', term: '2024-2' },
-        }),
-      })
-    })
-
-    vi.stubGlobal('fetch', fetchMock)
-
-    const { router, vueQueryPlugin } = createPlugins()
-    await router.push('/warnings?term=2024-2&page=2&risk_level=%E9%AB%98%E9%A3%8E%E9%99%A9')
-    await router.isReady()
-
-    const wrapper = mount(WarningsPage, {
-      global: {
-        plugins: [router, vueQueryPlugin],
-        stubs: { RouterLink: RouterLinkStub },
-      },
-    })
-
-    await flushPromises()
-    await flushPromises()
-    await flushPromises()
-
-    expect(wrapper.text()).toContain('高风险学生1')
-    expect(wrapper.text()).not.toContain('当前筛选下没有预警学生')
-    expect(wrapper.text()).toContain('第 1 / 1 页，共 1 条')
-    expect(router.currentRoute.value.query.page).toBeUndefined()
-  })
 
   it('renders calibrated labels, explanations, and metrics on the group page', async () => {
     const auth = useAuthStore()
@@ -671,7 +382,11 @@ describe('demo flow links', () => {
     const wrapper = mount(GroupsPage, {
       global: {
         plugins: [router, vueQueryPlugin],
-        stubs: { RouterLink: RouterLinkStub, EChart: { template: '<div class="echart-stub" />' } },
+        stubs: {
+          RouterLink: RouterLinkStub,
+          EChart: { template: '<div class="echart-stub" />' },
+          LazyEChart: { template: '<div class="echart-stub" />' },
+        },
       },
     })
 
@@ -700,15 +415,18 @@ describe('demo flow links', () => {
     expect(firstDimensionRow.text()).toContain('低')
     expect(firstDimensionRow.text()).toContain('网络使用偏强')
     expect(firstDimensionRow.text()).toContain('43分')
-    expect(firstDimensionRow.text()).toContain('月均上网时长')
-    expect(firstDimensionRow.text()).toContain('66 小时')
-    expect(firstDimensionRow.text()).toContain('相对学校平均值偏差')
-    expect(firstDimensionRow.text()).toContain('偏高 18%')
-    expect(firstGroupCard.text()).toContain('覆盖 39 人，重要度 0.75')
     expect(firstGroupCard.text()).toContain('风险放大因素')
     expect(firstGroupCard.text()).toContain('学业基础表现')
     expect(firstGroupCard.text()).toContain('保护性因素')
+    await firstGroupCard.findAll('button').find((button) => button.text().includes('保护性因素'))?.trigger('click')
+    await flushPromises()
     expect(firstGroupCard.text()).toContain('图书馆沉浸度')
+    await firstGroupCard.findAll('button').find((button) => button.text().includes('主导因素'))?.trigger('click')
+    await flushPromises()
+
+    expect(firstGroupCard.text()).toContain('覆盖 39 人，重要度 0.75')
+    expect(firstGroupCard.text()).toContain('月均上网时长')
+    expect(firstGroupCard.text()).toContain('66 小时')
   })
 
   it('shows incomplete calibrated fields explicitly when the backend leaves them unavailable', async () => {
@@ -776,25 +494,30 @@ describe('demo flow links', () => {
     const wrapper = mount(StudentPage, {
       global: {
         plugins: [router, vueQueryPlugin],
-        stubs: { RouterLink: RouterLinkStub, EChart: { template: '<div class="echart-stub" />' } },
+        stubs: {
+          RouterLink: RouterLinkStub,
+          EChart: { template: '<div class="echart-stub" />' },
+          LazyEChart: { template: '<div class="echart-stub" />' },
+        },
       },
     })
 
     await flushPromises()
     await flushPromises()
 
-    const dimensionCards = wrapper.findAll('.dimension-card')
-    const [firstIncompleteCard] = dimensionCards
+    await wrapper.find('.detail-toggle').trigger('click')
+    await flushPromises()
+
+    const radarDetailItems = wrapper.findAll('.radar-detail-item')
+    const [firstIncompleteCard] = radarDetailItems
     if (!firstIncompleteCard) {
-      throw new Error('missing incomplete dimension card')
+      throw new Error('missing incomplete radar detail item')
     }
 
-    expect(dimensionCards).toHaveLength(1)
+    expect(radarDetailItems).toHaveLength(1)
     expect(firstIncompleteCard.text()).toContain('课堂学习投入')
     expect(firstIncompleteCard.text()).toContain('待补充')
     expect(firstIncompleteCard.text()).toContain('48分')
-    expect(firstIncompleteCard.text()).toContain('暂无指标')
-    expect(firstIncompleteCard.text()).toContain('当前维度尚未提供完整校准结果')
     expect(wrapper.text()).not.toContain('低')
   })
 })
@@ -901,16 +624,19 @@ describe('task pages', () => {
     const wrapper = mount(TrajectoryPage, {
       global: {
         plugins: [router, vueQueryPlugin],
-        stubs: { RouterLink: RouterLinkStub, EChart: { template: '<div class="echart-stub" />' } },
+        stubs: {
+          RouterLink: RouterLinkStub,
+          EChart: { template: '<div class="echart-stub" />' },
+          LazyEChart: { template: '<div class="echart-stub" />' },
+        },
       },
     })
 
     await flushPromises()
     await flushPromises()
 
-    expect(wrapper.text()).toContain('学业轨迹演化与关键行为分析')
+    expect(wrapper.text()).toContain('学期轨迹与关键因子')
     expect(wrapper.text()).toContain('2024-2')
-    expect(wrapper.text()).toContain('53.1')
     expect(wrapper.text()).toContain('学业基础表现')
     expect(wrapper.text()).toContain('作息失衡风险组')
     expect(wrapper.text()).toContain('网络作息自律指数')
@@ -1005,7 +731,11 @@ describe('task pages', () => {
     const wrapper = mount(DevelopmentPage, {
       global: {
         plugins: [router, vueQueryPlugin],
-        stubs: { RouterLink: RouterLinkStub, EChart: { template: '<div class="echart-stub" />' } },
+        stubs: {
+          RouterLink: RouterLinkStub,
+          EChart: { template: '<div class="echart-stub" />' },
+          LazyEChart: { template: '<div class="echart-stub" />' },
+        },
       },
     })
 

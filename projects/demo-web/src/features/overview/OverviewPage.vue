@@ -169,10 +169,10 @@
 
             <div class="portrait-stage">
               <div v-if="activePortraitTab === 'bar'" class="portrait-chart-wrap">
-                <EChart :option="dimensionBarOption" height="100%" />
+                <LazyEChart :option="dimensionBarOption" height="100%" />
               </div>
               <div v-else-if="activePortraitTab === 'radar'" class="portrait-chart-wrap">
-                <EChart :option="dimensionRadarOption" height="100%" />
+                <LazyEChart :option="dimensionRadarOption" height="100%" />
               </div>
               <div v-else class="dimension-summary-grid">
                 <article v-for="item in dimensionRows" :key="`summary-${item.dimension}`" class="dimension-summary-card">
@@ -317,7 +317,7 @@ import { useQuery } from '@tanstack/vue-query'
 import type { EChartsOption } from 'echarts'
 
 import { useTermStore } from '@/app/term'
-import EChart from '@/components/charts/EChart.vue'
+import LazyEChart from '@/components/charts/LazyEChart.vue'
 import RiskCardParticles from '@/components/layout/RiskCardParticles.vue'
 import EmptyState from '@/components/state/EmptyState.vue'
 import ErrorState from '@/components/state/ErrorState.vue'
@@ -733,6 +733,7 @@ function retry() {
   inset: 0;
   z-index: 0;
   pointer-events: none;
+  contain: paint;
 }
 
 .risk-card-particles :deep(canvas) {

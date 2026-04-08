@@ -26,26 +26,33 @@ import {
   WireframeGeometry,
 } from 'three'
 
+import { getMotionBudget, type MotionBudget, readMotionBudget } from '@/lib/motionBudget'
+
 const hostRef = ref<HTMLElement | null>(null)
 
 let renderer: WebGLRenderer | null = null
 let scene: Scene | null = null
 let camera: PerspectiveCamera | null = null
 let frameId = 0
+let animationRunning = false
+let lastRenderTime = 0
 let resizeObserver: ResizeObserver | null = null
+let intersectionObserver: IntersectionObserver | null = null
 let sphereGroup: Group | null = null
 let fieldGroup: Group | null = null
+let motionBudget: MotionBudget = getMotionBudget()
+let hostInViewport = true
 let targetRotationX = 0.2
 let targetRotationY = -0.35
 let targetFieldX = 0
 let targetFieldY = 0
 
-function buildRing(radius: number, depth: number, color: string, opacity: number) {
+function buildRing(radius: number, depth: number, color: string, opacity: number, segmentCount: number) {
   const geometry = new BufferGeometry()
   const positions: number[] = []
 
-  for (let i = 0; i < 64; i += 1) {
-    const angle = (i / 64) * Math.PI * 2
+  for (let i = 0; i < segmentCount; i += 1) {
+    const angle = (i / segmentCount) * Math.PI * 2
     positions.push(Math.cos(angle) * radius, Math.sin(angle) * radius, depth)
   }
 
@@ -61,11 +68,11 @@ function buildRing(radius: number, depth: number, color: string, opacity: number
   )
 }
 
-function buildHaloPoints() {
+function buildHaloPoints(pointCount: number) {
   const geometry = new BufferGeometry()
   const positions: number[] = []
 
-  for (let i = 0; i < 140; i += 1) {
+  for (let i = 0; i < pointCount; i += 1) {
     const theta = Math.random() * Math.PI * 2
     const phi = Math.acos(2 * Math.random() - 1)
     const radius = 1.95 + Math.random() * 0.45
@@ -90,17 +97,19 @@ function buildHaloPoints() {
   )
 }
 
-function buildFieldLines() {
+function buildFieldLines(horizontalCount: number, verticalCount: number) {
   const geometry = new BufferGeometry()
   const positions: number[] = []
 
-  for (let i = 0; i < 28; i += 1) {
-    const y = -2.5 + i * 0.18
+  for (let i = 0; i < horizontalCount; i += 1) {
+    const progress = horizontalCount === 1 ? 0.5 : i / (horizontalCount - 1)
+    const y = -2.5 + progress * 5
     positions.push(-4.9, y, -1.2, 4.9, y + Math.sin(i * 0.55) * 0.08, -1.2)
   }
 
-  for (let i = 0; i < 20; i += 1) {
-    const x = -3.6 + i * 0.36
+  for (let i = 0; i < verticalCount; i += 1) {
+    const progress = verticalCount === 1 ? 0.5 : i / (verticalCount - 1)
+    const x = -3.6 + progress * 7.2
     positions.push(x, -2.8, -1.2, x + Math.cos(i * 0.45) * 0.06, 2.8, -1.2)
   }
 
@@ -125,11 +134,18 @@ function resizeRenderer() {
   renderer.setSize(width, height, false)
   camera.aspect = width / height
   camera.updateProjectionMatrix()
+  if (scene) renderer.render(scene, camera)
 }
 
 function handlePointerMove(event: PointerEvent) {
-  const x = event.clientX / window.innerWidth - 0.5
-  const y = event.clientY / window.innerHeight - 0.5
+  const host = hostRef.value
+  if (!host) return
+
+  const bounds = host.getBoundingClientRect()
+  if (bounds.width <= 0 || bounds.height <= 0) return
+
+  const x = (event.clientX - bounds.left) / bounds.width - 0.5
+  const y = (event.clientY - bounds.top) / bounds.height - 0.5
 
   targetRotationY = -0.35 + x * 0.75
   targetRotationX = 0.2 + y * 0.45
@@ -144,12 +160,48 @@ function handlePointerLeave() {
   targetFieldY = 0
 }
 
-function animate() {
+function scheduleNextFrame() {
+  if (!animationRunning) return
+  frameId = window.requestAnimationFrame(animate)
+}
+
+function stopAnimation() {
+  animationRunning = false
+  lastRenderTime = 0
+  if (frameId) {
+    window.cancelAnimationFrame(frameId)
+    frameId = 0
+  }
+}
+
+function startAnimation() {
+  if (animationRunning) return
+  animationRunning = true
+  lastRenderTime = 0
+  scheduleNextFrame()
+}
+
+function syncAnimationState() {
+  if (document.visibilityState === 'visible' && hostInViewport) startAnimation()
+  else stopAnimation()
+}
+
+function handleVisibilityChange() {
+  syncAnimationState()
+}
+
+function animate(now: number) {
   if (!renderer || !scene || !camera || !sphereGroup || !fieldGroup) return
 
+  if (lastRenderTime && now - lastRenderTime < motionBudget.webglFrameIntervalMs) {
+    scheduleNextFrame()
+    return
+  }
+
+  lastRenderTime = now
   sphereGroup.rotation.x = MathUtils.lerp(sphereGroup.rotation.x, targetRotationX, 0.035)
   sphereGroup.rotation.y = MathUtils.lerp(sphereGroup.rotation.y, targetRotationY, 0.035)
-  sphereGroup.rotation.z += 0.0028
+  sphereGroup.rotation.z += motionBudget.lite ? 0.0016 : 0.0021
 
   fieldGroup.rotation.x = MathUtils.lerp(fieldGroup.rotation.x, -targetFieldY * 0.18, 0.04)
   fieldGroup.rotation.y = MathUtils.lerp(fieldGroup.rotation.y, targetFieldX * 0.18, 0.04)
@@ -157,12 +209,14 @@ function animate() {
   fieldGroup.position.y = MathUtils.lerp(fieldGroup.position.y, -targetFieldY * 0.14, 0.04)
 
   renderer.render(scene, camera)
-  frameId = window.requestAnimationFrame(animate)
+  scheduleNextFrame()
 }
 
 onMounted(() => {
   const host = hostRef.value
   if (!host) return
+  if (typeof window.WebGLRenderingContext === 'undefined') return
+  motionBudget = readMotionBudget()
 
   scene = new Scene()
   scene.background = null
@@ -170,8 +224,13 @@ onMounted(() => {
   camera = new PerspectiveCamera(34, 1, 0.1, 100)
   camera.position.set(0, 0, 8.4)
 
-  renderer = new WebGLRenderer({ antialias: true, alpha: true })
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  try {
+    renderer = new WebGLRenderer({ antialias: !motionBudget.lite, alpha: true, powerPreference: 'low-power' })
+  } catch {
+    return
+  }
+
+  renderer.setPixelRatio(motionBudget.webglPixelRatio)
   renderer.setClearColor(new Color('#000000'), 0)
   host.appendChild(renderer.domElement)
 
@@ -206,16 +265,16 @@ onMounted(() => {
     }),
   )
 
-  const haloPoints = buildHaloPoints()
-  const outerRing = buildRing(2.82, -0.3, '#d6c6ff', 0.42)
+  const haloPoints = buildHaloPoints(motionBudget.lite ? 72 : 96)
+  const outerRing = buildRing(2.82, -0.3, '#d6c6ff', 0.42, motionBudget.lite ? 36 : 44)
   outerRing.rotation.x = 1.08
   outerRing.rotation.y = 0.22
 
-  const middleRing = buildRing(2.28, 0.35, '#73ecff', 0.28)
+  const middleRing = buildRing(2.28, 0.35, '#73ecff', 0.28, motionBudget.lite ? 28 : 36)
   middleRing.rotation.x = 0.52
   middleRing.rotation.y = 0.94
 
-  const rearField = buildFieldLines()
+  const rearField = buildFieldLines(motionBudget.lite ? 18 : 22, motionBudget.lite ? 12 : 15)
 
   sphereGroup.add(shell)
   sphereGroup.add(wireframe)
@@ -236,19 +295,35 @@ onMounted(() => {
   resizeObserver = new ResizeObserver(() => resizeRenderer())
   resizeObserver.observe(host)
 
-  window.addEventListener('pointermove', handlePointerMove)
-  window.addEventListener('pointerleave', handlePointerLeave)
+  if (typeof IntersectionObserver !== 'undefined') {
+    intersectionObserver = new IntersectionObserver(
+      ([entry]) => {
+        hostInViewport = entry?.isIntersecting ?? true
+        syncAnimationState()
+      },
+      { threshold: 0.12 },
+    )
+    intersectionObserver.observe(host)
+  }
 
-  animate()
+  host.addEventListener('pointermove', handlePointerMove)
+  host.addEventListener('pointerleave', handlePointerLeave)
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+
+  syncAnimationState()
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('pointermove', handlePointerMove)
-  window.removeEventListener('pointerleave', handlePointerLeave)
+  const host = hostRef.value
+  host?.removeEventListener('pointermove', handlePointerMove)
+  host?.removeEventListener('pointerleave', handlePointerLeave)
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
 
-  if (frameId) window.cancelAnimationFrame(frameId)
+  stopAnimation()
   resizeObserver?.disconnect()
   resizeObserver = null
+  intersectionObserver?.disconnect()
+  intersectionObserver = null
 
   scene?.traverse((object: Object3D) => {
     const mesh = object as Mesh

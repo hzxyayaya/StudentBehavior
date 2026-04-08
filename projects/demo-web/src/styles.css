@@ -102,6 +102,7 @@ button {
   opacity: 0.38;
   mix-blend-mode: screen;
   overflow: hidden;
+  contain: paint;
 }
 
 .nav-particles-layer::before {
@@ -334,22 +335,22 @@ button {
 }
 
 .main-content::before {
-  opacity: 0.5;
+  opacity: 0.4;
   background:
     radial-gradient(circle at 8% 14%, rgba(179, 148, 241, 0.22), transparent 24%),
     radial-gradient(circle at 84% 10%, rgba(148, 119, 232, 0.16), transparent 24%),
     radial-gradient(circle at 74% 72%, rgba(202, 185, 248, 0.18), transparent 28%);
-  filter: blur(28px);
-  animation: mainAuroraShift 22s ease-in-out infinite alternate;
+  filter: blur(22px);
+  animation: mainAuroraShift 30s ease-in-out infinite alternate;
 }
 
 .main-content::after {
-  opacity: 0.42;
+  opacity: 0.32;
   background:
     linear-gradient(115deg, rgba(154, 116, 237, 0) 14%, rgba(176, 141, 242, 0.1) 38%, rgba(136, 105, 226, 0) 72%),
     linear-gradient(165deg, rgba(124, 95, 214, 0) 22%, rgba(214, 203, 246, 0.18) 48%, rgba(124, 95, 214, 0) 80%);
-  filter: blur(34px);
-  animation: mainAuroraDrift 18s ease-in-out infinite alternate;
+  filter: blur(28px);
+  animation: mainAuroraDrift 26s ease-in-out infinite alternate;
 }
 
 .main-particles-layer {
@@ -360,6 +361,7 @@ button {
   opacity: 0.92;
   mix-blend-mode: multiply;
   overflow: hidden;
+  contain: paint;
 }
 
 .main-particles-mount,

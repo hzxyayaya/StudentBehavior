@@ -9,18 +9,22 @@ import { onBeforeUnmount, onMounted } from 'vue'
 import { tsParticles, type Container } from '@tsparticles/engine'
 import { loadSlim } from '@tsparticles/slim'
 
+import { readMotionBudget } from '@/lib/motionBudget'
+
 const containerId = `login-triangles-${Math.random().toString(36).slice(2, 10)}`
 let container: Container | undefined
 
 onMounted(async () => {
+  const motionBudget = readMotionBudget()
+
   await loadSlim(tsParticles)
 
   container = await tsParticles.load({
     id: containerId,
     options: {
       fullScreen: { enable: false },
-      detectRetina: true,
-      fpsLimit: 60,
+      detectRetina: motionBudget.particleDetectRetina,
+      fpsLimit: motionBudget.particleFpsLimit,
       background: {
         color: 'transparent',
       },
@@ -33,7 +37,7 @@ onMounted(async () => {
       },
       particles: {
         number: {
-          value: 112,
+          value: motionBudget.lite ? 60 : 78,
           density: {
             enable: true,
             width: 1440,
@@ -55,41 +59,27 @@ onMounted(async () => {
           value: { min: 12, max: 30 },
         },
         opacity: {
-          value: { min: 0.12, max: 0.28 },
-          animation: {
-            enable: true,
-            speed: 0.4,
-            sync: false,
-          },
-        },
-        rotate: {
-          value: { min: 0, max: 360 },
-          direction: 'random',
-          animation: {
-            enable: true,
-            speed: 3,
-            sync: false,
-          },
+          value: motionBudget.lite ? { min: 0.08, max: 0.18 } : { min: 0.1, max: 0.22 },
         },
         move: {
           enable: true,
           direction: 'top-right',
           random: true,
           straight: false,
-          speed: { min: 0.08, max: 0.22 },
+          speed: motionBudget.lite ? { min: 0.05, max: 0.14 } : { min: 0.06, max: 0.18 },
           outModes: {
             default: 'out',
           },
         },
         links: {
           enable: true,
-          distance: 212,
+          distance: motionBudget.lite ? 176 : 194,
           color: '#f1e7ff',
-          opacity: 0.2,
-          width: 1.35,
+          opacity: motionBudget.lite ? 0.14 : 0.18,
+          width: motionBudget.lite ? 0.95 : 1.1,
           triangles: {
             enable: true,
-            opacity: 0.11,
+            opacity: motionBudget.lite ? 0.06 : 0.08,
             color: '#f4edff',
           },
         },

@@ -14,13 +14,13 @@
           </div>
         </div>
         <div class="filters">
-          <label class="custom-select-wrap" aria-label="学期选择">
+          <label class="custom-select-wrap filter-field" aria-label="学期选择">
             <select class="custom-select" :value="term" @change="handleTermChange">
               <option v-for="item in AVAILABLE_TERMS" :key="item" :value="item">{{ item }}</option>
             </select>
             <span class="custom-select-arrow">▾</span>
           </label>
-          <label class="custom-select-wrap" aria-label="风险等级筛选">
+          <label class="custom-select-wrap filter-field" aria-label="风险等级筛选">
             <select v-model="draftFilters.riskLevel" class="custom-select">
               <option value="">全部风险等级</option>
               <option value="高风险">高风险</option>
@@ -30,7 +30,7 @@
             </select>
             <span class="custom-select-arrow">▾</span>
           </label>
-          <label class="custom-select-wrap" aria-label="变化方向筛选">
+          <label class="custom-select-wrap filter-field" aria-label="变化方向筛选">
             <select v-model="draftFilters.riskChangeDirection" class="custom-select">
               <option value="">全部变化方向</option>
               <option value="rising">上升</option>
@@ -39,15 +39,17 @@
             </select>
             <span class="custom-select-arrow">▾</span>
           </label>
-          <label class="custom-select-wrap" aria-label="群体筛选">
+          <label class="custom-select-wrap filter-field" aria-label="群体筛选">
             <select v-model="draftFilters.groupSegment" class="custom-select">
               <option value="">全部群体标签</option>
               <option v-for="item in groupOptions" :key="item" :value="item">{{ item }}</option>
             </select>
             <span class="custom-select-arrow">▾</span>
           </label>
-          <input v-model="draftFilters.majorName" class="search-input" placeholder="按专业名称筛选" />
-          <button class="btn" type="button" @click="applyFilters">应用筛选</button>
+          <input v-model="draftFilters.majorName" class="search-input filter-search" placeholder="按专业名称筛选" />
+          <div class="filter-action">
+            <button class="btn filters-apply" type="button" @click="applyFilters">应用筛选</button>
+          </div>
         </div>
       </div>
     </section>
@@ -68,24 +70,24 @@
 
         <div class="table">
           <div class="table-row header">
-            <span>学号</span>
-            <span>姓名</span>
-            <span>专业</span>
-            <span>群体标签</span>
-            <span>风险等级</span>
-            <span>风险详情</span>
-            <span>风险因素</span>
+            <span class="table-heading">学号</span>
+            <span class="table-heading">姓名</span>
+            <span class="table-heading">专业</span>
+            <span class="table-heading">群体标签</span>
+            <span class="table-heading">风险等级</span>
+            <span class="table-heading">风险详情</span>
+            <span class="table-heading">风险因素</span>
           </div>
 
           <template v-if="query.isLoading.value">
             <div v-for="index in 5" :key="`skeleton-${index}`" class="table-row skeleton-row">
-              <span class="skeleton-block"></span>
-              <span class="skeleton-block"></span>
-              <span class="skeleton-block"></span>
-              <span class="skeleton-block"></span>
-              <span class="skeleton-block"></span>
-              <span class="skeleton-block"></span>
-              <span class="skeleton-block"></span>
+              <span class="table-cell"><span class="skeleton-block"></span></span>
+              <span class="table-cell"><span class="skeleton-block"></span></span>
+              <span class="table-cell"><span class="skeleton-block"></span></span>
+              <span class="table-cell"><span class="skeleton-block"></span></span>
+              <span class="table-cell"><span class="skeleton-block"></span></span>
+              <span class="table-cell"><span class="skeleton-block"></span></span>
+              <span class="table-cell"><span class="skeleton-block"></span></span>
             </div>
           </template>
 
@@ -96,22 +98,22 @@
             class="table-row"
             :to="buildStudentLink(item.student_id)"
           >
-            <span>{{ item.student_id }}</span>
-            <span>{{ item.student_name }}</span>
-            <span>{{ item.major_name }}</span>
-            <span>{{ item.group_segment }}</span>
-            <span>
+            <span class="table-cell" data-label="学号">{{ item.student_id }}</span>
+            <span class="table-cell" data-label="姓名">{{ item.student_name }}</span>
+            <span class="table-cell" data-label="专业">{{ item.major_name }}</span>
+            <span class="table-cell" data-label="群体标签">{{ item.group_segment }}</span>
+            <span class="table-cell" data-label="风险等级">
               <strong :class="warningLevelClass(item.intervention_priority_level ?? item.risk_level)">
                 {{ formatWarningLevel(item.intervention_priority_level ?? item.risk_level) }}
               </strong>
               <small class="risk-direction">{{ riskChangeText(item.risk_change_direction) }}</small>
             </span>
-            <span class="stack compact">
+            <span class="table-cell table-cell-detail stack compact" data-label="风险详情">
               <strong>干预 {{ formatWarningLevel(item.intervention_priority_level ?? item.risk_level) }}</strong>
               <small>学业 {{ formatWarningLevel(item.academic_risk_level ?? item.risk_level) }}</small>
               <small>行为 {{ formatWarningLevel(item.behavior_risk_level ?? item.risk_level) }}</small>
             </span>
-            <span class="factor-cell">
+            <span class="table-cell table-cell-factors factor-cell" data-label="风险因素">
               <small>优先分 {{ formatScore(item.intervention_priority_score ?? item.adjusted_risk_score ?? item.risk_probability * 100) }}</small>
               <small>风险 {{ factorText(item.top_risk_factors) }}</small>
               <small>保护 {{ factorText(item.top_protective_factors) }}</small>
@@ -346,11 +348,35 @@ function factorText(factors: WarningFactor[]) {
 .filters {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  align-items: end;
 }
 
 .filter-panel {
   margin-bottom: 10px;
+}
+
+.filter-field,
+.filter-search,
+.filter-action {
+  min-width: 0;
+}
+
+.filter-search {
+  grid-column: span 2;
+}
+
+.filter-action {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.filters-apply {
+  display: inline-flex;
+  align-items: center;
+  min-width: 132px;
+  justify-content: center;
+  white-space: nowrap;
 }
 
 .custom-select-wrap {
@@ -440,12 +466,29 @@ function factorText(factors: WarningFactor[]) {
 
 .table-row {
   display: grid;
-  gap: 12px;
-  grid-template-columns: 1fr 0.9fr 1.1fr 1fr 0.9fr 1.1fr 1.4fr;
+  gap: 12px 16px;
+  align-items: start;
+  grid-template-columns:
+    minmax(88px, 0.9fr)
+    minmax(92px, 0.85fr)
+    minmax(150px, 1.15fr)
+    minmax(140px, 1fr)
+    minmax(124px, 0.95fr)
+    minmax(170px, 1.15fr)
+    minmax(220px, 1.45fr);
   padding: 14px 16px;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.82);
   border: 1px solid rgba(28, 34, 56, 0.08);
+}
+
+.table-cell,
+.table-heading {
+  min-width: 0;
+}
+
+.table-cell {
+  overflow-wrap: anywhere;
 }
 
 .table-row.header {
@@ -552,10 +595,67 @@ function factorText(factors: WarningFactor[]) {
   }
 }
 
+@media (max-width: 1320px) {
+  .table-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .table-row.header {
+    display: none;
+  }
+
+  .table-cell {
+    display: grid;
+    gap: 4px;
+    align-content: start;
+  }
+
+  .table-cell[data-label]::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+
+  .table-cell-detail,
+  .table-cell-factors {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 1120px) {
+  .filter-search {
+    grid-column: span 1;
+  }
+
+  .table-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .table-cell-detail,
+  .table-cell-factors {
+    grid-column: span 2;
+  }
+}
+
 @media (max-width: 960px) {
   .filters,
   .table-row {
     grid-template-columns: 1fr;
+  }
+
+  .filter-action {
+    justify-content: stretch;
+  }
+
+  .filters-apply {
+    width: 100%;
+  }
+
+  .table-cell-detail,
+  .table-cell-factors {
+    grid-column: auto;
   }
 }
 </style>

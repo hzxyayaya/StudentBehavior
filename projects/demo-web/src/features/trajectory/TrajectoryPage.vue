@@ -46,7 +46,7 @@
                 <h3>学期趋势图</h3>
                 <span class="tag">{{ trajectoryRows.length }} 个学期</span>
               </div>
-              <EChart :option="trajectoryChartOption" height="320px" />
+              <LazyEChart :option="trajectoryChartOption" height="320px" />
             </div>
           </article>
         </section>
@@ -176,7 +176,7 @@ import { RouterLink } from 'vue-router'
 import type { EChartsOption } from 'echarts'
 
 import { AVAILABLE_TERMS, useTermStore } from '@/app/term'
-import EChart from '@/components/charts/EChart.vue'
+import LazyEChart from '@/components/charts/LazyEChart.vue'
 import EmptyState from '@/components/state/EmptyState.vue'
 import ErrorState from '@/components/state/ErrorState.vue'
 import LoadingState from '@/components/state/LoadingState.vue'

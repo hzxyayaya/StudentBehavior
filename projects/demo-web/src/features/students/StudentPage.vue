@@ -120,7 +120,7 @@
                 {{ showRadarDetails ? '收起' : '详情' }}
               </button>
             </div>
-            <EChart v-if="!showRadarDetails" :option="dimensionRadarOption" height="340px" />
+            <LazyEChart v-if="!showRadarDetails" :option="dimensionRadarOption" height="340px" />
             <div v-else class="radar-detail-grid">
               <article v-for="item in simplifiedDimensionRows" :key="item.dimension" class="radar-detail-item">
                 <div class="radar-detail-head">
@@ -141,7 +141,7 @@
         <article class="panel">
           <div class="panel-inner stack">
             <h3>学期趋势</h3>
-            <EChart :option="trendLineOption" height="300px" />
+            <LazyEChart :option="trendLineOption" height="300px" />
           </div>
         </article>
 
@@ -214,7 +214,7 @@ import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import type { EChartsOption } from 'echarts'
 
 import { AVAILABLE_TERMS } from '@/app/term'
-import EChart from '@/components/charts/EChart.vue'
+import LazyEChart from '@/components/charts/LazyEChart.vue'
 import EmptyState from '@/components/state/EmptyState.vue'
 import ErrorState from '@/components/state/ErrorState.vue'
 import LoadingState from '@/components/state/LoadingState.vue'

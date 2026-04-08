@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { getGroups, getOverview, loginDemo, getStudentProfile, getStudentReport } from '@/lib/api'
+import { getDevelopmentAnalysis, getGroups, getOverview, loginDemo, getStudentProfile, getStudentReport } from '@/lib/api'
 
 describe('api client', () => {
   beforeEach(() => {
@@ -104,8 +104,20 @@ describe('api client', () => {
                   ],
                 },
                 risk_trend_summary: [
-                  { term: '2024-1', avg_risk_score: 49.8, high_risk_count: 10, risk_change_direction: 'rising' },
-                  { term: '2024-2', avg_risk_score: 52.1, high_risk_count: 12, risk_change_direction: 'rising' },
+                  {
+                    term: '2024-1',
+                    avg_risk_score: 49.8,
+                    high_risk_count: 10,
+                    elevated_risk_count: 10,
+                    risk_change_direction: 'rising',
+                  },
+                  {
+                    term: '2024-2',
+                    avg_risk_score: 52.1,
+                    high_risk_count: 12,
+                    elevated_risk_count: 12,
+                    risk_change_direction: 'rising',
+                  },
                 ],
                 risk_factor_summary: [
                   { feature: 'academic_base', feature_cn: '学业基础表现', count: 52, importance: 0.82 },
@@ -297,8 +309,8 @@ describe('api client', () => {
       major_risk_summary: [{ major_name: '应用化学', high_risk_count: 0, student_count: 7 }],
       trend_summary: [{ term: '2024-2', high_risk_count: 0 }],
       risk_trend_summary: [
-        { term: '2024-1', avg_risk_score: 49.8, high_risk_count: 10, risk_change_direction: 'rising' },
-        { term: '2024-2', avg_risk_score: 52.1, high_risk_count: 12, risk_change_direction: 'rising' },
+        { term: '2024-1', avg_risk_score: 49.8, high_risk_count: 10, elevated_risk_count: 10, risk_change_direction: 'rising' },
+        { term: '2024-2', avg_risk_score: 52.1, high_risk_count: 12, elevated_risk_count: 12, risk_change_direction: 'rising' },
       ],
       risk_factor_summary: [
         { feature: 'academic_base', feature_cn: '学业基础表现', count: 52, importance: 0.82 },
@@ -697,5 +709,66 @@ describe('api client', () => {
     const groups = await getGroups('2024-2')
     expect(groups.groups[0]?.avg_risk_probability).toBe(0.61)
     expect(groups.groups[0]?.avg_risk_score).toBe(0)
+  })
+
+  it('omits optional major comparison fields when backend leaves them out', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input)
+
+        if (url.includes('/analytics/overview')) {
+          return Promise.resolve({
+            ok: true,
+            text: async () =>
+              JSON.stringify({
+                code: 200,
+                message: 'OK',
+                data: {
+                  student_count: 1,
+                  risk_distribution: { high: 0, medium: 0, low: 1 },
+                  risk_band_distribution: { 高风险: 0, 较高风险: 0, 一般风险: 0, 低风险: 1 },
+                  group_distribution: {},
+                  dimension_summary: [],
+                  major_risk_summary: [{ major_name: '应用化学', high_risk_count: 0, student_count: 7 }],
+                  trend_summary: { terms: [] },
+                  risk_trend_summary: [],
+                  risk_factor_summary: [],
+                },
+                meta: { request_id: 'demo-request', term: '2024-2' },
+              }),
+          })
+        }
+
+        return Promise.resolve({
+          ok: true,
+          text: async () =>
+            JSON.stringify({
+              code: 200,
+              message: 'OK',
+              data: {
+                term: '2024-2',
+                major_comparison: [{ major_name: '应用化学', high_risk_count: 0, student_count: 7 }],
+                dimension_highlights: [],
+                group_direction_segments: [],
+                direction_chains: [],
+                disclaimer: '去向真值暂未接入',
+              },
+              meta: { request_id: 'demo-request', term: '2024-2' },
+            }),
+        })
+      }),
+    )
+
+    const overview = await getOverview('2024-2')
+    const development = await getDevelopmentAnalysis('2024-2')
+
+    expect(overview.major_risk_summary[0]).not.toHaveProperty('elevated_risk_count')
+    expect(overview.major_risk_summary[0]).not.toHaveProperty('elevated_risk_ratio')
+    expect(overview.major_risk_summary[0]).not.toHaveProperty('average_risk_probability')
+
+    expect(development.major_comparison[0]).not.toHaveProperty('elevated_risk_count')
+    expect(development.major_comparison[0]).not.toHaveProperty('elevated_risk_ratio')
+    expect(development.major_comparison[0]).not.toHaveProperty('average_risk_probability')
   })
 })

@@ -175,14 +175,18 @@ function normalizeOverviewData(raw: unknown): OverviewData {
     dimension_summary: normalizeCalibratedDimensions(data.dimension_summary),
     major_risk_summary: asArray(data.major_risk_summary).map((item) => {
       const row = asRecord(item)
-      return {
+      const summary: OverviewData['major_risk_summary'][number] = {
         major_name: asString(row.major_name),
         high_risk_count: asNumber(row.high_risk_count),
-        elevated_risk_count: asOptionalNumber(row.elevated_risk_count),
-        elevated_risk_ratio: asOptionalNumber(row.elevated_risk_ratio),
         student_count: asNumber(row.student_count),
-        average_risk_probability: asOptionalNumber(row.average_risk_probability),
       }
+      const elevatedRiskCount = asOptionalNumber(row.elevated_risk_count)
+      if (elevatedRiskCount !== undefined) summary.elevated_risk_count = elevatedRiskCount
+      const elevatedRiskRatio = asOptionalNumber(row.elevated_risk_ratio)
+      if (elevatedRiskRatio !== undefined) summary.elevated_risk_ratio = elevatedRiskRatio
+      const averageRiskProbability = asOptionalNumber(row.average_risk_probability)
+      if (averageRiskProbability !== undefined) summary.average_risk_probability = averageRiskProbability
+      return summary
     }),
     trend_summary: normalizeTrendSummary(data.trend_summary),
     risk_trend_summary: normalizeRiskTrendSummary(data.risk_trend_summary),
@@ -379,14 +383,18 @@ function normalizeDevelopmentAnalysisData(raw: unknown): DevelopmentAnalysisData
     term: asString(data.term),
     major_comparison: asArray(data.major_comparison).map((item) => {
       const row = asRecord(item)
-      return {
+      const summary: DevelopmentAnalysisData['major_comparison'][number] = {
         major_name: asString(row.major_name),
         high_risk_count: asNumber(row.high_risk_count),
-        elevated_risk_count: asOptionalNumber(row.elevated_risk_count),
-        elevated_risk_ratio: asOptionalNumber(row.elevated_risk_ratio),
         student_count: asNumber(row.student_count),
-        average_risk_probability: asOptionalNumber(row.average_risk_probability),
       }
+      const elevatedRiskCount = asOptionalNumber(row.elevated_risk_count)
+      if (elevatedRiskCount !== undefined) summary.elevated_risk_count = elevatedRiskCount
+      const elevatedRiskRatio = asOptionalNumber(row.elevated_risk_ratio)
+      if (elevatedRiskRatio !== undefined) summary.elevated_risk_ratio = elevatedRiskRatio
+      const averageRiskProbability = asOptionalNumber(row.average_risk_probability)
+      if (averageRiskProbability !== undefined) summary.average_risk_probability = averageRiskProbability
+      return summary
     }),
     dimension_highlights: normalizeCalibratedDimensions(data.dimension_highlights),
     group_direction_segments: groupDirectionSegments,

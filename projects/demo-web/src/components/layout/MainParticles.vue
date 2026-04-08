@@ -9,35 +9,45 @@ import { nextTick, onBeforeUnmount, onMounted } from 'vue'
 import { tsParticles, type Container } from '@tsparticles/engine'
 import { loadSlim } from '@tsparticles/slim'
 
+import { readMotionBudget } from '@/lib/motionBudget'
+
 const containerId = `main-particles-${Math.random().toString(36).slice(2, 10)}`
 let container: Container | undefined
 let refreshTimer: ReturnType<typeof setTimeout> | undefined
+let refreshFrameId = 0
 
 function syncParticleLayout() {
   if (!container) return
 
   void nextTick(() => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        void container?.refresh()
-      })
+    if (refreshFrameId) window.cancelAnimationFrame(refreshFrameId)
+
+    refreshFrameId = window.requestAnimationFrame(() => {
+      refreshFrameId = 0
+      void container?.refresh()
     })
   })
 }
 
 function handleWindowLayoutChange() {
-  syncParticleLayout()
+  if (refreshTimer) clearTimeout(refreshTimer)
+  refreshTimer = setTimeout(() => {
+    refreshTimer = undefined
+    syncParticleLayout()
+  }, 96)
 }
 
 onMounted(async () => {
+  const motionBudget = readMotionBudget()
+
   await loadSlim(tsParticles)
 
   container = await tsParticles.load({
     id: containerId,
     options: {
       fullScreen: { enable: false },
-      detectRetina: true,
-      fpsLimit: 60,
+      detectRetina: motionBudget.particleDetectRetina,
+      fpsLimit: motionBudget.particleFpsLimit,
       background: {
         color: 'transparent',
       },
@@ -50,7 +60,7 @@ onMounted(async () => {
       },
       particles: {
         number: {
-          value: 88,
+          value: motionBudget.lite ? 40 : 56,
           density: {
             enable: true,
             width: 1200,
@@ -61,30 +71,20 @@ onMounted(async () => {
           value: ['#8a59cf', '#7442bf', '#5b2ea3'],
         },
         shape: {
-          type: ['circle', 'star'],
+          type: motionBudget.lite ? 'circle' : ['circle', 'star'],
         },
         size: {
-          value: { min: 1.2, max: 3.2 },
-          animation: {
-            enable: true,
-            speed: 0.55,
-            sync: false,
-          },
+          value: motionBudget.lite ? { min: 1.1, max: 2.3 } : { min: 1.2, max: 2.8 },
         },
         opacity: {
-          value: { min: 0.28, max: 0.64 },
-          animation: {
-            enable: true,
-            speed: 0.52,
-            sync: false,
-          },
+          value: motionBudget.lite ? { min: 0.16, max: 0.34 } : { min: 0.2, max: 0.42 },
         },
         move: {
           enable: true,
           direction: 'none',
           random: true,
           straight: false,
-          speed: { min: 0.12, max: 0.34 },
+          speed: motionBudget.lite ? { min: 0.06, max: 0.18 } : { min: 0.08, max: 0.22 },
           outModes: {
             default: 'bounce',
           },
@@ -109,6 +109,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   if (refreshTimer) clearTimeout(refreshTimer)
+  if (refreshFrameId) window.cancelAnimationFrame(refreshFrameId)
   window.removeEventListener('resize', handleWindowLayoutChange)
   window.removeEventListener('load', handleWindowLayoutChange)
   container?.destroy()

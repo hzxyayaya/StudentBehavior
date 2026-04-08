@@ -1,6 +1,11 @@
 <template>
   <div class="login-page">
-    <LoginTriangles />
+    <Suspense v-if="showAmbientVisuals">
+      <LoginTriangles />
+      <template #fallback>
+        <div class="login-triangles-fallback" aria-hidden="true"></div>
+      </template>
+    </Suspense>
     <div class="ambient ambient-a"></div>
     <div class="ambient ambient-b"></div>
     <div class="ambient ambient-c"></div>
@@ -87,7 +92,13 @@
             <p class="visual-text">用更轻的交互方式，查看学生群体状态、风险波动与关键行为信号。</p>
           </div>
           <div class="sphere-stage">
-            <LoginPolySphere />
+            <div v-if="!showAmbientVisuals" class="sphere-placeholder" aria-hidden="true"></div>
+            <Suspense v-else>
+              <LoginPolySphere />
+              <template #fallback>
+                <div class="sphere-placeholder" aria-hidden="true"></div>
+              </template>
+            </Suspense>
           </div>
         </div>
       </section>
@@ -96,14 +107,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { useAuthStore } from '@/app/auth'
 import { useTermStore } from '@/app/term'
-import LoginPolySphere from '@/components/auth/LoginPolySphere.vue'
-import LoginTriangles from '@/components/auth/LoginTriangles.vue'
 import { loginDemo } from '@/lib/api'
+
+const LoginPolySphere = defineAsyncComponent(() => import('@/components/auth/LoginPolySphere.vue'))
+const LoginTriangles = defineAsyncComponent(() => import('@/components/auth/LoginTriangles.vue'))
 
 const router = useRouter()
 const route = useRoute()
@@ -115,6 +127,8 @@ const password = ref('demo_only')
 const term = ref(termStore.term.value)
 const loading = ref(false)
 const error = ref('')
+const showAmbientVisuals = ref(false)
+const shouldLoadAmbientVisuals = import.meta.env.MODE !== 'test'
 const previousBodyOverflow = document.body.style.overflow
 const previousHtmlOverflow = document.documentElement.style.overflow
 
@@ -126,6 +140,7 @@ const redirectTarget = computed(() => {
 onMounted(() => {
   document.body.style.overflow = 'hidden'
   document.documentElement.style.overflow = 'hidden'
+  showAmbientVisuals.value = shouldLoadAmbientVisuals
 })
 
 onBeforeUnmount(() => {
@@ -199,6 +214,13 @@ function formatLoginError(err: unknown) {
   border-radius: 999px;
   filter: blur(42px);
   opacity: 0.36;
+  pointer-events: none;
+}
+
+.login-triangles-fallback {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
   pointer-events: none;
 }
 
@@ -523,6 +545,12 @@ h1 {
   padding: 92px 20px 20px;
 }
 
+.sphere-placeholder {
+  width: 100%;
+  height: 100%;
+  min-height: 420px;
+}
+
 .visual-copy {
   position: absolute;
   top: 26px;
@@ -627,6 +655,11 @@ h1 {
 
   .sphere-stage {
     padding: 82px 8px 8px;
+  }
+
+  .sphere-placeholder {
+    min-height: 280px;
+    height: 320px;
   }
 
   .visual-copy {

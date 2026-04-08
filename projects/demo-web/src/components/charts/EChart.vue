@@ -4,8 +4,14 @@
 
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import * as echarts from 'echarts'
+import { BarChart, LineChart, RadarChart } from 'echarts/charts'
+import { AxisPointerComponent, GridComponent, LegendComponent, RadarComponent, TooltipComponent } from 'echarts/components'
+import { init, use } from 'echarts/core'
+import type { EChartsType } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
 import type { EChartsOption } from 'echarts'
+
+use([BarChart, LineChart, RadarChart, AxisPointerComponent, GridComponent, LegendComponent, RadarComponent, TooltipComponent, CanvasRenderer])
 
 const props = defineProps<{
   option: EChartsOption
@@ -17,7 +23,7 @@ const emit = defineEmits<{
 }>()
 
 const el = ref<HTMLDivElement | null>(null)
-let chart: echarts.ECharts | null = null
+let chart: EChartsType | null = null
 
 function render() {
   if (!chart) return
@@ -30,7 +36,7 @@ function resize() {
 
 onMounted(() => {
   if (!el.value) return
-  chart = echarts.init(el.value)
+  chart = init(el.value)
   chart.on('click', (params) => emit('chart-click', params))
   render()
   window.addEventListener('resize', resize)
