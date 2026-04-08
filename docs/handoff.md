@@ -1,6 +1,23 @@
 # 项目交接说明
 
-Last Updated: 2026-03-31
+Last Updated: 2026-04-08
+
+## 0. 2026-04-08 Branch Status Update
+
+当前仓库的分支状态需要按最新事实理解，不要继续沿用 2026-03-31 之前的判断。
+
+- 当前本地 `main` 已经包含 `projects/demo-web`，不要再把“前端仍只存在于独立 worktree”当成现状。
+- 当前最新业务开发分支是 `codex/academic-risk-warning`。
+- `codex/academic-risk-warning` 基于 `main` 继续前进，包含比 `main` 更新的学业预警 Demo 改动。
+- 如果新协作者要接着做当前项目，默认应从 `codex/academic-risk-warning` 切出新分支，而不是从旧的 `codex/v1-demo-web` 或历史 worktree 开始。
+- `main` 更适合视为稳定集成基线；最新演示能力与学业预警链路以 `codex/academic-risk-warning` 为准。
+
+面向协作者的最小 Git 流程建议更新为：
+
+1. 先同步远端并检出 `codex/academic-risk-warning`
+2. 从该分支创建自己的 `codex/<task-name>` 分支
+3. 修改前先运行相关测试/构建确认基线
+4. 完成后通过 PR 合回 `codex/academic-risk-warning`，再择机并回 `main`
 
 ## 0. 2026-03-28 Real-Data Update
 

@@ -33,6 +33,7 @@ prompts/
 数据集及类型/
 .history/
 .worktrees/
+.omx/
 .tmp_rg_files.txt
 artifacts/semester_features/
 artifacts/*.csv
