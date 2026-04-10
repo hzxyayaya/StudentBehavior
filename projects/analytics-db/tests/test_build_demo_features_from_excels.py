@@ -288,6 +288,14 @@ def test_build_demo_features_from_excels_generates_filtered_csv(tmp_path: Path):
     pd.DataFrame([{"XH": student_id, "CPXN": "2024-2025", "CPXQ": 1, "PDXN": "2024-2025", "PDXQ": 1, "ZYNJPM": 90, "ZYNJRS": 100}]).to_excel(
         data_dir / "本科生综合测评.xlsx", index=False
     )
+    pd.DataFrame(
+        [
+            {"SID": student_id, "GRADUATE_YEAR": 2025, "BYQX": "46", "BYQXMC": "签就业协议形式就业", "DWXZ": "21", "DWXZMC": "党政机关", "DWHY": "S", "DWHYMC": "公共管理"},
+            {"SID": neutral_status_student_id, "GRADUATE_YEAR": 2025, "BYQX": "99", "BYQXMC": "待就业", "DWXZ": "", "DWXZMC": "", "DWHY": "", "DWHYMC": ""},
+        ]
+    ).to_excel(
+        data_dir / "毕业去向.xlsx", index=False
+    )
     pd.DataFrame([{"LOGIN_NAME": student_id, "XM": "学生A", "DEPARTMENT_NAME": "信息学院", "MAJOR_NAME": "计算机科学", "CLASS_NAME": "计科1班", "ROLEID": 3, "BFB": 99.6}]).to_excel(
         data_dir / "线上学习（综合表现）.xlsx", index=False
     )
@@ -352,6 +360,8 @@ def test_build_demo_features_from_excels_generates_filtered_csv(tmp_path: Path):
         "risk_label_level",
         "label_source",
         "label_rule_version",
+        "destination_label",
+        "destination_source",
     }.issubset(frame.columns)
     expected_support_columns = {
         "absence_count",
@@ -379,6 +389,8 @@ def test_build_demo_features_from_excels_generates_filtered_csv(tmp_path: Path):
 
     assert student_frame.loc[0, "student_id"] == student_id
     assert student_frame.loc[0, "term_key"] == "2024-1"
+    assert student_frame.loc[0, "destination_label"] == "体制内"
+    assert student_frame.loc[0, "destination_source"] == "dwxz_public_sector"
     assert student_frame.loc[0, "failed_course_count"] == 1
     assert student_frame.loc[0, "risk_label"] == 1
     assert student_frame.loc[0, "risk_label_binary"] == 1
@@ -427,6 +439,8 @@ def test_build_demo_features_from_excels_generates_filtered_csv(tmp_path: Path):
     assert str(student_frame.loc[0, "negative_status_alert_flag"]).lower() == "true"
 
     assert neutral_status_frame.loc[0, "term_key"] == "2024-1"
+    assert neutral_status_frame.loc[0, "destination_label"] == "待定其他"
+    assert neutral_status_frame.loc[0, "destination_source"] == "byqx_pending_other"
     assert pd.isna(neutral_status_frame.loc[0, "risk_label_binary"])
     assert pd.isna(neutral_status_frame.loc[0, "risk_label_level"])
     assert pd.isna(neutral_status_frame.loc[0, "label_source"])
@@ -576,3 +590,252 @@ def test_build_demo_features_from_excels_includes_heavy_metrics_by_default(tmp_p
     assert frame.loc[0, "term_online_duration_sum"] == 100
     assert frame.loc[0, "library_completed_visit_count"] == 1
     assert pd.notna(frame.loc[0, "online_activeness_score_raw"])
+
+
+def test_build_demo_features_from_excels_loads_destination_truth_rows(tmp_path: Path):
+    repo_root = tmp_path / "repo"
+    data_dir = repo_root / "数据集及类型"
+    output_csv = repo_root / "artifacts" / "semester_features" / "v1_semester_features.csv"
+    data_dir.mkdir(parents=True)
+
+    official_student_id = "pjxyqxbj901"
+    _write_required_default_excels(
+        data_dir,
+        student_rows=[
+            {"XH": official_student_id, "XB": "男", "MZMC": "汉族", "ZZMMMC": "群众", "XSM": "计科1班", "ZYM": "计算机科学"}
+        ],
+        grade_rows=[
+            {
+                "XH": official_student_id,
+                "KSSJ": "2024-09-02 09:00:00",
+                "KCH": "CS201",
+                "KCM": "数据结构",
+                "KCCJ": 75,
+                "JDCJ": 2.8,
+                "XF": 3,
+                "DJCJ": "75",
+                "KSLXDM": "01",
+                "CXBKBZ": 0,
+            }
+        ],
+    )
+    _write_excel(
+        data_dir / "毕业去向.xlsx",
+        [
+            {
+                "SID": official_student_id,
+                "GRADUATE_YEAR": 2025,
+                "BYQX": "10",
+                "BYQXMC": "国内升学",
+                "DWXZ": "01",
+                "DWXZMC": "高等教育单位",
+                "DWHY": "P",
+                "DWHYMC": "教育",
+            },
+            {
+                "SID": "alias-not-on-roster",
+                "GRADUATE_YEAR": 2025,
+                "BYQX": "46",
+                "BYQXMC": "签就业协议形式就业",
+                "DWXZ": "10",
+                "DWXZMC": "民营企业",
+                "DWHY": "I",
+                "DWHYMC": "信息传输、软件和信息技术服务业",
+            },
+        ],
+        ["SID", "GRADUATE_YEAR", "BYQX", "BYQXMC", "DWXZ", "DWXZMC", "DWHY", "DWHYMC"],
+    )
+
+    summary = build_demo_features_from_excels(
+        repo_root=repo_root,
+        data_dir=data_dir,
+        output_csv=output_csv,
+        include_heavy_sources=False,
+    )
+
+    assert summary["row_count"] == 1
+    assert summary["source_row_counts"]["destinations"] == 1
+    frame = pd.read_csv(output_csv)
+    assert frame["student_id"].tolist() == [official_student_id]
+    assert frame.loc[0, "destination_label"] == "升学"
+    assert frame.loc[0, "destination_source"] == "byqx_study"
+
+
+def test_build_demo_features_from_excels_uses_destination_business_precedence_for_duplicate_year_rows(tmp_path: Path):
+    repo_root = tmp_path / "repo"
+    data_dir = repo_root / "数据集及类型"
+    output_csv = repo_root / "artifacts" / "semester_features" / "v1_semester_features.csv"
+    data_dir.mkdir(parents=True)
+
+    student_id = "pjxyqxbj901"
+    _write_required_default_excels(
+        data_dir,
+        student_rows=[
+            {"XH": student_id, "XB": "男", "MZMC": "汉族", "ZZMMMC": "群众", "XSM": "计科1班", "ZYM": "计算机科学"}
+        ],
+        grade_rows=[
+            {
+                "XH": student_id,
+                "KSSJ": "2024-09-02 09:00:00",
+                "KCH": "CS201",
+                "KCM": "数据结构",
+                "KCCJ": 75,
+                "JDCJ": 2.8,
+                "XF": 3,
+                "DJCJ": "75",
+                "KSLXDM": "01",
+                "CXBKBZ": 0,
+            }
+        ],
+    )
+    _write_excel(
+        data_dir / "毕业去向.xlsx",
+        [
+            {
+                "SID": student_id,
+                "GRADUATE_YEAR": 2025,
+                "BYQX": "99",
+                "BYQXMC": "待就业",
+                "DWXZ": "",
+                "DWXZMC": "",
+                "DWHY": "",
+                "DWHYMC": "",
+            },
+            {
+                "SID": student_id,
+                "GRADUATE_YEAR": 2025,
+                "BYQX": "10",
+                "BYQXMC": "国内升学",
+                "DWXZ": "01",
+                "DWXZMC": "高等教育单位",
+                "DWHY": "P",
+                "DWHYMC": "教育",
+            },
+        ],
+        ["SID", "GRADUATE_YEAR", "BYQX", "BYQXMC", "DWXZ", "DWXZMC", "DWHY", "DWHYMC"],
+    )
+
+    summary = build_demo_features_from_excels(
+        repo_root=repo_root,
+        data_dir=data_dir,
+        output_csv=output_csv,
+        include_heavy_sources=False,
+    )
+
+    assert summary["row_count"] == 1
+    assert summary["source_row_counts"]["destinations"] == 2
+    frame = pd.read_csv(output_csv)
+    assert frame.loc[0, "destination_label"] == "升学"
+    assert frame.loc[0, "destination_source"] == "byqx_study"
+
+
+def test_build_demo_features_from_excels_discovers_destination_source_with_alternate_id_and_year_headers(tmp_path: Path):
+    repo_root = tmp_path / "repo"
+    data_dir = repo_root / "数据集及类型"
+    output_csv = repo_root / "artifacts" / "semester_features" / "v1_semester_features.csv"
+    data_dir.mkdir(parents=True)
+
+    student_id = "pjxyqxbj901"
+    _write_required_default_excels(
+        data_dir,
+        student_rows=[
+            {"XH": student_id, "XB": "男", "MZMC": "汉族", "ZZMMMC": "群众", "XSM": "计科1班", "ZYM": "计算机科学"}
+        ],
+        grade_rows=[
+            {
+                "XH": student_id,
+                "KSSJ": "2024-09-02 09:00:00",
+                "KCH": "CS201",
+                "KCM": "数据结构",
+                "KCCJ": 75,
+                "JDCJ": 2.8,
+                "XF": 3,
+                "DJCJ": "75",
+                "KSLXDM": "01",
+                "CXBKBZ": 0,
+            }
+        ],
+    )
+    _write_excel(
+        data_dir / "毕业去向-别名表头.xlsx",
+        [
+            {
+                "XH": student_id,
+                "BYNF": 2025,
+                "BYQX": "10",
+                "BYQXMC": "国内升学",
+                "DWXZ": "01",
+                "DWXZMC": "高等教育单位",
+                "DWHY": "P",
+                "DWHYMC": "教育",
+            }
+        ],
+        ["XH", "BYNF", "BYQX", "BYQXMC", "DWXZ", "DWXZMC", "DWHY", "DWHYMC"],
+    )
+
+    summary = build_demo_features_from_excels(
+        repo_root=repo_root,
+        data_dir=data_dir,
+        output_csv=output_csv,
+        include_heavy_sources=False,
+    )
+
+    assert summary["source_row_counts"]["destinations"] == 1
+    frame = pd.read_csv(output_csv)
+    assert frame.loc[0, "destination_label"] == "升学"
+    assert frame.loc[0, "destination_source"] == "byqx_study"
+
+
+def test_build_demo_features_from_excels_discovers_alternate_named_destination_workbook_without_industry_headers(tmp_path: Path):
+    repo_root = tmp_path / "repo"
+    data_dir = repo_root / "数据集及类型"
+    output_csv = repo_root / "artifacts" / "semester_features" / "v1_semester_features.csv"
+    data_dir.mkdir(parents=True)
+
+    student_id = "pjxyqxbj901"
+    _write_required_default_excels(
+        data_dir,
+        student_rows=[
+            {"XH": student_id, "XB": "男", "MZMC": "汉族", "ZZMMMC": "群众", "XSM": "计科1班", "ZYM": "计算机科学"}
+        ],
+        grade_rows=[
+            {
+                "XH": student_id,
+                "KSSJ": "2024-09-02 09:00:00",
+                "KCH": "CS201",
+                "KCM": "数据结构",
+                "KCCJ": 75,
+                "JDCJ": 2.8,
+                "XF": 3,
+                "DJCJ": "75",
+                "KSLXDM": "01",
+                "CXBKBZ": 0,
+            }
+        ],
+    )
+    _write_excel(
+        data_dir / "毕业去向-缺行业列.xlsx",
+        [
+            {
+                "XH": student_id,
+                "BYNF": 2025,
+                "BYQX": "10",
+                "BYQXMC": "国内升学",
+                "DWXZ": "01",
+                "DWXZMC": "高等教育单位",
+            }
+        ],
+        ["XH", "BYNF", "BYQX", "BYQXMC", "DWXZ", "DWXZMC"],
+    )
+
+    summary = build_demo_features_from_excels(
+        repo_root=repo_root,
+        data_dir=data_dir,
+        output_csv=output_csv,
+        include_heavy_sources=False,
+    )
+
+    assert summary["source_row_counts"]["destinations"] == 1
+    frame = pd.read_csv(output_csv)
+    assert frame.loc[0, "destination_label"] == "升学"
+    assert frame.loc[0, "destination_source"] == "byqx_study"

@@ -791,6 +791,26 @@ describe('task pages', () => {
                   { major_name: '计算机科学与技术', high_risk_count: 5, student_count: 18 },
                   { major_name: '软件工程', high_risk_count: 3, student_count: 21 },
                 ],
+                destination_distribution: { 升学: 18, 企业就业: 9 },
+                major_destination_summary: [
+                  {
+                    major_name: '计算机科学与技术',
+                    student_count: 18,
+                    destination_student_count: 7,
+                    top_destination_label: '升学',
+                    top_destination_count: 4,
+                    destination_distribution: { 升学: 4, 企业就业: 3 },
+                  },
+                ],
+                group_destination_association: [
+                  {
+                    group_segment: '综合发展优势组',
+                    destination_label: '升学',
+                    student_count: 15,
+                    group_student_count: 51,
+                    share_within_group: 0.2941,
+                  },
+                ],
                 dimension_highlights: [
                   { dimension: '学业基础表现', average_score: 0.7, level: 'high', label: '学业基础稳健' },
                   { dimension: '图书馆沉浸度', average_score: 0.41, level: 'medium', label: '图书馆投入一般' },
@@ -823,7 +843,7 @@ describe('task pages', () => {
                     avg_risk_score: 41.2,
                   },
                 ],
-                disclaimer: '去向真值暂未接入',
+                disclaimer: '去向分析已接入真实毕业去向数据；无匹配数据时相关字段返回空结果',
               },
               meta: { request_id: 'req-development', term: '2024-2' },
             }),
@@ -867,13 +887,24 @@ describe('task pages', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('发展方向与去向关联分析')
+    expect(wrapper.text()).toContain('毕业去向分布')
+    expect(wrapper.text()).toContain('升学')
+    expect(wrapper.text()).toContain('18 人')
+    expect(wrapper.text()).toContain('企业就业')
+    expect(wrapper.text()).toContain('9 人')
+    expect(wrapper.text()).toContain('专业去向对比')
     expect(wrapper.text()).toContain('计算机科学与技术')
+    expect(wrapper.text()).toContain('去向学生 7 人')
+    expect(wrapper.text()).toContain('主去向 升学')
+    expect(wrapper.text()).toContain('升学 4')
+    expect(wrapper.text()).toContain('企业就业 3')
+    expect(wrapper.text()).toContain('群体去向关联')
     expect(wrapper.text()).toContain('综合发展优势组')
+    expect(wrapper.text()).toContain('组内占比 29.4%')
     expect(wrapper.text()).toContain('图书馆沉浸度')
-    expect(wrapper.text()).toContain('方向标签')
     expect(wrapper.text()).toContain('方向解释链路')
     expect(wrapper.text()).toContain('学业基础表现')
     expect(wrapper.text()).toContain('平均风险分 41.2')
-    expect(wrapper.text()).toContain('去向真值暂未接入')
+    expect(wrapper.text()).toContain('去向分析已接入真实毕业去向数据')
   })
 })

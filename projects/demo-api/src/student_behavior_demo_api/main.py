@@ -280,7 +280,7 @@ def get_trajectory_analysis(
     "/api/analytics/development",
     tags=["发展分析"],
     summary="获取发展方向与去向关联分析",
-    description="返回指定学期的专业对比、群体方向标签、方向解释链路与当前去向分析口径说明。",
+    description="返回指定学期的专业对比、群体方向标签、方向解释链路，以及真实毕业去向分布与群体关联分析。",
     responses=_response_examples(
         {
             "code": 200,
@@ -290,10 +290,30 @@ def get_trajectory_analysis(
                 "major_comparison": [
                     {"major_name": "智能科学与技术", "high_risk_count": 3, "student_count": 28}
                 ],
+                "destination_distribution": {"升学": 18, "企业就业": 9},
+                "major_destination_summary": [
+                    {
+                        "major_name": "智能科学与技术",
+                        "student_count": 28,
+                        "destination_student_count": 7,
+                        "top_destination_label": "升学",
+                        "top_destination_count": 4,
+                        "destination_distribution": {"升学": 4, "企业就业": 3},
+                    }
+                ],
+                "group_destination_association": [
+                    {
+                        "group_segment": "作息失衡风险组",
+                        "destination_label": "升学",
+                        "student_count": 6,
+                        "group_student_count": 21,
+                        "share_within_group": 0.2857,
+                    }
+                ],
                 "group_direction_segments": [
                     {"group_segment": "作息失衡风险组", "direction_label": "偏向 课堂学习投入", "avg_risk_score": 24.47}
                 ],
-                "disclaimer": "去向真值暂未接入",
+                "disclaimer": "去向分析已接入真实毕业去向数据；无匹配数据时相关字段返回空结果",
             },
             "meta": _example_meta("2024-2"),
         },

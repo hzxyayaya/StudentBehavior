@@ -396,6 +396,13 @@ function normalizeDevelopmentAnalysisData(raw: unknown): DevelopmentAnalysisData
       if (averageRiskProbability !== undefined) summary.average_risk_probability = averageRiskProbability
       return summary
     }),
+    destination_distribution: normalizeCountDistribution(data.destination_distribution),
+    major_destination_summary: normalizeMajorDestinationSummary(
+      data.major_destination_summary ?? data.major_destination_comparison,
+    ),
+    group_destination_association: normalizeGroupDestinationAssociation(
+      data.group_destination_association ?? data.behavior_destination_association,
+    ),
     dimension_highlights: normalizeCalibratedDimensions(data.dimension_highlights),
     group_direction_segments: groupDirectionSegments,
     direction_chains: asArray(data.direction_chains).map((item) => {
@@ -591,6 +598,49 @@ function normalizeGroupDistribution(raw: unknown) {
     group_segment: groupSegment,
     count: asNumber(count),
   }))
+}
+
+function normalizeCountDistribution(raw: unknown) {
+  const record = asRecord(raw)
+  return Object.fromEntries(
+    Object.entries(record)
+      .filter(([label]) => Boolean(label))
+      .map(([label, count]) => [label, asNumber(count)]),
+  )
+}
+
+function normalizeMajorDestinationSummary(raw: unknown): DevelopmentAnalysisData['major_destination_summary'] {
+  return asArray(raw).map((item) => {
+    const row = asRecord(item)
+    const summary: DevelopmentAnalysisData['major_destination_summary'][number] = {
+      major_name: asString(row.major_name),
+      student_count: asNumber(row.student_count),
+      destination_student_count: asNumber(row.destination_student_count),
+      destination_distribution: normalizeCountDistribution(row.destination_distribution),
+    }
+    const topDestinationLabel = asOptionalString(row.top_destination_label)
+    if (topDestinationLabel !== undefined) summary.top_destination_label = topDestinationLabel
+    const topDestinationCount = asOptionalNumber(row.top_destination_count)
+    if (topDestinationCount !== undefined) summary.top_destination_count = topDestinationCount
+    return summary
+  })
+}
+
+function normalizeGroupDestinationAssociation(raw: unknown): DevelopmentAnalysisData['group_destination_association'] {
+  return asArray(raw).map((item) => {
+    const row = asRecord(item)
+    const association: DevelopmentAnalysisData['group_destination_association'][number] = {
+      group_segment: asString(row.group_segment),
+      student_count: asNumber(row.student_count),
+    }
+    const destinationLabel = asOptionalString(row.destination_label)
+    if (destinationLabel !== undefined) association.destination_label = destinationLabel
+    const groupStudentCount = asOptionalNumber(row.group_student_count)
+    if (groupStudentCount !== undefined) association.group_student_count = groupStudentCount
+    const shareWithinGroup = asOptionalNumber(row.share_within_group)
+    if (shareWithinGroup !== undefined) association.share_within_group = shareWithinGroup
+    return association
+  })
 }
 
 function normalizeTrendSummary(raw: unknown) {

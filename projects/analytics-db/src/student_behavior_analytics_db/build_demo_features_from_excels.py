@@ -14,6 +14,7 @@ from .build_student_term_features import build_student_term_features
 from .load_fact_assignments import load_fact_assignments
 from .load_fact_attendance import load_fact_attendance
 from .load_fact_discussions import load_fact_discussions
+from .load_fact_destinations import load_fact_destinations
 from .load_fact_enrollments import load_fact_enrollments
 from .load_fact_evaluation_labels import load_fact_evaluation_labels
 from .load_fact_exams import load_fact_exams
@@ -45,6 +46,21 @@ _ARTIFACT_DIMENSION_RAW_COLUMNS = {
     "physical_resilience": "physical_resilience_score_raw",
     "appraisal_status_alert": "appraisal_status_alert_score_raw",
 }
+_DESTINATION_LABEL_PRECEDENCE = {
+    "升学": 0,
+    "体制内": 1,
+    "出国出境": 2,
+    "企业就业": 3,
+    "待定其他": 4,
+}
+_DESTINATION_SOURCE_PRECEDENCE = {
+    "byqx_study": 0,
+    "byqx_public_sector": 1,
+    "byqx_abroad": 2,
+    "dwxz_public_sector": 3,
+    "byqx_employment": 4,
+    "byqx_pending_other": 5,
+}
 
 
 @dataclass(frozen=True)
@@ -53,6 +69,9 @@ class SourceSpec:
     usecols: tuple[str, ...]
     loader: Callable[[list[dict[str, object]]], pd.DataFrame]
     enabled_by_default: bool = True
+    required: bool = True
+    required_headers: tuple[str, ...] | None = None
+    alternative_header_groups: tuple[tuple[str, ...], ...] = ()
 
 
 _SOURCE_SPECS: dict[str, SourceSpec] = {
@@ -75,6 +94,31 @@ _SOURCE_SPECS: dict[str, SourceSpec] = {
         filename="本科生综合测评.xlsx",
         usecols=("XH", "CPXN", "CPXQ", "PDXN", "PDXQ", "ZYNJPM", "ZYNJRS"),
         loader=load_fact_evaluation_labels,
+    ),
+    "destinations": SourceSpec(
+        filename="毕业去向.xlsx",
+        usecols=(
+            "SID",
+            "XH",
+            "XSBH",
+            "LOGIN_NAME",
+            "USERNUM",
+            "GRADUATE_YEAR",
+            "BYNF",
+            "BYQX",
+            "BYQXMC",
+            "DWXZ",
+            "DWXZMC",
+            "DWHY",
+            "DWHYMC",
+        ),
+        loader=load_fact_destinations,
+        required=False,
+        required_headers=("BYQX", "BYQXMC", "DWXZ", "DWXZMC"),
+        alternative_header_groups=(
+            ("SID", "XH", "XSBH", "LOGIN_NAME", "USERNUM"),
+            ("GRADUATE_YEAR", "BYNF"),
+        ),
     ),
     "enrollments": SourceSpec(
         filename="学生选课信息.xlsx",
@@ -218,11 +262,16 @@ def build_demo_features_from_excels(
         fallback["include_heavy_sources"] = include_heavy_sources
         return fallback
 
-    normalized_frames = {
-        name: spec.loader(_read_excel_rows(_resolve_source_file(resolved_data_dir, spec), spec.usecols))
-        for name, spec in _SOURCE_SPECS.items()
-        if include_heavy_sources or spec.enabled_by_default
-    }
+    normalized_frames: dict[str, pd.DataFrame] = {}
+    for name, spec in _SOURCE_SPECS.items():
+        if not include_heavy_sources and not spec.enabled_by_default:
+            continue
+        source_path = _resolve_source_file(resolved_data_dir, spec)
+        if source_path is None:
+            normalized_frames[name] = spec.loader([])
+            continue
+        normalized_frames[name] = spec.loader(_read_excel_rows(source_path, spec.usecols))
+
     normalized_frames.setdefault("signins", pd.DataFrame())
     normalized_frames.setdefault("library", pd.DataFrame())
     normalized_frames.setdefault("assignments", pd.DataFrame())
@@ -256,6 +305,10 @@ def build_demo_features_from_excels(
         official_student_ids=official_student_ids,
     )
     combined = _merge_feature_frames(features, extra_features)
+    combined = _merge_destination_truth(
+        combined,
+        normalized_frames.get("destinations", pd.DataFrame()),
+    )
     filtered = combined.loc[combined["term_key"].isin(_ANALYSIS_TERMS)].copy()
     filtered = filtered.sort_values(["student_id", "term_key"], kind="stable").reset_index(drop=True)
 
@@ -300,6 +353,8 @@ def _build_demo_features_from_artifacts(
     features["avg_gpa"] = None
     features["major_rank_pct"] = None
     features["risk_label"] = artifact_frame["risk_level"] if "risk_level" in artifact_frame.columns else None
+    features["destination_label"] = None
+    features["destination_source"] = None
     features["attendance_record_count"] = None
     features["attendance_normal_rate"] = None
     features["selected_course_count"] = None
@@ -368,24 +423,30 @@ def _extract_artifact_dimension_raw_score(value: object, dimension_code: str) ->
     return None
 
 
-def _resolve_source_file(data_dir: Path, spec: SourceSpec) -> Path:
+def _resolve_source_file(data_dir: Path, spec: SourceSpec) -> Path | None:
     path = data_dir / spec.filename
     if path.exists():
         return path
-    fallback = _resolve_source_file_by_header(data_dir, spec.usecols)
+    fallback = _resolve_source_file_by_header(data_dir, spec)
     if fallback is not None:
         return fallback
-    raise FileNotFoundError(f"未找到数据源文件: {spec.filename}")
+    if spec.required:
+        raise FileNotFoundError(f"未找到数据源文件: {spec.filename}")
+    return None
 
 
-def _resolve_source_file_by_header(data_dir: Path, usecols: tuple[str, ...]) -> Path | None:
-    expected = set(usecols)
+def _resolve_source_file_by_header(data_dir: Path, spec: SourceSpec) -> Path | None:
+    expected = set(spec.required_headers or spec.usecols)
     for candidate in sorted(data_dir.glob("*.xlsx")):
         try:
             header_frame = pd.read_excel(candidate, nrows=0, dtype=object)
         except Exception:
             continue
         columns = {str(column) for column in header_frame.columns}
+        if not expected.issubset(columns):
+            continue
+        if any(not set(group).intersection(columns) for group in spec.alternative_header_groups):
+            continue
         if expected.issubset(columns):
             return candidate
     return None
@@ -470,6 +531,64 @@ def _merge_feature_frames(features: pd.DataFrame, extra_features: pd.DataFrame) 
             merged = merged.drop(columns=[column])
         else:
             merged = merged.rename(columns={column: base_column})
+    return merged
+
+
+def _merge_destination_truth(features: pd.DataFrame, destinations: pd.DataFrame) -> pd.DataFrame:
+    enriched = features.copy()
+    for column in ("destination_label", "destination_source"):
+        if column not in enriched.columns:
+            enriched[column] = None
+
+    if enriched.empty or destinations.empty or "student_id" not in destinations.columns:
+        return enriched
+
+    available_columns = [
+        column
+        for column in ("student_id", "graduate_year", "destination_label", "destination_source", "source_row_hash")
+        if column in destinations.columns
+    ]
+    lookup = destinations.loc[:, available_columns].dropna(subset=["student_id"]).copy()
+    if lookup.empty:
+        return enriched
+
+    lookup["_destination_label_priority"] = lookup["destination_label"].map(
+        lambda value: _DESTINATION_LABEL_PRECEDENCE.get(str(value), 99)
+    )
+    lookup["_destination_source_priority"] = lookup["destination_source"].map(
+        lambda value: _DESTINATION_SOURCE_PRECEDENCE.get(str(value), 99)
+    )
+    sort_columns = [
+        column
+        for column in (
+            "student_id",
+            "graduate_year",
+            "_destination_label_priority",
+            "_destination_source_priority",
+            "source_row_hash",
+        )
+        if column in lookup.columns
+    ]
+    ascending = [
+        True,
+        *[
+            False if column == "graduate_year" else True
+            for column in sort_columns[1:]
+        ],
+    ]
+    lookup = lookup.sort_values(sort_columns, ascending=ascending, kind="stable")
+    lookup = lookup.drop_duplicates(subset=["student_id"], keep="first", ignore_index=True)
+    lookup = lookup.loc[
+        :,
+        [column for column in ("student_id", "destination_label", "destination_source") if column in lookup.columns],
+    ]
+
+    merged = enriched.merge(lookup, on="student_id", how="left", suffixes=("", "__destination"))
+    for column in ("destination_label", "destination_source"):
+        destination_column = f"{column}__destination"
+        if destination_column in merged.columns:
+            merged[column] = merged[destination_column].combine_first(merged[column])
+            merged = merged.drop(columns=[destination_column])
     return merged
 
 
