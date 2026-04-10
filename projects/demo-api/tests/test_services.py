@@ -507,6 +507,217 @@ def test_get_development_analysis_repackages_major_group_and_dimension_views(sam
     assert "direction_label" in payload["group_direction_segments"][0]
 
 
+def test_get_development_analysis_exposes_destination_analysis_when_available(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    overview_path = tmp_path / "artifacts" / "model_stubs" / "v1_overview_by_term.json"
+    overview_path.parent.mkdir(parents=True, exist_ok=True)
+    overview_path.write_text(
+        json.dumps(
+            {
+                "student_count": 1,
+                "risk_distribution": {"high": 0, "medium": 1, "low": 0},
+                "risk_band_distribution": {"高风险": 0, "较高风险": 1, "一般风险": 0, "低风险": 0},
+                "group_distribution": {"综合发展优势组": 1},
+                "major_risk_summary": [],
+                "destination_distribution": {"升学": 1},
+                "major_destination_summary": [
+                    {
+                        "major_name": "软件工程",
+                        "student_count": 1,
+                        "destination_student_count": 1,
+                        "top_destination_label": "升学",
+                        "top_destination_count": 1,
+                        "destination_distribution": {"升学": 1},
+                    }
+                ],
+                "group_destination_association": [
+                    {
+                        "group_segment": "综合发展优势组",
+                        "destination_label": "升学",
+                        "student_count": 1,
+                        "group_student_count": 1,
+                        "share_within_group": 1.0,
+                    }
+                ],
+                "dimension_summary": [{"dimension": "学业基础表现", "average_score": 0.82}],
+                "trend_summary": {"terms": [{"term_key": "2024-2"}]},
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230001",
+                "term_key": "2024-2",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "group_segment": "综合发展优势组",
+                "risk_probability": 0.52,
+                "base_risk_score": 52.0,
+                "risk_adjustment_score": -1.0,
+                "adjusted_risk_score": 51.0,
+                "risk_level": "一般风险",
+                "risk_delta": -1.0,
+                "risk_change_direction": "falling",
+                "dimension_scores_json": json.dumps(
+                    [{"dimension": "学业基础表现", "score": 82}],
+                    ensure_ascii=False,
+                ),
+                "top_risk_factors_json": json.dumps([], ensure_ascii=False),
+                "top_protective_factors_json": json.dumps([], ensure_ascii=False),
+                "base_risk_explanation": "base",
+                "behavior_adjustment_explanation": "adjust",
+                "risk_change_explanation": "change",
+            }
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.write_text("", encoding="utf-8")
+    store = DemoApiStore(
+        overview_path=overview_path,
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    payload = store.get_development_analysis(term="2024-2")
+
+    assert payload["destination_distribution"] == {"升学": 1}
+    assert payload["major_destination_summary"] == [
+        {
+            "major_name": "软件工程",
+            "student_count": 1,
+            "destination_student_count": 1,
+            "top_destination_label": "升学",
+            "top_destination_count": 1,
+            "destination_distribution": {"升学": 1},
+        }
+    ]
+    assert payload["group_destination_association"] == [
+        {
+            "group_segment": "综合发展优势组",
+            "destination_label": "升学",
+            "student_count": 1,
+            "group_student_count": 1,
+            "share_within_group": 1.0,
+        }
+    ]
+    assert payload["destination_segments"] == payload["group_destination_association"]
+    assert payload["major_destination_comparison"] == payload["major_destination_summary"]
+    assert payload["behavior_destination_association"] == payload["group_destination_association"]
+    assert payload["disclaimer"] == "去向分析已接入真实毕业去向数据；无匹配数据时相关字段返回空结果"
+
+
+def test_result_outputs_expose_destination_analysis_when_available(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    overview_path = tmp_path / "artifacts" / "model_stubs" / "v1_overview_by_term.json"
+    overview_path.parent.mkdir(parents=True, exist_ok=True)
+    overview_path.write_text(
+        json.dumps(
+            {
+                "student_count": 1,
+                "risk_distribution": {"high": 0, "medium": 1, "low": 0},
+                "risk_band_distribution": {"高风险": 0, "较高风险": 1, "一般风险": 0, "低风险": 0},
+                "group_distribution": {"综合发展优势组": 1},
+                "major_risk_summary": [],
+                "destination_distribution": {"升学": 1},
+                "major_destination_summary": [
+                    {
+                        "major_name": "软件工程",
+                        "student_count": 1,
+                        "destination_student_count": 1,
+                        "top_destination_label": "升学",
+                        "top_destination_count": 1,
+                        "destination_distribution": {"升学": 1},
+                    }
+                ],
+                "group_destination_association": [
+                    {
+                        "group_segment": "综合发展优势组",
+                        "destination_label": "升学",
+                        "student_count": 1,
+                        "group_student_count": 1,
+                        "share_within_group": 1.0,
+                    }
+                ],
+                "dimension_summary": [{"dimension": "学业基础表现", "average_score": 0.82}],
+                "trend_summary": {"terms": [{"term_key": "2024-2"}]},
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230001",
+                "term_key": "2024-2",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "group_segment": "综合发展优势组",
+                "risk_probability": 0.52,
+                "base_risk_score": 52.0,
+                "risk_adjustment_score": -1.0,
+                "adjusted_risk_score": 51.0,
+                "risk_level": "一般风险",
+                "risk_delta": -1.0,
+                "risk_change_direction": "falling",
+                "dimension_scores_json": json.dumps(
+                    [{"dimension": "学业基础表现", "score": 82}],
+                    ensure_ascii=False,
+                ),
+                "top_risk_factors_json": json.dumps([], ensure_ascii=False),
+                "top_protective_factors_json": json.dumps([], ensure_ascii=False),
+                "base_risk_explanation": "base",
+                "behavior_adjustment_explanation": "adjust",
+                "risk_change_explanation": "change",
+            }
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.write_text("", encoding="utf-8")
+    store = DemoApiStore(
+        overview_path=overview_path,
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    major_payload = store.get_result_major_comparison(term="2024-2")
+    behavior_payload = store.get_result_behavior_patterns(term="2024-2")
+
+    assert major_payload["destination_distribution"] == {"升学": 1}
+    assert major_payload["major_destination_summary"] == [
+        {
+            "major_name": "软件工程",
+            "student_count": 1,
+            "destination_student_count": 1,
+            "top_destination_label": "升学",
+            "top_destination_count": 1,
+            "destination_distribution": {"升学": 1},
+        }
+    ]
+    assert major_payload["major_destination_comparison"] == major_payload["major_destination_summary"]
+    assert behavior_payload["behavior_destination_association"] == [
+        {
+            "group_segment": "综合发展优势组",
+            "destination_label": "升学",
+            "student_count": 1,
+            "group_student_count": 1,
+            "share_within_group": 1.0,
+        }
+    ]
+    assert behavior_payload["destination_segments"] == behavior_payload["behavior_destination_association"]
+
+
 @pytest.mark.parametrize(
     ("term_key", "student_count", "risk_distribution", "group_distribution", "major_risk_summary"),
     [

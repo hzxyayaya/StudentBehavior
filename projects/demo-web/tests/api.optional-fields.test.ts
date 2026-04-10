@@ -92,4 +92,70 @@ describe('api client optional field normalization', () => {
     expect(row).not.toHaveProperty('elevated_risk_ratio')
     expect(row).not.toHaveProperty('average_risk_probability')
   })
+
+  it('normalizes destination analysis fields in development analysis responses', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input)
+        if (!url.includes('/analytics/development')) {
+          throw new Error(`Unexpected fetch url: ${url}`)
+        }
+
+        return Promise.resolve(
+          okResponse({
+            term: '2024-2',
+            major_comparison: [{ major_name: '应用化学', high_risk_count: 1, student_count: 9 }],
+            destination_distribution: { 升学: 12, 企业就业: 5 },
+            major_destination_comparison: [
+              {
+                major_name: '应用化学',
+                student_count: 9,
+                destination_student_count: 4,
+                top_destination_label: '升学',
+                top_destination_count: 3,
+                destination_distribution: { 升学: 3, 企业就业: 1 },
+              },
+            ],
+            behavior_destination_association: [
+              {
+                group_segment: '综合发展优势组',
+                destination_label: '升学',
+                student_count: 4,
+                group_student_count: 6,
+                share_within_group: 0.6667,
+              },
+            ],
+            dimension_highlights: [],
+            group_direction_segments: [],
+            direction_chains: [],
+            disclaimer: '去向分析已接入真实毕业去向数据；无匹配数据时相关字段返回空结果',
+          }),
+        )
+      }),
+    )
+
+    const data = await getDevelopmentAnalysis('2024-2')
+
+    expect(data.destination_distribution).toStrictEqual({ 升学: 12, 企业就业: 5 })
+    expect(data.major_destination_summary).toStrictEqual([
+      {
+        major_name: '应用化学',
+        student_count: 9,
+        destination_student_count: 4,
+        top_destination_label: '升学',
+        top_destination_count: 3,
+        destination_distribution: { 升学: 3, 企业就业: 1 },
+      },
+    ])
+    expect(data.group_destination_association).toStrictEqual([
+      {
+        group_segment: '综合发展优势组',
+        destination_label: '升学',
+        student_count: 4,
+        group_student_count: 6,
+        share_within_group: 0.6667,
+      },
+    ])
+  })
 })

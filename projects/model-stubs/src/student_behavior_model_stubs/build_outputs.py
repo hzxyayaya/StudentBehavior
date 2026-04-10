@@ -20,6 +20,8 @@ _RESULT_COLUMNS = [
     "term_key",
     "student_name",
     "major_name",
+    "destination_label",
+    "destination_source",
     "group_segment",
     "risk_probability",
     "term_gpa",
@@ -49,6 +51,13 @@ _RESULT_COLUMNS = [
 ]
 _RISK_LEVEL_ORDER = ("高风险", "较高风险", "一般风险", "低风险")
 _RISK_PRIORITY = {level: index + 1 for index, level in enumerate(_RISK_LEVEL_ORDER)}
+_DESTINATION_LABEL_PRECEDENCE = {
+    "升学": 0,
+    "体制内": 1,
+    "出国出境": 2,
+    "企业就业": 3,
+    "待定其他": 4,
+}
 _MODEL_SUMMARY_STUB = {
     "cluster_method": "stub-eight-dimension-group-rules",
     "risk_model": "stub-eight-dimension-risk-rules",
@@ -119,6 +128,16 @@ def _factor_names(factors: Sequence[Mapping[str, object]]) -> str:
 def _count_distribution(values: pd.Series) -> dict[str, int]:
     counts = values.fillna("").astype(str).value_counts(dropna=False)
     return {str(key): int(counts[key]) for key in sorted(counts.index)}
+
+
+def _count_present_distribution(values: pd.Series) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for value in values:
+        text = _normalized_text(value)
+        if text is None:
+            continue
+        counts[text] = counts.get(text, 0) + 1
+    return {key: counts[key] for key in sorted(counts, key=_destination_label_sort_key)}
 
 
 def _count_risk_distribution(values: pd.Series) -> dict[str, int]:
@@ -206,6 +225,67 @@ def _intervention_priority_summary(student_results: pd.DataFrame) -> list[dict[s
     ]
 
 
+def _destination_label_sort_key(label: str) -> tuple[int, str]:
+    return _DESTINATION_LABEL_PRECEDENCE.get(label, 99), label
+
+
+def _top_distribution_item(distribution: Mapping[str, int]) -> tuple[str | None, int]:
+    if not distribution:
+        return None, 0
+    label, count = min(distribution.items(), key=lambda item: (-item[1], *_destination_label_sort_key(item[0])))
+    return label, count
+
+
+def _major_destination_summary(student_results: pd.DataFrame) -> list[dict[str, object]]:
+    summary: list[dict[str, object]] = []
+    for major_name, major_frame in sorted(
+        student_results.groupby("major_name", sort=True),
+        key=lambda item: item[0],
+    ):
+        distribution = _count_present_distribution(major_frame["destination_label"])
+        top_destination_label, top_destination_count = _top_distribution_item(distribution)
+        summary.append(
+            {
+                "major_name": major_name,
+                "student_count": int(len(major_frame)),
+                "destination_student_count": int(sum(distribution.values())),
+                "top_destination_label": top_destination_label,
+                "top_destination_count": top_destination_count,
+                "destination_distribution": distribution,
+            }
+        )
+    return summary
+
+
+def _group_destination_association(student_results: pd.DataFrame) -> list[dict[str, object]]:
+    association_rows = student_results.copy()
+    association_rows["destination_label"] = association_rows["destination_label"].map(_normalized_text)
+    association_rows = association_rows.dropna(subset=["destination_label"])
+    if association_rows.empty:
+        return []
+
+    group_student_counts = {
+        str(group_segment): int(len(group_frame))
+        for group_segment, group_frame in student_results.groupby("group_segment", sort=True)
+    }
+    association: list[dict[str, object]] = []
+    for (group_segment, destination_label), group_frame in sorted(
+        association_rows.groupby(["group_segment", "destination_label"], sort=True),
+        key=lambda item: (str(item[0][0]), *_destination_label_sort_key(str(item[0][1]))),
+    ):
+        total_students = max(group_student_counts[str(group_segment)], 1)
+        association.append(
+            {
+                "group_segment": str(group_segment),
+                "destination_label": str(destination_label),
+                "student_count": int(len(group_frame)),
+                "group_student_count": total_students,
+                "share_within_group": round(float(len(group_frame)) / total_students, 4),
+            }
+        )
+    return association
+
+
 def _term_sort_key(term_key: str) -> tuple[int, str]:
     parts = term_key.split("-")
     if len(parts) == 2 and all(part.isdigit() for part in parts):
@@ -264,6 +344,9 @@ def build_overview_by_term(student_results: pd.DataFrame) -> dict[str, object]:
             "risk_band_distribution": {level: 0 for level in _RISK_LEVEL_ORDER},
             "group_distribution": {},
             "major_risk_summary": [],
+            "destination_distribution": {},
+            "major_destination_summary": [],
+            "group_destination_association": [],
             "risk_trend_summary": {"terms": []},
             "trend_summary": {"terms": []},
             "dimension_summary": [],
@@ -285,6 +368,11 @@ def build_overview_by_term(student_results: pd.DataFrame) -> dict[str, object]:
     ordered_results["group_segment"] = ordered_results["group_segment"].fillna("").astype(str)
     ordered_results["major_name"] = ordered_results["major_name"].fillna("").astype(str)
     ordered_results["term_key"] = ordered_results["term_key"].fillna("").astype(str)
+    for column in ("destination_label", "destination_source"):
+        if column in ordered_results.columns:
+            ordered_results[column] = ordered_results[column].astype(object)
+        else:
+            ordered_results[column] = pd.Series(index=ordered_results.index, dtype=object)
     if "risk_probability" in ordered_results.columns:
         risk_probabilities = ordered_results["risk_probability"]
     elif "adjusted_risk_score" in ordered_results.columns:
@@ -342,6 +430,9 @@ def build_overview_by_term(student_results: pd.DataFrame) -> dict[str, object]:
     intervention_priority_summary = _intervention_priority_summary(
         ordered_results.assign(risk_level=intervention_levels)
     )
+    destination_distribution = _count_present_distribution(ordered_results["destination_label"])
+    major_destination_summary = _major_destination_summary(ordered_results)
+    group_destination_association = _group_destination_association(ordered_results)
 
     return {
         "student_count": int(len(ordered_results)),
@@ -349,6 +440,9 @@ def build_overview_by_term(student_results: pd.DataFrame) -> dict[str, object]:
         "risk_band_distribution": risk_band_distribution,
         "group_distribution": _count_distribution(ordered_results["group_segment"]),
         "major_risk_summary": major_risk_summary,
+        "destination_distribution": destination_distribution,
+        "major_destination_summary": major_destination_summary,
+        "group_destination_association": group_destination_association,
         "trend_summary": risk_trend_summary,
         "risk_trend_summary": risk_trend_summary,
         "dimension_summary": _average_dimension_scores(ordered_results["dimension_scores_json"]),
@@ -421,6 +515,8 @@ def build_student_results(
             "term_key": term_key,
             "student_name": _resolve_student_name(row, name_map),
             "major_name": _normalized_text(row.get("major_name")) or "",
+            "destination_label": _normalized_text(row.get("destination_label")) or "",
+            "destination_source": _normalized_text(row.get("destination_source")) or "",
             "group_segment": compute_group_segment(row),
             "risk_probability": risk_probability,
             "term_gpa": _numeric_value(row, "term_gpa", "avg_gpa", "avg_gpa_metric"),

@@ -306,6 +306,7 @@ class DemoApiStore:
         group_rows = groups.get("groups", [])
         warning_rows = _load_warning_rows(self._warnings_path or _resolve_warning_artifact_path(self._repo_root))
         term_rows = [row for row in warning_rows if row.get("term_key") == term]
+        destination_analysis = _extract_destination_analysis(overview)
         return {
             "term": term,
             "major_comparison": _build_major_risk_summary(term_rows),
@@ -332,7 +333,7 @@ class DemoApiStore:
                 }
                 for row in group_rows
             ],
-            "disclaimer": "去向真值暂未接入",
+            **destination_analysis,
         }
 
     def get_result_individual_profile(self, *, student_id: str, term: str) -> dict[str, Any]:
@@ -354,6 +355,7 @@ class DemoApiStore:
     def get_result_behavior_patterns(self, *, term: str) -> dict[str, Any]:
         overview = self.get_overview(term)
         groups = self.get_groups(term=term)
+        destination_analysis = _extract_destination_analysis(overview)
         return {
             "result_key": "behavior_patterns",
             "term": term,
@@ -367,6 +369,8 @@ class DemoApiStore:
                 }
                 for group in groups.get("groups", [])
             ],
+            "behavior_destination_association": destination_analysis["behavior_destination_association"],
+            "destination_segments": destination_analysis["destination_segments"],
         }
 
     def get_result_risk_probability(self, *, term: str) -> dict[str, Any]:
@@ -423,6 +427,9 @@ class DemoApiStore:
             "result_key": "major_comparison",
             "term": term,
             "major_comparison": development.get("major_comparison", []),
+            "destination_distribution": development.get("destination_distribution", {}),
+            "major_destination_summary": development.get("major_destination_summary", []),
+            "major_destination_comparison": development.get("major_destination_comparison", []),
         }
 
     def get_result_model_summary(self, *, term: str) -> dict[str, Any]:
@@ -859,6 +866,58 @@ def _build_term_aware_overview_fallback(
     fallback_payload["summary_source"] = "term_fallback"
     fallback_payload["summary_unavailable_fields"] = ["trend_summary"]
     return fallback_payload
+
+
+def _extract_destination_analysis(overview: Mapping[str, Any]) -> dict[str, Any]:
+    destination_distribution = _first_mapping_value(
+        overview,
+        "destination_distribution",
+    )
+    major_destination_summary = _first_list_value(
+        overview,
+        "major_destination_summary",
+        "major_destination_comparison",
+    )
+    group_destination_association = _first_list_value(
+        overview,
+        "group_destination_association",
+        "group_destination_summary",
+        "behavior_destination_association",
+        "destination_segments",
+    )
+    has_destination_truth = bool(
+        destination_distribution or major_destination_summary or group_destination_association
+    )
+    disclaimer = (
+        "去向分析已接入真实毕业去向数据；无匹配数据时相关字段返回空结果"
+        if has_destination_truth
+        else "去向真值暂未接入"
+    )
+    return {
+        "destination_distribution": destination_distribution,
+        "major_destination_summary": major_destination_summary,
+        "group_destination_association": group_destination_association,
+        "destination_segments": list(group_destination_association),
+        "major_destination_comparison": list(major_destination_summary),
+        "behavior_destination_association": list(group_destination_association),
+        "disclaimer": disclaimer,
+    }
+
+
+def _first_mapping_value(payload: Mapping[str, Any], *keys: str) -> dict[str, Any]:
+    for key in keys:
+        value = payload.get(key)
+        if isinstance(value, Mapping):
+            return dict(value)
+    return {}
+
+
+def _first_list_value(payload: Mapping[str, Any], *keys: str) -> list[Any]:
+    for key in keys:
+        value = payload.get(key)
+        if isinstance(value, list):
+            return list(value)
+    return []
 
 
 def _build_dimension_summary_entry(item: Mapping[str, Any], score: float) -> dict[str, Any]:

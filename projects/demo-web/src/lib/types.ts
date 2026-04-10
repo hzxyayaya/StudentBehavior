@@ -233,9 +233,31 @@ export type TrajectoryAnalysisData = {
   student_samples: WarningsData['items']
 }
 
+export type DestinationDistribution = Record<string, number>
+
+export type MajorDestinationSummaryRow = {
+  major_name: string
+  student_count: number
+  destination_student_count: number
+  top_destination_label?: string
+  top_destination_count?: number
+  destination_distribution: DestinationDistribution
+}
+
+export type GroupDestinationAssociationRow = {
+  group_segment: string
+  destination_label?: string
+  student_count: number
+  group_student_count?: number
+  share_within_group?: number
+}
+
 export type DevelopmentAnalysisData = {
   term: string
   major_comparison: OverviewData['major_risk_summary']
+  destination_distribution: DestinationDistribution
+  major_destination_summary: MajorDestinationSummaryRow[]
+  group_destination_association: GroupDestinationAssociationRow[]
   dimension_highlights: CalibratedDimensionScore[]
   group_direction_segments: Array<
     GroupsData['groups'][number] & {

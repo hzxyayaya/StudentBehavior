@@ -7,6 +7,7 @@ import pytest
 
 import student_behavior_model_stubs.build_outputs as build_outputs_module
 from student_behavior_model_stubs.build_outputs import _coerce_dimension_scores
+from student_behavior_model_stubs.build_outputs import _destination_label_sort_key
 from student_behavior_model_stubs.build_outputs import _factor_names
 from student_behavior_model_stubs.build_outputs import build_model_summary
 from student_behavior_model_stubs.build_outputs import build_overview_by_term
@@ -20,6 +21,8 @@ def _feature_row() -> dict[str, object]:
         "student_id": "20230002",
         "term_key": "2024-1",
         "major_name": "软件工程",
+        "destination_label": "升学",
+        "destination_source": "byqx_study",
         "term_gpa": 1.8,
         "academic_base_score_raw": 58.0,
         "class_engagement_score_raw": 40.0,
@@ -45,6 +48,8 @@ def test_build_student_results_outputs_risk_warning_contract() -> None:
         "term_key",
         "student_name",
         "major_name",
+        "destination_label",
+        "destination_source",
         "group_segment",
         "risk_probability",
         "base_risk_score",
@@ -67,6 +72,8 @@ def test_build_student_results_outputs_risk_warning_contract() -> None:
     assert record["term_key"] == "2024-1"
     assert record["student_name"] == "20230002"
     assert record["major_name"] == "软件工程"
+    assert record["destination_label"] == "升学"
+    assert record["destination_source"] == "byqx_study"
     assert record["group_segment"] == results.loc[0, "group_segment"]
     assert record["risk_probability"] == 0.63
     assert record["base_risk_score"] == results.loc[0, "base_risk_score"]
@@ -329,6 +336,153 @@ def test_build_overview_by_term_includes_required_sections() -> None:
         assert [entry["dimension_code"] for entry in entries] == [
             item["dimension_code"] for item in expected_dimension_summary
         ]
+
+
+def test_build_overview_by_term_includes_destination_outputs() -> None:
+    student_results = build_student_results(
+        pd.DataFrame(
+            [
+                _feature_row()
+                | {
+                    "student_id": "20230001",
+                    "term_key": "2024-1",
+                    "destination_label": "升学",
+                    "destination_source": "byqx_study",
+                },
+                _feature_row()
+                | {
+                    "student_id": "20230002",
+                    "term_key": "2024-1",
+                    "destination_label": "升学",
+                    "destination_source": "byqx_study",
+                    "failed_course_count": 0,
+                    "academic_base_score_raw": 84.0,
+                    "class_engagement_score_raw": 78.0,
+                    "online_activeness_score_raw": 72.0,
+                    "network_habits_score_raw": 70.0,
+                    "daily_routine_boundary_score_raw": 76.0,
+                },
+                _feature_row()
+                | {
+                    "student_id": "20230003",
+                    "term_key": "2024-2",
+                    "major_name": "数据科学",
+                    "destination_label": "体制内",
+                    "destination_source": "dwxz_public_sector",
+                    "academic_base_score_raw": 22.0,
+                    "class_engagement_score_raw": 20.0,
+                    "online_activeness_score_raw": 18.0,
+                    "network_habits_score_raw": 15.0,
+                    "daily_routine_boundary_score_raw": 17.0,
+                    "failed_course_count": 4,
+                },
+                _feature_row()
+                | {
+                    "student_id": "20230004",
+                    "term_key": "2024-2",
+                    "major_name": "数据科学",
+                    "destination_label": None,
+                    "destination_source": None,
+                },
+            ]
+        )
+    )
+
+    overview = build_overview_by_term(student_results)
+
+    assert overview["destination_distribution"] == {"升学": 2, "体制内": 1}
+    assert overview["major_destination_summary"] == [
+        {
+            "major_name": "数据科学",
+            "student_count": 2,
+            "destination_student_count": 1,
+            "top_destination_label": "体制内",
+            "top_destination_count": 1,
+            "destination_distribution": {"体制内": 1},
+        },
+        {
+            "major_name": "软件工程",
+            "student_count": 2,
+            "destination_student_count": 2,
+            "top_destination_label": "升学",
+            "top_destination_count": 2,
+            "destination_distribution": {"升学": 2},
+        },
+    ]
+
+    expected_association = [
+        {
+            "group_segment": group_segment,
+            "destination_label": destination_label,
+            "student_count": int(len(group_frame)),
+            "group_student_count": int(
+                len(student_results[student_results["group_segment"] == group_segment])
+            ),
+            "share_within_group": round(
+                len(group_frame)
+                / len(student_results[student_results["group_segment"] == group_segment]),
+                4,
+            ),
+        }
+        for (group_segment, destination_label), group_frame in sorted(
+            student_results.loc[
+                student_results["destination_label"].astype(str).str.strip() != ""
+            ].groupby(["group_segment", "destination_label"], sort=True),
+            key=lambda item: (item[0][0], *_destination_label_sort_key(item[0][1])),
+        )
+    ]
+    assert overview["group_destination_association"] == expected_association
+
+
+def test_build_overview_by_term_uses_destination_precedence_for_ties() -> None:
+    student_results = build_student_results(
+        pd.DataFrame(
+            [
+                _feature_row()
+                | {
+                    "student_id": "20230001",
+                    "major_name": "软件工程",
+                    "destination_label": "企业就业",
+                    "destination_source": "byqx_employment",
+                },
+                _feature_row()
+                | {
+                    "student_id": "20230002",
+                    "major_name": "软件工程",
+                    "destination_label": "出国出境",
+                    "destination_source": "byqx_abroad",
+                    "failed_course_count": 0,
+                    "academic_base_score_raw": 84.0,
+                },
+                _feature_row()
+                | {
+                    "student_id": "20230003",
+                    "major_name": "软件工程",
+                    "destination_label": "企业就业",
+                    "destination_source": "byqx_employment",
+                    "term_key": "2024-2",
+                },
+                _feature_row()
+                | {
+                    "student_id": "20230004",
+                    "major_name": "软件工程",
+                    "destination_label": "出国出境",
+                    "destination_source": "byqx_abroad",
+                    "term_key": "2024-2",
+                    "academic_base_score_raw": 22.0,
+                    "failed_course_count": 4,
+                },
+            ]
+        )
+    )
+
+    overview = build_overview_by_term(student_results)
+    major_summary = overview["major_destination_summary"][0]
+
+    assert list(overview["destination_distribution"]) == ["出国出境", "企业就业"]
+    assert major_summary["top_destination_label"] == "出国出境"
+    assert major_summary["top_destination_count"] == 2
+    assert list(major_summary["destination_distribution"]) == ["出国出境", "企业就业"]
 
 
 def test_build_model_summary_prefers_trained_metrics_when_available(
