@@ -1,0 +1,15 @@
+{
+  "model_name": "deterministic-risk-scorecard-v1",
+  "task_type": "binary_classification",
+  "target_label": "risk_label",
+  "sample_count": 467,
+  "positive_sample_count": 161,
+  "negative_sample_count": 306,
+  "auc": 0.9215,
+  "accuracy": 0.7024,
+  "precision": 1.0,
+  "recall": 0.1366,
+  "f1": 0.2404,
+  "trained_at": "2026-04-10T16:14:28Z",
+  "evaluated_at": "2026-04-10T16:15:29Z"
+}

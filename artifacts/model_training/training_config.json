@@ -1,0 +1,25 @@
+{
+  "model_name": "deterministic-risk-scorecard-v1",
+  "target_label": "risk_label",
+  "feature_columns": [
+    "term_gpa",
+    "failed_course_count",
+    "borderline_course_count",
+    "failed_course_ratio",
+    "dim_academic_base_score",
+    "dim_appraisal_status_alert_score",
+    "dim_class_engagement_score",
+    "dim_daily_routine_boundary_score",
+    "dim_library_immersion_score",
+    "dim_network_habits_score",
+    "dim_online_activeness_score",
+    "dim_physical_resilience_score"
+  ],
+  "split_strategy": "grouped_by_student_id",
+  "stable_feature_min_non_null_ratio": 0.6,
+  "deterministic": true,
+  "train_sample_count": 3033,
+  "valid_sample_count": 1,
+  "test_sample_count": 1,
+  "trained_at": "2026-04-10T16:14:28Z"
+}

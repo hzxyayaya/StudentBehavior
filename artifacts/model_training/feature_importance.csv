@@ -1,0 +1,13 @@
+feature,importance,coefficient
+term_gpa,12,-0.093792
+failed_course_count,11,0.053135
+borderline_course_count,10,0.042174
+failed_course_ratio,9,0.056421
+dim_academic_base_score,8,0.000298
+dim_appraisal_status_alert_score,7,-0.036372
+dim_class_engagement_score,6,0.009797
+dim_daily_routine_boundary_score,5,-0.020651
+dim_library_immersion_score,4,-0.009373
+dim_network_habits_score,3,0.005747
+dim_online_activeness_score,2,0.003054
+dim_physical_resilience_score,1,-0.034237
