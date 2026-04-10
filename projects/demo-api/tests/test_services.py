@@ -502,7 +502,7 @@ def test_get_development_analysis_repackages_major_group_and_dimension_views(sam
     assert payload["group_direction_segments"]
     assert payload["dimension_highlights"]
     assert payload["direction_chains"]
-    assert payload["disclaimer"] == "去向真值暂未接入"
+    assert payload["disclaimer"] == "去向分析已接入真实毕业去向数据；无匹配数据时相关字段返回空结果"
     assert payload["group_direction_segments"][0]["group_segment"]
     assert "direction_label" in payload["group_direction_segments"][0]
 
@@ -610,6 +610,108 @@ def test_get_development_analysis_exposes_destination_analysis_when_available(
     assert payload["destination_segments"] == payload["group_destination_association"]
     assert payload["major_destination_comparison"] == payload["major_destination_summary"]
     assert payload["behavior_destination_association"] == payload["group_destination_association"]
+    assert payload["disclaimer"] == "去向分析已接入真实毕业去向数据；无匹配数据时相关字段返回空结果"
+
+
+def test_get_development_analysis_rebuilds_destination_analysis_for_term_fallback(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    overview_path = tmp_path / "artifacts" / "model_stubs" / "v1_overview_by_term.json"
+    overview_path.parent.mkdir(parents=True, exist_ok=True)
+    overview_path.write_text(
+        json.dumps(
+            {
+                "student_count": 2,
+                "risk_distribution": {"高风险": 0, "较高风险": 0, "一般风险": 1, "低风险": 1},
+                "risk_band_distribution": {"高风险": 0, "较高风险": 0, "一般风险": 1, "低风险": 1},
+                "group_distribution": {"作息失衡风险组": 2},
+                "major_risk_summary": [],
+                "trend_summary": {
+                    "terms": [
+                        {
+                            "term_key": "2024-2",
+                            "student_count": 2,
+                            "risk_distribution": {"高风险": 0, "较高风险": 0, "一般风险": 1, "低风险": 1},
+                        }
+                    ]
+                },
+                "dimension_summary": [],
+                "risk_factor_summary": [],
+                "destination_distribution": {},
+                "major_destination_summary": [],
+                "group_destination_association": [],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20240001",
+                "term_key": "2024-2",
+                "student_name": "Alice",
+                "major_name": "软件工程",
+                "destination_label": "升学",
+                "destination_source": "byqx_study",
+                "group_segment": "作息失衡风险组",
+                "risk_probability": 0.61,
+                "risk_level": "一般风险",
+                "dimension_scores_json": "[]",
+            },
+            {
+                "student_id": "20240002",
+                "term_key": "2024-2",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "destination_label": "企业就业",
+                "destination_source": "byqx_employment",
+                "group_segment": "作息失衡风险组",
+                "risk_probability": 0.39,
+                "risk_level": "低风险",
+                "dimension_scores_json": "[]",
+            },
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+
+    store = DemoApiStore(
+        overview_path=overview_path,
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2023-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    payload = store.get_development_analysis(term="2024-2")
+
+    assert payload["destination_distribution"] == {"企业就业": 1, "升学": 1}
+    assert payload["major_destination_summary"] == [
+        {
+            "major_name": "软件工程",
+            "student_count": 2,
+            "destination_student_count": 2,
+            "top_destination_label": "企业就业",
+            "top_destination_count": 1,
+            "destination_distribution": {"企业就业": 1, "升学": 1},
+        }
+    ]
+    assert payload["group_destination_association"] == [
+        {
+            "group_segment": "作息失衡风险组",
+            "destination_label": "企业就业",
+            "student_count": 1,
+            "group_student_count": 2,
+            "share_within_group": 0.5,
+        },
+        {
+            "group_segment": "作息失衡风险组",
+            "destination_label": "升学",
+            "student_count": 1,
+            "group_student_count": 2,
+            "share_within_group": 0.5,
+        },
+    ]
     assert payload["disclaimer"] == "去向分析已接入真实毕业去向数据；无匹配数据时相关字段返回空结果"
 
 

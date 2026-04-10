@@ -148,7 +148,7 @@ def test_get_development_analysis_returns_envelope(client) -> None:
     assert payload["code"] == 200
     assert payload["meta"]["term"] == "2023-1"
     assert payload["data"]["term"] == "2023-1"
-    assert payload["data"]["disclaimer"] == "去向真值暂未接入"
+    assert payload["data"]["disclaimer"] == "去向分析已接入真实毕业去向数据；无匹配数据时相关字段返回空结果"
     assert "destination_distribution" in payload["data"]
     assert "major_destination_summary" in payload["data"]
     assert "group_destination_association" in payload["data"]

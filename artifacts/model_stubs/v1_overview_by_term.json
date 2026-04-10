@@ -1,396 +1,1196 @@
 {
-  "student_count": 3035,
+  "student_count": 2772,
   "risk_distribution": {
-    "高风险": 5,
-    "较高风险": 878,
-    "一般风险": 1688,
-    "低风险": 464
+    "高风险": 0,
+    "较高风险": 45,
+    "一般风险": 113,
+    "低风险": 2614
   },
   "risk_band_distribution": {
-    "高风险": 5,
-    "较高风险": 878,
-    "一般风险": 1688,
-    "低风险": 464
+    "高风险": 0,
+    "较高风险": 45,
+    "一般风险": 113,
+    "低风险": 2614
   },
   "group_distribution": {
-    "作息失衡风险组": 3010,
-    "学习投入稳定组": 7,
-    "综合发展优势组": 15,
-    "课堂参与薄弱组": 3
+    "作息失衡风险组": 2772
   },
   "major_risk_summary": [
-    {
-      "major_name": "",
-      "student_count": 119,
-      "high_risk_count": 0,
-      "average_risk_probability": 0.56
-    },
     {
       "major_name": "人力资源管理",
       "student_count": 9,
       "high_risk_count": 0,
-      "average_risk_probability": 0.58
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "人工智能",
-      "student_count": 94,
+      "student_count": 89,
       "high_risk_count": 0,
-      "average_risk_probability": 0.59
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "信息与计算科学",
       "student_count": 12,
-      "high_risk_count": 1,
-      "average_risk_probability": 0.67
+      "high_risk_count": 0,
+      "average_risk_probability": 0.01
     },
     {
       "major_name": "信息安全",
       "student_count": 62,
       "high_risk_count": 0,
-      "average_risk_probability": 0.56
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "信息对抗技术",
       "student_count": 61,
       "high_risk_count": 0,
-      "average_risk_probability": 0.57
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "信息工程",
-      "student_count": 101,
+      "student_count": 55,
       "high_risk_count": 0,
-      "average_risk_probability": 0.55
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "信息管理与信息系统",
       "student_count": 18,
       "high_risk_count": 0,
-      "average_risk_probability": 0.59
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "光电信息科学与工程",
       "student_count": 45,
       "high_risk_count": 0,
-      "average_risk_probability": 0.57
+      "average_risk_probability": 0.01
     },
     {
       "major_name": "哲学",
       "student_count": 12,
       "high_risk_count": 0,
-      "average_risk_probability": 0.6
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "大数据管理与应用",
       "student_count": 17,
       "high_risk_count": 0,
-      "average_risk_probability": 0.54
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "密码科学与技术",
       "student_count": 3,
       "high_risk_count": 0,
-      "average_risk_probability": 0.3
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "工业工程",
       "student_count": 14,
       "high_risk_count": 0,
-      "average_risk_probability": 0.55
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "工业设计",
       "student_count": 16,
       "high_risk_count": 0,
-      "average_risk_probability": 0.5
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "工商管理（理工类）",
       "student_count": 11,
       "high_risk_count": 0,
-      "average_risk_probability": 0.55
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "工程管理",
       "student_count": 14,
       "high_risk_count": 0,
-      "average_risk_probability": 0.55
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "市场营销",
-      "student_count": 17,
+      "student_count": 16,
       "high_risk_count": 0,
-      "average_risk_probability": 0.58
+      "average_risk_probability": 0.01
     },
     {
       "major_name": "应用化学",
       "student_count": 15,
       "high_risk_count": 0,
-      "average_risk_probability": 0.55
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "应用物理学",
-      "student_count": 9,
+      "student_count": 8,
       "high_risk_count": 0,
-      "average_risk_probability": 0.58
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "录音艺术",
       "student_count": 16,
       "high_risk_count": 0,
-      "average_risk_probability": 0.55
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "微电子科学与工程",
-      "student_count": 124,
+      "student_count": 123,
       "high_risk_count": 0,
-      "average_risk_probability": 0.56
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "探测制导与控制技术",
       "student_count": 33,
-      "high_risk_count": 1,
-      "average_risk_probability": 0.57
+      "high_risk_count": 0,
+      "average_risk_probability": 0.01
     },
     {
       "major_name": "数字媒体技术",
       "student_count": 8,
       "high_risk_count": 0,
-      "average_risk_probability": 0.61
+      "average_risk_probability": 0.01
     },
     {
       "major_name": "数学与应用数学",
       "student_count": 23,
       "high_risk_count": 0,
-      "average_risk_probability": 0.52
+      "average_risk_probability": 0.01
     },
     {
       "major_name": "数据科学与大数据技术",
-      "student_count": 19,
+      "student_count": 18,
       "high_risk_count": 0,
-      "average_risk_probability": 0.58
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "日语",
       "student_count": 8,
       "high_risk_count": 0,
-      "average_risk_probability": 0.59
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "智能医学工程",
       "student_count": 16,
       "high_risk_count": 0,
-      "average_risk_probability": 0.56
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "智能科学与技术",
-      "student_count": 117,
-      "high_risk_count": 1,
-      "average_risk_probability": 0.58
+      "student_count": 112,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.01
     },
     {
       "major_name": "机器人工程",
-      "student_count": 37,
+      "student_count": 28,
       "high_risk_count": 0,
-      "average_risk_probability": 0.56
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "机械设计制造及其自动化",
-      "student_count": 83,
-      "high_risk_count": 1,
-      "average_risk_probability": 0.55
+      "student_count": 81,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.01
     },
     {
       "major_name": "材料科学与工程",
-      "student_count": 23,
+      "student_count": 22,
       "high_risk_count": 0,
-      "average_risk_probability": 0.54
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "汉语言文学",
       "student_count": 15,
       "high_risk_count": 0,
-      "average_risk_probability": 0.58
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "测控技术与仪器",
       "student_count": 57,
       "high_risk_count": 0,
-      "average_risk_probability": 0.53
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "物联网工程",
       "student_count": 24,
       "high_risk_count": 0,
-      "average_risk_probability": 0.6
+      "average_risk_probability": 0.01
     },
     {
       "major_name": "生物医学工程",
       "student_count": 19,
       "high_risk_count": 0,
-      "average_risk_probability": 0.52
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "生物技术",
       "student_count": 6,
       "high_risk_count": 0,
-      "average_risk_probability": 0.54
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "电子信息工程",
-      "student_count": 254,
+      "student_count": 250,
       "high_risk_count": 0,
-      "average_risk_probability": 0.55
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "电子信息科学与技术",
-      "student_count": 109,
-      "high_risk_count": 1,
-      "average_risk_probability": 0.57
+      "student_count": 107,
+      "high_risk_count": 0,
+      "average_risk_probability": 0.01
     },
     {
       "major_name": "电子商务",
       "student_count": 15,
       "high_risk_count": 0,
-      "average_risk_probability": 0.56
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "电子封装技术",
       "student_count": 16,
       "high_risk_count": 0,
-      "average_risk_probability": 0.55
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "电子科学与技术",
       "student_count": 139,
       "high_risk_count": 0,
-      "average_risk_probability": 0.56
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "电气工程及其自动化",
       "student_count": 28,
       "high_risk_count": 0,
-      "average_risk_probability": 0.57
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "电波传播与天线",
       "student_count": 11,
       "high_risk_count": 0,
-      "average_risk_probability": 0.57
+      "average_risk_probability": 0.01
     },
     {
       "major_name": "电磁场与无线技术",
       "student_count": 42,
       "high_risk_count": 0,
-      "average_risk_probability": 0.55
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "空间信息与数字技术",
-      "student_count": 23,
+      "student_count": 13,
       "high_risk_count": 0,
-      "average_risk_probability": 0.59
+      "average_risk_probability": 0.01
     },
     {
       "major_name": "空间科学与技术",
       "student_count": 40,
       "high_risk_count": 0,
-      "average_risk_probability": 0.56
+      "average_risk_probability": 0.01
     },
     {
       "major_name": "纳米材料与技术",
-      "student_count": 17,
+      "student_count": 9,
       "high_risk_count": 0,
-      "average_risk_probability": 0.6
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "统计学",
       "student_count": 5,
       "high_risk_count": 0,
-      "average_risk_probability": 0.49
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "网络工程",
       "student_count": 22,
       "high_risk_count": 0,
-      "average_risk_probability": 0.56
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "网络空间安全",
       "student_count": 55,
       "high_risk_count": 0,
-      "average_risk_probability": 0.55
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "翻译",
       "student_count": 17,
       "high_risk_count": 0,
-      "average_risk_probability": 0.47
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "自动化",
-      "student_count": 47,
+      "student_count": 46,
       "high_risk_count": 0,
-      "average_risk_probability": 0.55
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "英语",
       "student_count": 19,
       "high_risk_count": 0,
-      "average_risk_probability": 0.52
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "计算机科学与技术",
-      "student_count": 232,
+      "student_count": 224,
       "high_risk_count": 0,
-      "average_risk_probability": 0.58
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "软件工程",
-      "student_count": 187,
+      "student_count": 185,
       "high_risk_count": 0,
-      "average_risk_probability": 0.55
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "通信工程",
-      "student_count": 325,
+      "student_count": 290,
       "high_risk_count": 0,
-      "average_risk_probability": 0.56
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "遥感科学与技术",
-      "student_count": 23,
+      "student_count": 22,
       "high_risk_count": 0,
-      "average_risk_probability": 0.53
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "金融学",
       "student_count": 14,
       "high_risk_count": 0,
-      "average_risk_probability": 0.55
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "集成电路设计与集成系统",
-      "student_count": 106,
+      "student_count": 105,
       "high_risk_count": 0,
-      "average_risk_probability": 0.54
+      "average_risk_probability": 0.0
     },
     {
       "major_name": "飞行器设计与工程",
       "student_count": 12,
       "high_risk_count": 0,
-      "average_risk_probability": 0.53
+      "average_risk_probability": 0.01
+    }
+  ],
+  "destination_distribution": {
+    "升学": 490,
+    "体制内": 54,
+    "出国出境": 247,
+    "企业就业": 870,
+    "待定其他": 1111
+  },
+  "major_destination_summary": [
+    {
+      "major_name": "人力资源管理",
+      "student_count": 9,
+      "destination_student_count": 9,
+      "top_destination_label": "企业就业",
+      "top_destination_count": 4,
+      "destination_distribution": {
+        "出国出境": 3,
+        "企业就业": 4,
+        "待定其他": 2
+      }
+    },
+    {
+      "major_name": "人工智能",
+      "student_count": 89,
+      "destination_student_count": 89,
+      "top_destination_label": "待定其他",
+      "top_destination_count": 48,
+      "destination_distribution": {
+        "升学": 13,
+        "体制内": 2,
+        "出国出境": 6,
+        "企业就业": 20,
+        "待定其他": 48
+      }
+    },
+    {
+      "major_name": "信息与计算科学",
+      "student_count": 12,
+      "destination_student_count": 12,
+      "top_destination_label": "企业就业",
+      "top_destination_count": 8,
+      "destination_distribution": {
+        "升学": 1,
+        "企业就业": 8,
+        "待定其他": 3
+      }
+    },
+    {
+      "major_name": "信息安全",
+      "student_count": 62,
+      "destination_student_count": 62,
+      "top_destination_label": "待定其他",
+      "top_destination_count": 30,
+      "destination_distribution": {
+        "升学": 12,
+        "出国出境": 2,
+        "企业就业": 18,
+        "待定其他": 30
+      }
+    },
+    {
+      "major_name": "信息对抗技术",
+      "student_count": 61,
+      "destination_student_count": 61,
+      "top_destination_label": "企业就业",
+      "top_destination_count": 28,
+      "destination_distribution": {
+        "升学": 11,
+        "出国出境": 4,
+        "企业就业": 28,
+        "待定其他": 18
+      }
+    },
+    {
+      "major_name": "信息工程",
+      "student_count": 55,
+      "destination_student_count": 55,
+      "top_destination_label": "企业就业",
+      "top_destination_count": 19,
+      "destination_distribution": {
+        "升学": 10,
+        "体制内": 3,
+        "出国出境": 5,
+        "企业就业": 19,
+        "待定其他": 18
+      }
+    },
+    {
+      "major_name": "信息管理与信息系统",
+      "student_count": 18,
+      "destination_student_count": 18,
+      "top_destination_label": "企业就业",
+      "top_destination_count": 10,
+      "destination_distribution": {
+        "升学": 1,
+        "体制内": 1,
+        "出国出境": 3,
+        "企业就业": 10,
+        "待定其他": 3
+      }
+    },
+    {
+      "major_name": "光电信息科学与工程",
+      "student_count": 45,
+      "destination_student_count": 45,
+      "top_destination_label": "企业就业",
+      "top_destination_count": 22,
+      "destination_distribution": {
+        "升学": 1,
+        "体制内": 3,
+        "出国出境": 6,
+        "企业就业": 22,
+        "待定其他": 13
+      }
+    },
+    {
+      "major_name": "哲学",
+      "student_count": 12,
+      "destination_student_count": 12,
+      "top_destination_label": "待定其他",
+      "top_destination_count": 7,
+      "destination_distribution": {
+        "升学": 4,
+        "企业就业": 1,
+        "待定其他": 7
+      }
+    },
+    {
+      "major_name": "大数据管理与应用",
+      "student_count": 17,
+      "destination_student_count": 17,
+      "top_destination_label": "待定其他",
+      "top_destination_count": 8,
+      "destination_distribution": {
+        "升学": 4,
+        "出国出境": 1,
+        "企业就业": 4,
+        "待定其他": 8
+      }
+    },
+    {
+      "major_name": "密码科学与技术",
+      "student_count": 3,
+      "destination_student_count": 3,
+      "top_destination_label": "待定其他",
+      "top_destination_count": 3,
+      "destination_distribution": {
+        "待定其他": 3
+      }
+    },
+    {
+      "major_name": "工业工程",
+      "student_count": 14,
+      "destination_student_count": 14,
+      "top_destination_label": "企业就业",
+      "top_destination_count": 7,
+      "destination_distribution": {
+        "升学": 1,
+        "出国出境": 4,
+        "企业就业": 7,
+        "待定其他": 2
+      }
+    },
+    {
+      "major_name": "工业设计",
+      "student_count": 16,
+      "destination_student_count": 16,
+      "top_destination_label": "企业就业",
+      "top_destination_count": 10,
+      "destination_distribution": {
+        "出国出境": 1,
+        "企业就业": 10,
+        "待定其他": 5
+      }
+    },
+    {
+      "major_name": "工商管理（理工类）",
+      "student_count": 11,
+      "destination_student_count": 11,
+      "top_destination_label": "企业就业",
+      "top_destination_count": 4,
+      "destination_distribution": {
+        "升学": 2,
+        "体制内": 1,
+        "出国出境": 3,
+        "企业就业": 4,
+        "待定其他": 1
+      }
+    },
+    {
+      "major_name": "工程管理",
+      "student_count": 14,
+      "destination_student_count": 14,
+      "top_destination_label": "企业就业",
+      "top_destination_count": 10,
+      "destination_distribution": {
+        "体制内": 1,
+        "出国出境": 1,
+        "企业就业": 10,
+        "待定其他": 2
+      }
+    },
+    {
+      "major_name": "市场营销",
+      "student_count": 16,
+      "destination_student_count": 16,
+      "top_destination_label": "企业就业",
+      "top_destination_count": 10,
+      "destination_distribution": {
+        "出国出境": 1,
+        "企业就业": 10,
+        "待定其他": 5
+      }
+    },
+    {
+      "major_name": "应用化学",
+      "student_count": 15,
+      "destination_student_count": 15,
+      "top_destination_label": "待定其他",
+      "top_destination_count": 7,
+      "destination_distribution": {
+        "升学": 3,
+        "企业就业": 5,
+        "待定其他": 7
+      }
+    },
+    {
+      "major_name": "应用物理学",
+      "student_count": 8,
+      "destination_student_count": 8,
+      "top_destination_label": "待定其他",
+      "top_destination_count": 5,
+      "destination_distribution": {
+        "升学": 1,
+        "出国出境": 1,
+        "企业就业": 1,
+        "待定其他": 5
+      }
+    },
+    {
+      "major_name": "录音艺术",
+      "student_count": 16,
+      "destination_student_count": 16,
+      "top_destination_label": "企业就业",
+      "top_destination_count": 8,
+      "destination_distribution": {
+        "升学": 4,
+        "出国出境": 1,
+        "企业就业": 8,
+        "待定其他": 3
+      }
+    },
+    {
+      "major_name": "微电子科学与工程",
+      "student_count": 123,
+      "destination_student_count": 123,
+      "top_destination_label": "待定其他",
+      "top_destination_count": 61,
+      "destination_distribution": {
+        "升学": 28,
+        "出国出境": 3,
+        "企业就业": 31,
+        "待定其他": 61
+      }
+    },
+    {
+      "major_name": "探测制导与控制技术",
+      "student_count": 33,
+      "destination_student_count": 33,
+      "top_destination_label": "企业就业",
+      "top_destination_count": 21,
+      "destination_distribution": {
+        "出国出境": 2,
+        "企业就业": 21,
+        "待定其他": 10
+      }
+    },
+    {
+      "major_name": "数字媒体技术",
+      "student_count": 8,
+      "destination_student_count": 8,
+      "top_destination_label": "待定其他",
+      "top_destination_count": 4,
+      "destination_distribution": {
+        "升学": 1,
+        "企业就业": 3,
+        "待定其他": 4
+      }
+    },
+    {
+      "major_name": "数学与应用数学",
+      "student_count": 23,
+      "destination_student_count": 23,
+      "top_destination_label": "待定其他",
+      "top_destination_count": 13,
+      "destination_distribution": {
+        "升学": 2,
+        "体制内": 1,
+        "出国出境": 2,
+        "企业就业": 5,
+        "待定其他": 13
+      }
+    },
+    {
+      "major_name": "数据科学与大数据技术",
+      "student_count": 18,
+      "destination_student_count": 18,
+      "top_destination_label": "待定其他",
+      "top_destination_count": 10,
+      "destination_distribution": {
+        "升学": 2,
+        "出国出境": 1,
+        "企业就业": 5,
+        "待定其他": 10
+      }
+    },
+    {
+      "major_name": "日语",
+      "student_count": 8,
+      "destination_student_count": 8,
+      "top_destination_label": "企业就业",
+      "top_destination_count": 4,
+      "destination_distribution": {
+        "出国出境": 2,
+        "企业就业": 4,
+        "待定其他": 2
+      }
+    },
+    {
+      "major_name": "智能医学工程",
+      "student_count": 16,
+      "destination_student_count": 16,
+      "top_destination_label": "待定其他",
+      "top_destination_count": 9,
+      "destination_distribution": {
+        "升学": 4,
+        "出国出境": 3,
+        "待定其他": 9
+      }
+    },
+    {
+      "major_name": "智能科学与技术",
+      "student_count": 112,
+      "destination_student_count": 112,
+      "top_destination_label": "待定其他",
+      "top_destination_count": 63,
+      "destination_distribution": {
+        "升学": 10,
+        "体制内": 4,
+        "出国出境": 1,
+        "企业就业": 34,
+        "待定其他": 63
+      }
+    },
+    {
+      "major_name": "机器人工程",
+      "student_count": 28,
+      "destination_student_count": 28,
+      "top_destination_label": "待定其他",
+      "top_destination_count": 17,
+      "destination_distribution": {
+        "升学": 5,
+        "出国出境": 1,
+        "企业就业": 5,
+        "待定其他": 17
+      }
+    },
+    {
+      "major_name": "机械设计制造及其自动化",
+      "student_count": 81,
+      "destination_student_count": 81,
+      "top_destination_label": "企业就业",
+      "top_destination_count": 45,
+      "destination_distribution": {
+        "升学": 4,
+        "出国出境": 13,
+        "企业就业": 45,
+        "待定其他": 19
+      }
+    },
+    {
+      "major_name": "材料科学与工程",
+      "student_count": 22,
+      "destination_student_count": 22,
+      "top_destination_label": "待定其他",
+      "top_destination_count": 15,
+      "destination_distribution": {
+        "升学": 3,
+        "企业就业": 4,
+        "待定其他": 15
+      }
+    },
+    {
+      "major_name": "汉语言文学",
+      "student_count": 15,
+      "destination_student_count": 15,
+      "top_destination_label": "待定其他",
+      "top_destination_count": 5,
+      "destination_distribution": {
+        "升学": 4,
+        "出国出境": 4,
+        "企业就业": 2,
+        "待定其他": 5
+      }
+    },
+    {
+      "major_name": "测控技术与仪器",
+      "student_count": 57,
+      "destination_student_count": 57,
+      "top_destination_label": "待定其他",
+      "top_destination_count": 20,
+      "destination_distribution": {
+        "升学": 12,
+        "出国出境": 8,
+        "企业就业": 17,
+        "待定其他": 20
+      }
+    },
+    {
+      "major_name": "物联网工程",
+      "student_count": 24,
+      "destination_student_count": 24,
+      "top_destination_label": "企业就业",
+      "top_destination_count": 16,
+      "destination_distribution": {
+        "出国出境": 3,
+        "企业就业": 16,
+        "待定其他": 5
+      }
+    },
+    {
+      "major_name": "生物医学工程",
+      "student_count": 19,
+      "destination_student_count": 19,
+      "top_destination_label": "待定其他",
+      "top_destination_count": 7,
+      "destination_distribution": {
+        "升学": 4,
+        "体制内": 1,
+        "出国出境": 2,
+        "企业就业": 5,
+        "待定其他": 7
+      }
+    },
+    {
+      "major_name": "生物技术",
+      "student_count": 6,
+      "destination_student_count": 6,
+      "top_destination_label": "企业就业",
+      "top_destination_count": 2,
+      "destination_distribution": {
+        "体制内": 1,
+        "出国出境": 1,
+        "企业就业": 2,
+        "待定其他": 2
+      }
+    },
+    {
+      "major_name": "电子信息工程",
+      "student_count": 250,
+      "destination_student_count": 250,
+      "top_destination_label": "待定其他",
+      "top_destination_count": 104,
+      "destination_distribution": {
+        "升学": 73,
+        "体制内": 1,
+        "出国出境": 30,
+        "企业就业": 42,
+        "待定其他": 104
+      }
+    },
+    {
+      "major_name": "电子信息科学与技术",
+      "student_count": 107,
+      "destination_student_count": 107,
+      "top_destination_label": "企业就业",
+      "top_destination_count": 61,
+      "destination_distribution": {
+        "升学": 13,
+        "体制内": 1,
+        "出国出境": 3,
+        "企业就业": 61,
+        "待定其他": 29
+      }
+    },
+    {
+      "major_name": "电子商务",
+      "student_count": 15,
+      "destination_student_count": 15,
+      "top_destination_label": "企业就业",
+      "top_destination_count": 7,
+      "destination_distribution": {
+        "升学": 2,
+        "出国出境": 3,
+        "企业就业": 7,
+        "待定其他": 3
+      }
+    },
+    {
+      "major_name": "电子封装技术",
+      "student_count": 16,
+      "destination_student_count": 16,
+      "top_destination_label": "企业就业",
+      "top_destination_count": 9,
+      "destination_distribution": {
+        "升学": 2,
+        "出国出境": 1,
+        "企业就业": 9,
+        "待定其他": 4
+      }
+    },
+    {
+      "major_name": "电子科学与技术",
+      "student_count": 139,
+      "destination_student_count": 139,
+      "top_destination_label": "待定其他",
+      "top_destination_count": 56,
+      "destination_distribution": {
+        "升学": 25,
+        "体制内": 1,
+        "出国出境": 4,
+        "企业就业": 53,
+        "待定其他": 56
+      }
+    },
+    {
+      "major_name": "电气工程及其自动化",
+      "student_count": 28,
+      "destination_student_count": 28,
+      "top_destination_label": "企业就业",
+      "top_destination_count": 15,
+      "destination_distribution": {
+        "升学": 1,
+        "出国出境": 4,
+        "企业就业": 15,
+        "待定其他": 8
+      }
+    },
+    {
+      "major_name": "电波传播与天线",
+      "student_count": 11,
+      "destination_student_count": 11,
+      "top_destination_label": "企业就业",
+      "top_destination_count": 8,
+      "destination_distribution": {
+        "出国出境": 1,
+        "企业就业": 8,
+        "待定其他": 2
+      }
+    },
+    {
+      "major_name": "电磁场与无线技术",
+      "student_count": 42,
+      "destination_student_count": 42,
+      "top_destination_label": "企业就业",
+      "top_destination_count": 15,
+      "destination_distribution": {
+        "升学": 11,
+        "体制内": 3,
+        "企业就业": 15,
+        "待定其他": 13
+      }
+    },
+    {
+      "major_name": "空间信息与数字技术",
+      "student_count": 13,
+      "destination_student_count": 13,
+      "top_destination_label": "待定其他",
+      "top_destination_count": 6,
+      "destination_distribution": {
+        "升学": 1,
+        "出国出境": 1,
+        "企业就业": 5,
+        "待定其他": 6
+      }
+    },
+    {
+      "major_name": "空间科学与技术",
+      "student_count": 40,
+      "destination_student_count": 40,
+      "top_destination_label": "企业就业",
+      "top_destination_count": 19,
+      "destination_distribution": {
+        "升学": 2,
+        "企业就业": 19,
+        "待定其他": 19
+      }
+    },
+    {
+      "major_name": "纳米材料与技术",
+      "student_count": 9,
+      "destination_student_count": 9,
+      "top_destination_label": "企业就业",
+      "top_destination_count": 3,
+      "destination_distribution": {
+        "升学": 2,
+        "出国出境": 1,
+        "企业就业": 3,
+        "待定其他": 3
+      }
+    },
+    {
+      "major_name": "统计学",
+      "student_count": 5,
+      "destination_student_count": 5,
+      "top_destination_label": "待定其他",
+      "top_destination_count": 4,
+      "destination_distribution": {
+        "企业就业": 1,
+        "待定其他": 4
+      }
+    },
+    {
+      "major_name": "网络工程",
+      "student_count": 22,
+      "destination_student_count": 22,
+      "top_destination_label": "企业就业",
+      "top_destination_count": 12,
+      "destination_distribution": {
+        "升学": 1,
+        "体制内": 2,
+        "企业就业": 12,
+        "待定其他": 7
+      }
+    },
+    {
+      "major_name": "网络空间安全",
+      "student_count": 55,
+      "destination_student_count": 55,
+      "top_destination_label": "待定其他",
+      "top_destination_count": 30,
+      "destination_distribution": {
+        "升学": 10,
+        "出国出境": 2,
+        "企业就业": 13,
+        "待定其他": 30
+      }
+    },
+    {
+      "major_name": "翻译",
+      "student_count": 17,
+      "destination_student_count": 17,
+      "top_destination_label": "待定其他",
+      "top_destination_count": 7,
+      "destination_distribution": {
+        "升学": 2,
+        "体制内": 2,
+        "出国出境": 1,
+        "企业就业": 5,
+        "待定其他": 7
+      }
+    },
+    {
+      "major_name": "自动化",
+      "student_count": 46,
+      "destination_student_count": 46,
+      "top_destination_label": "升学",
+      "top_destination_count": 18,
+      "destination_distribution": {
+        "升学": 18,
+        "体制内": 1,
+        "出国出境": 2,
+        "企业就业": 12,
+        "待定其他": 13
+      }
+    },
+    {
+      "major_name": "英语",
+      "student_count": 19,
+      "destination_student_count": 19,
+      "top_destination_label": "待定其他",
+      "top_destination_count": 8,
+      "destination_distribution": {
+        "升学": 4,
+        "体制内": 1,
+        "出国出境": 2,
+        "企业就业": 4,
+        "待定其他": 8
+      }
+    },
+    {
+      "major_name": "计算机科学与技术",
+      "student_count": 224,
+      "destination_student_count": 224,
+      "top_destination_label": "待定其他",
+      "top_destination_count": 103,
+      "destination_distribution": {
+        "升学": 53,
+        "体制内": 7,
+        "出国出境": 17,
+        "企业就业": 44,
+        "待定其他": 103
+      }
+    },
+    {
+      "major_name": "软件工程",
+      "student_count": 185,
+      "destination_student_count": 185,
+      "top_destination_label": "企业就业",
+      "top_destination_count": 74,
+      "destination_distribution": {
+        "升学": 9,
+        "体制内": 9,
+        "出国出境": 27,
+        "企业就业": 74,
+        "待定其他": 66
+      }
+    },
+    {
+      "major_name": "通信工程",
+      "student_count": 290,
+      "destination_student_count": 290,
+      "top_destination_label": "待定其他",
+      "top_destination_count": 110,
+      "destination_distribution": {
+        "升学": 86,
+        "体制内": 6,
+        "出国出境": 47,
+        "企业就业": 41,
+        "待定其他": 110
+      }
+    },
+    {
+      "major_name": "遥感科学与技术",
+      "student_count": 22,
+      "destination_student_count": 22,
+      "top_destination_label": "待定其他",
+      "top_destination_count": 10,
+      "destination_distribution": {
+        "出国出境": 3,
+        "企业就业": 9,
+        "待定其他": 10
+      }
+    },
+    {
+      "major_name": "金融学",
+      "student_count": 14,
+      "destination_student_count": 14,
+      "top_destination_label": "升学",
+      "top_destination_count": 7,
+      "destination_distribution": {
+        "升学": 7,
+        "体制内": 2,
+        "出国出境": 4,
+        "企业就业": 1
+      }
+    },
+    {
+      "major_name": "集成电路设计与集成系统",
+      "student_count": 105,
+      "destination_student_count": 105,
+      "top_destination_label": "待定其他",
+      "top_destination_count": 60,
+      "destination_distribution": {
+        "升学": 20,
+        "出国出境": 6,
+        "企业就业": 19,
+        "待定其他": 60
+      }
+    },
+    {
+      "major_name": "飞行器设计与工程",
+      "student_count": 12,
+      "destination_student_count": 12,
+      "top_destination_label": "企业就业",
+      "top_destination_count": 10,
+      "destination_distribution": {
+        "升学": 1,
+        "企业就业": 10,
+        "待定其他": 1
+      }
+    }
+  ],
+  "group_destination_association": [
+    {
+      "group_segment": "作息失衡风险组",
+      "destination_label": "升学",
+      "student_count": 490,
+      "group_student_count": 2772,
+      "share_within_group": 0.1768
+    },
+    {
+      "group_segment": "作息失衡风险组",
+      "destination_label": "体制内",
+      "student_count": 54,
+      "group_student_count": 2772,
+      "share_within_group": 0.0195
+    },
+    {
+      "group_segment": "作息失衡风险组",
+      "destination_label": "出国出境",
+      "student_count": 247,
+      "group_student_count": 2772,
+      "share_within_group": 0.0891
+    },
+    {
+      "group_segment": "作息失衡风险组",
+      "destination_label": "企业就业",
+      "student_count": 870,
+      "group_student_count": 2772,
+      "share_within_group": 0.3139
+    },
+    {
+      "group_segment": "作息失衡风险组",
+      "destination_label": "待定其他",
+      "student_count": 1111,
+      "group_student_count": 2772,
+      "share_within_group": 0.4008
     }
   ],
   "trend_summary": {
     "terms": [
       {
         "term_key": "2023-2",
-        "student_count": 2440,
-        "average_risk_probability": 0.56,
+        "student_count": 2439,
+        "average_risk_probability": 0.0,
         "risk_distribution": {
-          "高风险": 5,
-          "较高风险": 710,
-          "一般风险": 1362,
-          "低风险": 363
+          "高风险": 0,
+          "较高风险": 34,
+          "一般风险": 75,
+          "低风险": 2330
         },
         "dimension_summary": [
           {
@@ -401,7 +1201,7 @@
           {
             "dimension": "综合荣誉与异动预警",
             "dimension_code": "appraisal_status_alert",
-            "average_score": 0.2
+            "average_score": 0.0
           },
           {
             "dimension": "课堂学习投入",
@@ -411,133 +1211,133 @@
           {
             "dimension": "早晚生活作息规律",
             "dimension_code": "daily_routine_boundary",
-            "average_score": 0.19
+            "average_score": 0.0
           },
           {
             "dimension": "图书馆沉浸度",
             "dimension_code": "library_immersion",
-            "average_score": 0.1
+            "average_score": 0.0
           },
           {
             "dimension": "网络作息自律指数",
             "dimension_code": "network_habits",
-            "average_score": 0.02
+            "average_score": 0.0
           },
           {
             "dimension": "在线学习积极性",
             "dimension_code": "online_activeness",
-            "average_score": 1.0
+            "average_score": 0.0
           },
           {
             "dimension": "体质及运动状况",
             "dimension_code": "physical_resilience",
-            "average_score": 0.35
+            "average_score": 0.0
           }
         ]
       },
       {
         "term_key": "2024-1",
-        "student_count": 375,
-        "average_risk_probability": 0.56,
+        "student_count": 158,
+        "average_risk_probability": 0.01,
         "risk_distribution": {
           "高风险": 0,
-          "较高风险": 111,
-          "一般风险": 208,
-          "低风险": 56
+          "较高风险": 10,
+          "一般风险": 33,
+          "低风险": 115
         },
         "dimension_summary": [
           {
             "dimension": "学业基础表现",
             "dimension_code": "academic_base",
-            "average_score": 0.3
+            "average_score": 0.71
           },
           {
             "dimension": "综合荣誉与异动预警",
             "dimension_code": "appraisal_status_alert",
-            "average_score": 0.13
+            "average_score": 0.0
           },
           {
             "dimension": "课堂学习投入",
             "dimension_code": "class_engagement",
-            "average_score": 0.15
+            "average_score": 0.35
           },
           {
             "dimension": "早晚生活作息规律",
             "dimension_code": "daily_routine_boundary",
-            "average_score": 0.23
+            "average_score": 0.0
           },
           {
             "dimension": "图书馆沉浸度",
             "dimension_code": "library_immersion",
-            "average_score": 0.09
+            "average_score": 0.0
           },
           {
             "dimension": "网络作息自律指数",
             "dimension_code": "network_habits",
-            "average_score": 0.02
+            "average_score": 0.0
           },
           {
             "dimension": "在线学习积极性",
             "dimension_code": "online_activeness",
-            "average_score": 1.0
+            "average_score": 0.0
           },
           {
             "dimension": "体质及运动状况",
             "dimension_code": "physical_resilience",
-            "average_score": 0.31
+            "average_score": 0.0
           }
         ]
       },
       {
         "term_key": "2024-2",
-        "student_count": 220,
-        "average_risk_probability": 0.54,
+        "student_count": 175,
+        "average_risk_probability": 0.0,
         "risk_distribution": {
           "高风险": 0,
-          "较高风险": 57,
-          "一般风险": 118,
-          "低风险": 45
+          "较高风险": 1,
+          "一般风险": 5,
+          "低风险": 169
         },
         "dimension_summary": [
           {
             "dimension": "学业基础表现",
             "dimension_code": "academic_base",
-            "average_score": 0.7
+            "average_score": 0.88
           },
           {
             "dimension": "综合荣誉与异动预警",
             "dimension_code": "appraisal_status_alert",
-            "average_score": 0.09
+            "average_score": 0.0
           },
           {
             "dimension": "课堂学习投入",
             "dimension_code": "class_engagement",
-            "average_score": 0.28
+            "average_score": 0.35
           },
           {
             "dimension": "早晚生活作息规律",
             "dimension_code": "daily_routine_boundary",
-            "average_score": 0.2
+            "average_score": 0.0
           },
           {
             "dimension": "图书馆沉浸度",
             "dimension_code": "library_immersion",
-            "average_score": 0.07
+            "average_score": 0.0
           },
           {
             "dimension": "网络作息自律指数",
             "dimension_code": "network_habits",
-            "average_score": 0.03
+            "average_score": 0.0
           },
           {
             "dimension": "在线学习积极性",
             "dimension_code": "online_activeness",
-            "average_score": 1.0
+            "average_score": 0.0
           },
           {
             "dimension": "体质及运动状况",
             "dimension_code": "physical_resilience",
-            "average_score": 0.28
+            "average_score": 0.0
           }
         ]
       }
@@ -547,13 +1347,13 @@
     "terms": [
       {
         "term_key": "2023-2",
-        "student_count": 2440,
-        "average_risk_probability": 0.56,
+        "student_count": 2439,
+        "average_risk_probability": 0.0,
         "risk_distribution": {
-          "高风险": 5,
-          "较高风险": 710,
-          "一般风险": 1362,
-          "低风险": 363
+          "高风险": 0,
+          "较高风险": 34,
+          "一般风险": 75,
+          "低风险": 2330
         },
         "dimension_summary": [
           {
@@ -564,7 +1364,7 @@
           {
             "dimension": "综合荣誉与异动预警",
             "dimension_code": "appraisal_status_alert",
-            "average_score": 0.2
+            "average_score": 0.0
           },
           {
             "dimension": "课堂学习投入",
@@ -574,133 +1374,133 @@
           {
             "dimension": "早晚生活作息规律",
             "dimension_code": "daily_routine_boundary",
-            "average_score": 0.19
+            "average_score": 0.0
           },
           {
             "dimension": "图书馆沉浸度",
             "dimension_code": "library_immersion",
-            "average_score": 0.1
+            "average_score": 0.0
           },
           {
             "dimension": "网络作息自律指数",
             "dimension_code": "network_habits",
-            "average_score": 0.02
+            "average_score": 0.0
           },
           {
             "dimension": "在线学习积极性",
             "dimension_code": "online_activeness",
-            "average_score": 1.0
+            "average_score": 0.0
           },
           {
             "dimension": "体质及运动状况",
             "dimension_code": "physical_resilience",
-            "average_score": 0.35
+            "average_score": 0.0
           }
         ]
       },
       {
         "term_key": "2024-1",
-        "student_count": 375,
-        "average_risk_probability": 0.56,
+        "student_count": 158,
+        "average_risk_probability": 0.01,
         "risk_distribution": {
           "高风险": 0,
-          "较高风险": 111,
-          "一般风险": 208,
-          "低风险": 56
+          "较高风险": 10,
+          "一般风险": 33,
+          "低风险": 115
         },
         "dimension_summary": [
           {
             "dimension": "学业基础表现",
             "dimension_code": "academic_base",
-            "average_score": 0.3
+            "average_score": 0.71
           },
           {
             "dimension": "综合荣誉与异动预警",
             "dimension_code": "appraisal_status_alert",
-            "average_score": 0.13
+            "average_score": 0.0
           },
           {
             "dimension": "课堂学习投入",
             "dimension_code": "class_engagement",
-            "average_score": 0.15
+            "average_score": 0.35
           },
           {
             "dimension": "早晚生活作息规律",
             "dimension_code": "daily_routine_boundary",
-            "average_score": 0.23
+            "average_score": 0.0
           },
           {
             "dimension": "图书馆沉浸度",
             "dimension_code": "library_immersion",
-            "average_score": 0.09
+            "average_score": 0.0
           },
           {
             "dimension": "网络作息自律指数",
             "dimension_code": "network_habits",
-            "average_score": 0.02
+            "average_score": 0.0
           },
           {
             "dimension": "在线学习积极性",
             "dimension_code": "online_activeness",
-            "average_score": 1.0
+            "average_score": 0.0
           },
           {
             "dimension": "体质及运动状况",
             "dimension_code": "physical_resilience",
-            "average_score": 0.31
+            "average_score": 0.0
           }
         ]
       },
       {
         "term_key": "2024-2",
-        "student_count": 220,
-        "average_risk_probability": 0.54,
+        "student_count": 175,
+        "average_risk_probability": 0.0,
         "risk_distribution": {
           "高风险": 0,
-          "较高风险": 57,
-          "一般风险": 118,
-          "低风险": 45
+          "较高风险": 1,
+          "一般风险": 5,
+          "低风险": 169
         },
         "dimension_summary": [
           {
             "dimension": "学业基础表现",
             "dimension_code": "academic_base",
-            "average_score": 0.7
+            "average_score": 0.88
           },
           {
             "dimension": "综合荣誉与异动预警",
             "dimension_code": "appraisal_status_alert",
-            "average_score": 0.09
+            "average_score": 0.0
           },
           {
             "dimension": "课堂学习投入",
             "dimension_code": "class_engagement",
-            "average_score": 0.28
+            "average_score": 0.35
           },
           {
             "dimension": "早晚生活作息规律",
             "dimension_code": "daily_routine_boundary",
-            "average_score": 0.2
+            "average_score": 0.0
           },
           {
             "dimension": "图书馆沉浸度",
             "dimension_code": "library_immersion",
-            "average_score": 0.07
+            "average_score": 0.0
           },
           {
             "dimension": "网络作息自律指数",
             "dimension_code": "network_habits",
-            "average_score": 0.03
+            "average_score": 0.0
           },
           {
             "dimension": "在线学习积极性",
             "dimension_code": "online_activeness",
-            "average_score": 1.0
+            "average_score": 0.0
           },
           {
             "dimension": "体质及运动状况",
             "dimension_code": "physical_resilience",
-            "average_score": 0.28
+            "average_score": 0.0
           }
         ]
       }
@@ -710,42 +1510,42 @@
     {
       "dimension": "学业基础表现",
       "dimension_code": "academic_base",
-      "average_score": 0.81
+      "average_score": 0.89
     },
     {
       "dimension": "综合荣誉与异动预警",
       "dimension_code": "appraisal_status_alert",
-      "average_score": 0.18
+      "average_score": 0.0
     },
     {
       "dimension": "课堂学习投入",
       "dimension_code": "class_engagement",
-      "average_score": 0.04
+      "average_score": 0.05
     },
     {
       "dimension": "早晚生活作息规律",
       "dimension_code": "daily_routine_boundary",
-      "average_score": 0.19
+      "average_score": 0.0
     },
     {
       "dimension": "图书馆沉浸度",
       "dimension_code": "library_immersion",
-      "average_score": 0.1
+      "average_score": 0.0
     },
     {
       "dimension": "网络作息自律指数",
       "dimension_code": "network_habits",
-      "average_score": 0.02
+      "average_score": 0.0
     },
     {
       "dimension": "在线学习积极性",
       "dimension_code": "online_activeness",
-      "average_score": 1.0
+      "average_score": 0.0
     },
     {
       "dimension": "体质及运动状况",
       "dimension_code": "physical_resilience",
-      "average_score": 0.34
+      "average_score": 0.0
     }
   ],
   "group_score_summary": {
@@ -753,148 +1553,22 @@
       {
         "dimension": "学业基础表现",
         "dimension_code": "academic_base",
-        "average_score": 0.81
+        "average_score": 0.89
       },
       {
         "dimension": "综合荣誉与异动预警",
         "dimension_code": "appraisal_status_alert",
-        "average_score": 0.18
+        "average_score": 0.0
       },
       {
         "dimension": "课堂学习投入",
         "dimension_code": "class_engagement",
-        "average_score": 0.04
-      },
-      {
-        "dimension": "早晚生活作息规律",
-        "dimension_code": "daily_routine_boundary",
-        "average_score": 0.19
-      },
-      {
-        "dimension": "图书馆沉浸度",
-        "dimension_code": "library_immersion",
-        "average_score": 0.1
-      },
-      {
-        "dimension": "网络作息自律指数",
-        "dimension_code": "network_habits",
-        "average_score": 0.02
-      },
-      {
-        "dimension": "在线学习积极性",
-        "dimension_code": "online_activeness",
-        "average_score": 1.0
-      },
-      {
-        "dimension": "体质及运动状况",
-        "dimension_code": "physical_resilience",
-        "average_score": 0.34
-      }
-    ],
-    "学习投入稳定组": [
-      {
-        "dimension": "学业基础表现",
-        "dimension_code": "academic_base",
-        "average_score": 0.95
-      },
-      {
-        "dimension": "综合荣誉与异动预警",
-        "dimension_code": "appraisal_status_alert",
-        "average_score": 0.27
-      },
-      {
-        "dimension": "课堂学习投入",
-        "dimension_code": "class_engagement",
-        "average_score": 0.93
-      },
-      {
-        "dimension": "早晚生活作息规律",
-        "dimension_code": "daily_routine_boundary",
-        "average_score": 0.75
-      },
-      {
-        "dimension": "图书馆沉浸度",
-        "dimension_code": "library_immersion",
         "average_score": 0.05
       },
       {
-        "dimension": "网络作息自律指数",
-        "dimension_code": "network_habits",
-        "average_score": 0.0
-      },
-      {
-        "dimension": "在线学习积极性",
-        "dimension_code": "online_activeness",
-        "average_score": 1.0
-      },
-      {
-        "dimension": "体质及运动状况",
-        "dimension_code": "physical_resilience",
-        "average_score": 0.26
-      }
-    ],
-    "综合发展优势组": [
-      {
-        "dimension": "学业基础表现",
-        "dimension_code": "academic_base",
-        "average_score": 1.0
-      },
-      {
-        "dimension": "综合荣誉与异动预警",
-        "dimension_code": "appraisal_status_alert",
-        "average_score": 0.98
-      },
-      {
-        "dimension": "课堂学习投入",
-        "dimension_code": "class_engagement",
-        "average_score": 0.12
-      },
-      {
         "dimension": "早晚生活作息规律",
         "dimension_code": "daily_routine_boundary",
-        "average_score": 0.22
-      },
-      {
-        "dimension": "图书馆沉浸度",
-        "dimension_code": "library_immersion",
-        "average_score": 0.35
-      },
-      {
-        "dimension": "网络作息自律指数",
-        "dimension_code": "network_habits",
         "average_score": 0.0
-      },
-      {
-        "dimension": "在线学习积极性",
-        "dimension_code": "online_activeness",
-        "average_score": 1.0
-      },
-      {
-        "dimension": "体质及运动状况",
-        "dimension_code": "physical_resilience",
-        "average_score": 0.82
-      }
-    ],
-    "课堂参与薄弱组": [
-      {
-        "dimension": "学业基础表现",
-        "dimension_code": "academic_base",
-        "average_score": 0.95
-      },
-      {
-        "dimension": "综合荣誉与异动预警",
-        "dimension_code": "appraisal_status_alert",
-        "average_score": 0.08
-      },
-      {
-        "dimension": "课堂学习投入",
-        "dimension_code": "class_engagement",
-        "average_score": 0.0
-      },
-      {
-        "dimension": "早晚生活作息规律",
-        "dimension_code": "daily_routine_boundary",
-        "average_score": 0.75
       },
       {
         "dimension": "图书馆沉浸度",
@@ -904,104 +1578,104 @@
       {
         "dimension": "网络作息自律指数",
         "dimension_code": "network_habits",
-        "average_score": 0.9
+        "average_score": 0.0
       },
       {
         "dimension": "在线学习积极性",
         "dimension_code": "online_activeness",
-        "average_score": 1.0
+        "average_score": 0.0
       },
       {
         "dimension": "体质及运动状况",
         "dimension_code": "physical_resilience",
-        "average_score": 0.41
+        "average_score": 0.0
       }
     ]
   },
   "risk_factor_summary": [
     {
-      "dimension": "网络作息自律指数",
-      "dimension_code": "network_habits",
-      "average_score": 0.02
+      "dimension": "综合荣誉与异动预警",
+      "dimension_code": "appraisal_status_alert",
+      "average_score": 0.0
     },
     {
-      "dimension": "课堂学习投入",
-      "dimension_code": "class_engagement",
-      "average_score": 0.04
+      "dimension": "早晚生活作息规律",
+      "dimension_code": "daily_routine_boundary",
+      "average_score": 0.0
     },
     {
       "dimension": "图书馆沉浸度",
       "dimension_code": "library_immersion",
-      "average_score": 0.1
+      "average_score": 0.0
     }
   ],
   "top_warning_factors": [
     {
-      "dimension": "网络作息自律指数",
-      "dimension_code": "network_habits",
-      "average_score": 0.02
+      "dimension": "综合荣誉与异动预警",
+      "dimension_code": "appraisal_status_alert",
+      "average_score": 0.0
     },
     {
-      "dimension": "课堂学习投入",
-      "dimension_code": "class_engagement",
-      "average_score": 0.04
+      "dimension": "早晚生活作息规律",
+      "dimension_code": "daily_routine_boundary",
+      "average_score": 0.0
     },
     {
       "dimension": "图书馆沉浸度",
       "dimension_code": "library_immersion",
-      "average_score": 0.1
+      "average_score": 0.0
     }
   ],
   "priority_interventions": [
     {
       "risk_level": "高风险",
       "priority": 1,
-      "student_count": 5,
-      "share": 0.0016
+      "student_count": 0,
+      "share": 0.0
     },
     {
       "risk_level": "较高风险",
       "priority": 2,
-      "student_count": 878,
-      "share": 0.2893
+      "student_count": 48,
+      "share": 0.0173
     },
     {
       "risk_level": "一般风险",
       "priority": 3,
-      "student_count": 1688,
-      "share": 0.5562
+      "student_count": 142,
+      "share": 0.0512
     },
     {
       "risk_level": "低风险",
       "priority": 4,
-      "student_count": 464,
-      "share": 0.1529
+      "student_count": 2582,
+      "share": 0.9315
     }
   ],
   "intervention_priority_summary": [
     {
       "risk_level": "高风险",
       "priority": 1,
-      "student_count": 5,
-      "share": 0.0016
+      "student_count": 0,
+      "share": 0.0
     },
     {
       "risk_level": "较高风险",
       "priority": 2,
-      "student_count": 878,
-      "share": 0.2893
+      "student_count": 48,
+      "share": 0.0173
     },
     {
       "risk_level": "一般风险",
       "priority": 3,
-      "student_count": 1688,
-      "share": 0.5562
+      "student_count": 142,
+      "share": 0.0512
     },
     {
       "risk_level": "低风险",
       "priority": 4,
-      "student_count": 464,
-      "share": 0.1529
+      "student_count": 2582,
+      "share": 0.9315
     }
   ]
 }

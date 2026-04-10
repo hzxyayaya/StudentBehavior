@@ -886,6 +886,9 @@ def _build_term_aware_overview_fallback(
     fallback_payload["group_distribution"] = _build_group_distribution(term_rows)
     fallback_payload["major_risk_summary"] = _build_major_risk_summary(term_rows)
     fallback_payload["risk_factor_summary"] = _build_risk_factor_summary(term_rows)
+    fallback_payload["destination_distribution"] = _build_destination_distribution(term_rows)
+    fallback_payload["major_destination_summary"] = _build_major_destination_summary(term_rows)
+    fallback_payload["group_destination_association"] = _build_group_destination_association(term_rows)
 
     term_dimension_summary = _build_average_dimension_scores(term_rows)
     fallback_payload["dimension_summary"] = term_dimension_summary
@@ -947,6 +950,84 @@ def _first_list_value(payload: Mapping[str, Any], *keys: str) -> list[Any]:
         if isinstance(value, list):
             return list(value)
     return []
+
+
+def _build_destination_distribution(rows: list[Mapping[str, Any]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for row in rows:
+        label = row.get("destination_label")
+        if not isinstance(label, str):
+            continue
+        normalized = label.strip()
+        if not normalized:
+            continue
+        counts[normalized] = counts.get(normalized, 0) + 1
+    return {key: counts[key] for key in sorted(counts)}
+
+
+def _build_major_destination_summary(rows: list[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    majors: dict[str, list[Mapping[str, Any]]] = {}
+    for row in rows:
+        major_name = row.get("major_name")
+        if not isinstance(major_name, str):
+            continue
+        normalized = major_name.strip()
+        if not normalized:
+            continue
+        majors.setdefault(normalized, []).append(row)
+
+    summaries: list[dict[str, Any]] = []
+    for major_name, major_rows in sorted(majors.items()):
+        distribution = _build_destination_distribution(major_rows)
+        destination_student_count = int(sum(distribution.values()))
+        top_destination_label = None
+        top_destination_count = 0
+        if distribution:
+            top_destination_label, top_destination_count = min(
+                distribution.items(),
+                key=lambda item: (-item[1], item[0]),
+            )
+        summaries.append(
+            {
+                "major_name": major_name,
+                "student_count": len(major_rows),
+                "destination_student_count": destination_student_count,
+                "top_destination_label": top_destination_label,
+                "top_destination_count": top_destination_count,
+                "destination_distribution": distribution,
+            }
+        )
+    return summaries
+
+
+def _build_group_destination_association(rows: list[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    groups: dict[str, list[Mapping[str, Any]]] = {}
+    for row in rows:
+        group_segment = row.get("group_segment")
+        if not isinstance(group_segment, str):
+            continue
+        normalized = group_segment.strip()
+        if not normalized:
+            continue
+        groups.setdefault(normalized, []).append(row)
+
+    associations: list[dict[str, Any]] = []
+    for group_segment, group_rows in sorted(groups.items()):
+        distribution = _build_destination_distribution(group_rows)
+        group_student_count = len(group_rows)
+        if group_student_count == 0:
+            continue
+        for destination_label, student_count in distribution.items():
+            associations.append(
+                {
+                    "group_segment": group_segment,
+                    "destination_label": destination_label,
+                    "student_count": student_count,
+                    "group_student_count": group_student_count,
+                    "share_within_group": round(student_count / group_student_count, 4),
+                }
+            )
+    return associations
 
 
 def _build_dimension_summary_entry(item: Mapping[str, Any], score: float) -> dict[str, Any]:
