@@ -35,5 +35,7 @@ prompts/
 .worktrees/
 .omx/
 .tmp_rg_files.txt
+.playwright-cli/
+output/
 artifacts/semester_features/
 artifacts/*.csv
