@@ -3,9 +3,11 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from collections.abc import Mapping, Sequence
+from pathlib import Path
 
 import pandas as pd
 
+from student_behavior_model_stubs.model_registry import build_default_model_registry
 from student_behavior_model_stubs.scoring import build_dimension_scores
 from student_behavior_model_stubs.scoring import compute_group_segment
 from student_behavior_model_stubs.scoring import compute_risk_probability
@@ -47,6 +49,12 @@ _RESULT_COLUMNS = [
 ]
 _RISK_LEVEL_ORDER = ("高风险", "较高风险", "一般风险", "低风险")
 _RISK_PRIORITY = {level: index + 1 for index, level in enumerate(_RISK_LEVEL_ORDER)}
+_MODEL_SUMMARY_STUB = {
+    "cluster_method": "stub-eight-dimension-group-rules",
+    "risk_model": "stub-eight-dimension-risk-rules",
+    "target_label": "学期级八维学业风险",
+    "auc": _MODEL_SUMMARY_AUC,
+}
 
 
 def _normalized_text(value: object) -> str | None:
@@ -116,6 +124,56 @@ def _count_distribution(values: pd.Series) -> dict[str, int]:
 def _count_risk_distribution(values: pd.Series) -> dict[str, int]:
     counts = values.fillna("").astype(str).value_counts(dropna=False)
     return {level: int(counts.get(level, 0)) for level in _RISK_LEVEL_ORDER}
+
+
+def _resolve_checkout_root() -> Path:
+    for parent in Path(__file__).resolve().parents:
+        if (parent / ".git").exists():
+            return parent
+    raise RuntimeError("unable to locate checkout root")
+
+
+def _build_trained_model_summary_fields() -> dict[str, object]:
+    try:
+        metrics = build_default_model_registry(_resolve_checkout_root()).load_metrics()
+    except (RuntimeError, OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return {}
+    if metrics is None:
+        return {}
+
+    summary: dict[str, object] = {"source": "trained"}
+    text_fields = ("model_name", "target_label", "trained_at", "evaluated_at")
+    summary_keys = {
+        "model_name": "risk_model",
+        "target_label": "target_label",
+        "trained_at": "trained_at",
+        "evaluated_at": "evaluated_at",
+    }
+    for field_name in text_fields:
+        value = _normalized_text(metrics.get(field_name))
+        if value is not None:
+            summary[summary_keys[field_name]] = value
+
+    for field_name in (
+        "auc",
+        "accuracy",
+        "precision",
+        "recall",
+        "f1",
+        "sample_count",
+        "positive_sample_count",
+        "negative_sample_count",
+        "train_sample_count",
+        "valid_sample_count",
+        "test_sample_count",
+        "feature_count",
+    ):
+        value = metrics.get(field_name)
+        if value is None or pd.isna(value):
+            continue
+        summary[field_name] = value
+
+    return summary
 
 
 def _top_warning_factors(student_results: pd.DataFrame, limit: int = 3) -> list[dict[str, object]]:
@@ -217,15 +275,28 @@ def build_overview_by_term(student_results: pd.DataFrame) -> dict[str, object]:
         }
 
     ordered_results = student_results.copy()
-    overview_level_column = "intervention_priority_level" if "intervention_priority_level" in ordered_results.columns else "risk_level"
-    overview_score_column = "intervention_priority_score" if "intervention_priority_score" in ordered_results.columns else "adjusted_risk_score"
-    ordered_results["risk_level"] = ordered_results[overview_level_column].fillna("").astype(str)
+    if "risk_level" in ordered_results.columns:
+        risk_levels = ordered_results["risk_level"]
+    elif "intervention_priority_level" in ordered_results.columns:
+        risk_levels = ordered_results["intervention_priority_level"]
+    else:
+        risk_levels = pd.Series("", index=ordered_results.index)
+    ordered_results["risk_level"] = risk_levels.fillna("").astype(str)
     ordered_results["group_segment"] = ordered_results["group_segment"].fillna("").astype(str)
     ordered_results["major_name"] = ordered_results["major_name"].fillna("").astype(str)
     ordered_results["term_key"] = ordered_results["term_key"].fillna("").astype(str)
-    ordered_results["risk_probability"] = pd.to_numeric(
-        ordered_results.get(overview_score_column, ordered_results["risk_probability"]), errors="coerce"
-    ).fillna(0.0)
+    if "risk_probability" in ordered_results.columns:
+        risk_probabilities = ordered_results["risk_probability"]
+    elif "adjusted_risk_score" in ordered_results.columns:
+        risk_probabilities = ordered_results["adjusted_risk_score"]
+    else:
+        risk_probabilities = pd.Series(0.0, index=ordered_results.index)
+    ordered_results["risk_probability"] = pd.to_numeric(risk_probabilities, errors="coerce").fillna(0.0)
+    intervention_levels = (
+        ordered_results["intervention_priority_level"].fillna("").astype(str)
+        if "intervention_priority_level" in ordered_results.columns
+        else ordered_results["risk_level"]
+    )
 
     major_risk_summary: list[dict[str, object]] = []
     major_groups = sorted(
@@ -268,7 +339,9 @@ def build_overview_by_term(student_results: pd.DataFrame) -> dict[str, object]:
     risk_band_distribution = _count_risk_distribution(ordered_results["risk_level"])
     risk_trend_summary = {"terms": trend_terms}
     top_warning_factors = _top_warning_factors(ordered_results)
-    intervention_priority_summary = _intervention_priority_summary(ordered_results)
+    intervention_priority_summary = _intervention_priority_summary(
+        ordered_results.assign(risk_level=intervention_levels)
+    )
 
     return {
         "student_count": int(len(ordered_results)),
@@ -291,13 +364,13 @@ def build_model_summary(*, now: datetime) -> dict[str, object]:
     if not isinstance(now, datetime):
         raise TypeError("now must be a datetime")
 
-    return {
-        "cluster_method": "stub-eight-dimension-group-rules",
-        "risk_model": "stub-eight-dimension-risk-rules",
-        "target_label": "学期级八维学业风险",
-        "auc": _MODEL_SUMMARY_AUC,
+    summary = {
+        **_MODEL_SUMMARY_STUB,
+        "source": "stub",
         "updated_at": now.isoformat(timespec="seconds"),
     }
+    summary.update(_build_trained_model_summary_fields())
+    return summary
 
 
 def _resolve_student_name(

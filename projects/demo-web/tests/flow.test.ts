@@ -128,6 +128,7 @@ describe('demo flow links', () => {
     await flushPromises()
 
     const overviewCards = wrapper.findAll('.dimension-detail-card')
+    const summaryRows = wrapper.findAll('.summary-row')
     const [firstOverviewCard, secondOverviewCard] = overviewCards
     if (!firstOverviewCard || !secondOverviewCard) {
       throw new Error('missing overview dimension cards')
@@ -152,6 +153,129 @@ describe('demo flow links', () => {
     expect(wrapper.text()).toContain('2024-1')
     expect(wrapper.text()).toContain('当前学期 Top 影响因素')
     expect(wrapper.text()).toContain('学业基础表现')
+    expect(summaryRows).toHaveLength(5)
+    expect(wrapper.text()).toContain('风险模型')
+    expect(wrapper.text()).toContain('stub-risk-rules')
+    expect(wrapper.text()).not.toContain('模型来源')
+    expect(wrapper.text()).not.toContain('Accuracy')
+  })
+
+  it('renders trained model summary extras when the backend includes them', async () => {
+    const auth = useAuthStore()
+    auth.signIn('demo-token', '演示管理员', '2024-2')
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input)
+
+        if (url.includes('/analytics/overview')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              code: 200,
+              message: 'OK',
+              data: {
+                student_count: 12,
+                risk_distribution: [
+                  { risk_level: 'high', count: 2 },
+                  { risk_level: 'medium', count: 3 },
+                  { risk_level: 'low', count: 7 },
+                ],
+                risk_band_distribution: { 高风险: 2, 较高风险: 1, 一般风险: 3, 低风险: 6 },
+                group_distribution: [{ group_segment: '学习投入稳定组', count: 12 }],
+                major_risk_summary: [],
+                trend_summary: [{ term: '2024-2', high_risk_count: 2 }],
+                risk_trend_summary: [{ term: '2024-2', avg_risk_score: 49.5, high_risk_count: 2, risk_change_direction: 'steady' }],
+                risk_factor_summary: [{ feature: 'academic_base', feature_cn: '学业基础表现', count: 6, importance: 0.74 }],
+                dimension_summary: [
+                  {
+                    dimension: '学业基础表现',
+                    score: 82,
+                    level: 'high',
+                    label: '学业基础稳健',
+                    explanation: '学期 GPA 保持稳定。',
+                    metrics: [{ metric: '学期GPA', value: 3.2, display: '3.2' }],
+                  },
+                ],
+              },
+              meta: { request_id: 'req-overview', term: '2024-2' },
+            }),
+          })
+        }
+
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            code: 200,
+            message: 'OK',
+            data: {
+              cluster_method: 'stub-eight-dimension-group-rules',
+              risk_model: 'trained-academic-risk-model',
+              target_label: '综合测评低等级风险',
+              auc: 0.9342,
+              updated_at: '2026-04-09T09:00:00Z',
+              source: 'trained',
+              accuracy: 0.88,
+              precision: 0.81,
+              recall: 0.79,
+              f1: 0.8,
+              sample_count: 200,
+              positive_sample_count: 64,
+              negative_sample_count: 136,
+              train_sample_count: 120,
+              valid_sample_count: 30,
+              test_sample_count: 50,
+            },
+            meta: { request_id: 'req-summary', term: '2024-2' },
+          }),
+        })
+      }),
+    )
+
+    const { router, vueQueryPlugin } = createPlugins()
+    await router.push('/overview')
+    await router.isReady()
+
+    const wrapper = mount(OverviewPage, {
+      global: {
+        plugins: [router, vueQueryPlugin],
+        stubs: {
+          RouterLink: RouterLinkStub,
+          EChart: { template: '<div class="echart-stub" />' },
+          LazyEChart: { template: '<div class="echart-stub" />' },
+        },
+      },
+    })
+
+    await flushPromises()
+    await flushPromises()
+
+    const summaryRows = wrapper.findAll('.summary-row')
+
+    expect(summaryRows).toHaveLength(16)
+    expect(wrapper.text()).toContain('模型来源')
+    expect(wrapper.text()).toContain('trained')
+    expect(wrapper.text()).toContain('Accuracy')
+    expect(wrapper.text()).toContain('0.8800')
+    expect(wrapper.text()).toContain('Precision')
+    expect(wrapper.text()).toContain('0.8100')
+    expect(wrapper.text()).toContain('Recall')
+    expect(wrapper.text()).toContain('0.7900')
+    expect(wrapper.text()).toContain('F1')
+    expect(wrapper.text()).toContain('0.8000')
+    expect(wrapper.text()).toContain('总样本数')
+    expect(wrapper.text()).toContain('200')
+    expect(wrapper.text()).toContain('正样本数')
+    expect(wrapper.text()).toContain('64')
+    expect(wrapper.text()).toContain('负样本数')
+    expect(wrapper.text()).toContain('136')
+    expect(wrapper.text()).toContain('训练样本数')
+    expect(wrapper.text()).toContain('120')
+    expect(wrapper.text()).toContain('验证样本数')
+    expect(wrapper.text()).toContain('30')
+    expect(wrapper.text()).toContain('测试样本数')
+    expect(wrapper.text()).toContain('50')
   })
 
   it('keeps warning filters in the back link on student page', async () => {

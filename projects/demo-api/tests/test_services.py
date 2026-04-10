@@ -516,14 +516,16 @@ def test_get_development_analysis_repackages_major_group_and_dimension_views(sam
             1,
             {"high": 0, "medium": 0, "low": 1},
             {"学习投入稳定组": 1},
-            [
-                {
-                    "major_name": "软件工程",
-                    "student_count": 1,
-                    "high_risk_count": 0,
-                    "average_risk_probability": 0.65,
-                }
-            ],
+                [
+                    {
+                        "major_name": "软件工程",
+                        "student_count": 1,
+                        "high_risk_count": 0,
+                        "elevated_risk_count": 0,
+                        "elevated_risk_ratio": 0.0,
+                        "average_risk_probability": 0.65,
+                    }
+                ],
         ),
         ("2024-2", 179, {"high": 12, "medium": 64, "low": 103}, None, None),
     ],
@@ -553,6 +555,112 @@ def test_get_overview_accepts_all_real_terms(
 def test_get_model_summary_returns_stub_summary(sample_store) -> None:
     payload = sample_store.get_model_summary(term="2024-2")
     assert payload["risk_model"] == "stub-eight-dimension-risk-rules"
+
+
+def test_get_model_summary_preserves_legacy_stub_shape(sample_store) -> None:
+    payload = sample_store.get_model_summary(term="2024-2")
+
+    assert payload == {
+        "cluster_method": "stub-eight-dimension-group-rules",
+        "risk_model": "stub-eight-dimension-risk-rules",
+        "target_label": "学期级八维学业风险",
+        "auc": 0.91,
+        "updated_at": "2024-09-01T00:00:00Z",
+    }
+
+
+def test_get_model_summary_exposes_trained_metrics_when_present(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    trained_summary_path = tmp_path / "artifacts" / "model_stubs" / "v1_model_summary.json"
+    trained_summary_path.parent.mkdir(parents=True, exist_ok=True)
+    trained_summary_path.write_text(
+        json.dumps(
+            {
+                "cluster_method": "stub-eight-dimension-group-rules",
+                "risk_model": "trained-academic-risk-model",
+                "target_label": "学期级八维学业风险",
+                "auc": 0.9342,
+                "updated_at": "2026-04-09T09:00:00Z",
+                "source": "trained",
+                "accuracy": 0.88,
+                "precision": 0.81,
+                "recall": 0.79,
+                "f1": 0.8,
+                "trained_at": "2026-04-08T18:15:00Z",
+                "evaluated_at": "2026-04-09T09:00:00Z",
+                "train_sample_count": 120,
+                "valid_sample_count": 30,
+                "test_sample_count": 50,
+                "feature_count": 64,
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=trained_summary_path,
+        overview_term="2024-2",
+        warnings_path=sample_artifacts_dir / "v1_student_results.csv",
+        repo_root=sample_artifacts_dir.parent.parent,
+    )
+
+    payload = store.get_model_summary(term="2024-2")
+
+    assert payload["cluster_method"] == "stub-eight-dimension-group-rules"
+    assert payload["risk_model"] == "trained-academic-risk-model"
+    assert payload["source"] == "trained"
+    assert payload["accuracy"] == 0.88
+    assert payload["precision"] == 0.81
+    assert payload["recall"] == 0.79
+    assert payload["f1"] == 0.8
+    assert payload["trained_at"] == "2026-04-08T18:15:00Z"
+    assert payload["evaluated_at"] == "2026-04-09T09:00:00Z"
+    assert payload["train_sample_count"] == 120
+    assert payload["valid_sample_count"] == 30
+    assert payload["test_sample_count"] == 50
+    assert payload["feature_count"] == 64
+
+
+def test_get_result_model_summary_preserves_reserved_api_fields(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    trained_summary_path = tmp_path / "artifacts" / "model_stubs" / "v1_model_summary.json"
+    trained_summary_path.parent.mkdir(parents=True, exist_ok=True)
+    trained_summary_path.write_text(
+        json.dumps(
+            {
+                "cluster_method": "stub-eight-dimension-group-rules",
+                "risk_model": "trained-academic-risk-model",
+                "target_label": "学期级八维学业风险",
+                "auc": 0.9342,
+                "updated_at": "2026-04-09T09:00:00Z",
+                "source": "trained",
+                "term": "artifact-term",
+                "result_key": "artifact-result-key",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=trained_summary_path,
+        overview_term="2024-2",
+        warnings_path=sample_artifacts_dir / "v1_student_results.csv",
+        repo_root=sample_artifacts_dir.parent.parent,
+    )
+
+    payload = store.get_result_model_summary(term="2024-2")
+
+    assert payload["result_key"] == "model_summary"
+    assert payload["term"] == "2024-2"
+    assert payload["risk_model"] == "trained-academic-risk-model"
+    assert "artifact-result-key" not in payload.values()
+    assert "artifact-term" not in payload.values()
 
 
 def test_get_student_profile_expands_dimension_scores(sample_store) -> None:
@@ -1650,12 +1758,16 @@ def test_get_overview_uses_term_specific_fallback_when_stub_is_multi_term(
             "major_name": "电子信息工程",
             "student_count": 1,
             "high_risk_count": 1,
+            "elevated_risk_count": 1,
+            "elevated_risk_ratio": 1.0,
             "average_risk_probability": 0.91,
         },
         {
             "major_name": "软件工程",
             "student_count": 2,
             "high_risk_count": 0,
+            "elevated_risk_count": 0,
+            "elevated_risk_ratio": 0.0,
             "average_risk_probability": 0.42,
         },
     ]

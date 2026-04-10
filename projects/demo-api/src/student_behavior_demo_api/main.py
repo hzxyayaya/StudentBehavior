@@ -669,7 +669,7 @@ def get_warnings(
     term: str = Query(description="学期标识，例如 2024-2", examples=["2024-2"]),
     page: int = Query(default=1, ge=1, description="分页页码，从 1 开始"),
     page_size: int = Query(default=20, ge=1, le=200, description="每页条数，范围 1-200"),
-    risk_level: str | None = Query(
+    risk_level: Literal["high", "medium", "low", "高风险", "较高风险", "一般风险", "低风险"] | None = Query(
         default=None,
         description="按风险等级筛选，支持高风险、较高风险、一般风险、低风险，以及 high/medium/low",
     ),

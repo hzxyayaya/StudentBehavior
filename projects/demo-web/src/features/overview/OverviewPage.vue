@@ -283,25 +283,9 @@
           <details class="dimension-details">
             <summary>模型信息</summary>
             <div class="summary-list">
-              <div class="summary-row">
-                <span class="muted">风险模型</span>
-                <strong>{{ summary.risk_model }}</strong>
-              </div>
-              <div class="summary-row">
-                <span class="muted">聚类口径</span>
-                <strong>{{ summary.cluster_method }}</strong>
-              </div>
-              <div class="summary-row">
-                <span class="muted">目标标签</span>
-                <strong>{{ summary.target_label }}</strong>
-              </div>
-              <div class="summary-row">
-                <span class="muted">AUC</span>
-                <strong>{{ summary.auc.toFixed(4) }}</strong>
-              </div>
-              <div class="summary-row">
-                <span class="muted">更新时间</span>
-                <strong>{{ summary.updated_at }}</strong>
+              <div v-for="row in summaryRows" :key="row.key" class="summary-row">
+                <span class="muted">{{ row.label }}</span>
+                <strong>{{ row.value }}</strong>
               </div>
             </div>
           </details>
@@ -324,7 +308,7 @@ import ErrorState from '@/components/state/ErrorState.vue'
 import LoadingState from '@/components/state/LoadingState.vue'
 import { getModelSummary, getOverview } from '@/lib/api'
 import { formatApiErrorMessage } from '@/lib/format'
-import type { RiskLevel } from '@/lib/types'
+import type { ModelSummaryData, RiskLevel } from '@/lib/types'
 
 const termStore = useTermStore()
 
@@ -379,6 +363,33 @@ const riskBandCards = computed(() => {
 const riskTrendRows = computed(() => (overview.value?.risk_trend_summary ?? []).slice(0, 3))
 const riskFactorRows = computed(() => (overview.value?.risk_factor_summary ?? []).slice(0, 3))
 const totalRiskPopulation = computed(() => riskBandRows.value.reduce((sum, item) => sum + item.count, 0))
+const summaryRows = computed(() => {
+  const currentSummary = summary.value
+  if (!currentSummary) return []
+
+  const summaryRecord = asSummaryRecord(currentSummary)
+  const rows = [
+    { key: 'risk_model', label: '风险模型', value: currentSummary.risk_model },
+    { key: 'cluster_method', label: '聚类口径', value: currentSummary.cluster_method },
+    { key: 'target_label', label: '目标标签', value: currentSummary.target_label },
+    { key: 'auc', label: 'AUC', value: currentSummary.auc.toFixed(4) },
+  ]
+
+  appendSummaryRow(rows, 'source', '模型来源', formatSummaryText(summaryRecord.source))
+  appendSummaryRow(rows, 'accuracy', 'Accuracy', formatSummaryMetric(summaryRecord.accuracy))
+  appendSummaryRow(rows, 'precision', 'Precision', formatSummaryMetric(summaryRecord.precision))
+  appendSummaryRow(rows, 'recall', 'Recall', formatSummaryMetric(summaryRecord.recall))
+  appendSummaryRow(rows, 'f1', 'F1', formatSummaryMetric(summaryRecord.f1))
+  appendSummaryRow(rows, 'sample_count', '总样本数', formatSummaryCount(summaryRecord.sample_count))
+  appendSummaryRow(rows, 'positive_sample_count', '正样本数', formatSummaryCount(summaryRecord.positive_sample_count))
+  appendSummaryRow(rows, 'negative_sample_count', '负样本数', formatSummaryCount(summaryRecord.negative_sample_count))
+  appendSummaryRow(rows, 'train_sample_count', '训练样本数', formatSummaryCount(summaryRecord.train_sample_count))
+  appendSummaryRow(rows, 'valid_sample_count', '验证样本数', formatSummaryCount(summaryRecord.valid_sample_count))
+  appendSummaryRow(rows, 'test_sample_count', '测试样本数', formatSummaryCount(summaryRecord.test_sample_count))
+  appendSummaryRow(rows, 'updated_at', '更新时间', currentSummary.updated_at)
+
+  return rows
+})
 
 const errorMessage = computed(() => {
   const firstError = overviewQuery.error.value ?? summaryQuery.error.value
@@ -507,6 +518,32 @@ function riskCardClass(key: string) {
   if (key === 'medium') return 'risk-card-medium'
   if (key === 'higher') return 'risk-card-higher'
   return 'risk-card-high'
+}
+
+function asSummaryRecord(value: ModelSummaryData): Record<string, unknown> {
+  return value as ModelSummaryData & Record<string, unknown>
+}
+
+function appendSummaryRow(
+  rows: Array<{ key: string; label: string; value: string }>,
+  key: string,
+  label: string,
+  value?: string,
+) {
+  if (!value) return
+  rows.push({ key, label, value })
+}
+
+function formatSummaryText(value: unknown) {
+  return typeof value === 'string' && value ? value : undefined
+}
+
+function formatSummaryMetric(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(4) : undefined
+}
+
+function formatSummaryCount(value: unknown) {
+  return typeof value === 'number' && Number.isFinite(value) ? String(value) : undefined
 }
 
 function retry() {

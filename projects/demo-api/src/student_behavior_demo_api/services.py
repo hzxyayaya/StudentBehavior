@@ -13,6 +13,14 @@ from student_behavior_demo_api.loaders import load_student_results
 from student_behavior_demo_api.loaders import validate_model_summary_payload
 from student_behavior_demo_api.loaders import validate_overview_payload
 
+MODEL_SUMMARY_BASE_FIELDS = (
+    "cluster_method",
+    "risk_model",
+    "target_label",
+    "auc",
+    "updated_at",
+)
+
 
 class DemoApiStore:
     def __init__(
@@ -37,7 +45,7 @@ class DemoApiStore:
         self._overview_terms = _infer_overview_terms(overview_record, self._overview_term)
         validate_overview_payload({"term_buckets": {self._overview_term: overview_record}})
         self._overview_payload = dict(overview_record)
-        self._model_summary_payload = dict(
+        self._model_summary_payload = _normalize_model_summary_payload(
             validate_model_summary_payload(_load_single_record(resolved_model_summary_path))
         )
 
@@ -53,10 +61,7 @@ class DemoApiStore:
             if row["term_key"] == term
         ]
 
-        payload_student_count = payload.get("student_count")
         should_use_term_fallback = term != self._overview_term
-        if isinstance(payload_student_count, int) and payload_student_count != len(term_rows):
-            should_use_term_fallback = True
 
         if should_use_term_fallback:
             payload = _build_term_aware_overview_fallback(payload, term, term_rows)
@@ -145,7 +150,6 @@ class DemoApiStore:
             raise KeyError((student_id, term))
 
         return {
-            "term": term,
             "top_factors": _parse_json_field(current_row.get("top_factors"), field_name="top_factors"),
             "intervention_advice": _parse_json_field(
                 current_row.get("intervention_advice"), field_name="intervention_advice"
@@ -165,12 +169,6 @@ class DemoApiStore:
                 current_row.get("intervention_plan"), field_name="intervention_plan"
             ),
             "risk_level": current_warning.get("risk_level"),
-            "academic_risk_score": _as_float(current_warning.get("academic_risk_score")),
-            "academic_risk_level": current_warning.get("academic_risk_level"),
-            "behavior_risk_score": _as_float(current_warning.get("behavior_risk_score")),
-            "behavior_risk_level": current_warning.get("behavior_risk_level"),
-            "intervention_priority_score": _as_float(current_warning.get("intervention_priority_score")),
-            "intervention_priority_level": current_warning.get("intervention_priority_level"),
             "risk_probability": current_warning.get("risk_probability"),
             "base_risk_score": _as_float(current_warning.get("base_risk_score")),
             "risk_adjustment_score": _as_float(current_warning.get("risk_adjustment_score")),
@@ -470,10 +468,9 @@ class DemoApiStore:
         ]
         filtered_rows.sort(
             key=lambda row: (
-                -_warning_level_priority(
-                    row.get("intervention_priority_level") or row.get("risk_level")
-                ),
-                -_as_float(row.get("intervention_priority_score") or row.get("adjusted_risk_score") or row.get("risk_probability")) if _as_float(row.get("intervention_priority_score") or row.get("adjusted_risk_score") or row.get("risk_probability")) is not None else float("inf"),
+                -_as_float(row.get("risk_probability"))
+                if _as_float(row.get("risk_probability")) is not None
+                else float("inf"),
                 row["student_id"],
             )
         )
@@ -540,6 +537,14 @@ def _load_single_record(path: Path) -> Mapping[str, Any]:
     if len(records) != 1:
         raise ValueError(f"expected exactly one record in {path}")
     return records[0]
+
+
+def _normalize_model_summary_payload(payload: Mapping[str, Any]) -> dict[str, Any]:
+    summary = {field_name: payload[field_name] for field_name in MODEL_SUMMARY_BASE_FIELDS}
+    for field_name, value in payload.items():
+        if field_name not in summary and field_name not in {"term", "result_key"}:
+            summary[field_name] = value
+    return summary
 
 
 def _load_warning_rows(path: Path | None) -> list[dict[str, Any]]:
@@ -1155,16 +1160,16 @@ def _finalize_dimension_summary(value: Mapping[str, Any]) -> dict[str, Any]:
 def _resolve_allowed_risk_levels(risk_level: str | None) -> set[str] | None:
     if risk_level is None:
         return None
-    normalized = _normalize_risk_level(risk_level) or risk_level
+    normalized = _normalize_risk_level(risk_level)
     if normalized == "高风险":
-        return {"高风险"}
+        return {"高风险", "较高风险"}
     if normalized == "较高风险":
         return {"较高风险"}
     if normalized == "一般风险":
         return {"一般风险"}
     if normalized == "低风险":
         return {"低风险"}
-    return {normalized}
+    return {risk_level}
 
 
 def _preferred_identity_key(item: Mapping[str, Any]) -> str:

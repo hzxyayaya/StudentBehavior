@@ -1,6 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { getDevelopmentAnalysis, getGroups, getOverview, loginDemo, getStudentProfile, getStudentReport } from '@/lib/api'
+import {
+  getDevelopmentAnalysis,
+  getGroups,
+  getModelSummary,
+  getOverview,
+  loginDemo,
+  getStudentProfile,
+  getStudentReport,
+} from '@/lib/api'
 
 describe('api client', () => {
   beforeEach(() => {
@@ -55,6 +63,58 @@ describe('api client', () => {
     )
 
     await expect(loginDemo()).rejects.toThrow('demo-api returned an empty response')
+  })
+
+  it('passes through trained model summary extras without rewriting the payload', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        text: async () =>
+          JSON.stringify({
+            code: 200,
+            message: 'OK',
+            data: {
+              cluster_method: 'stub-eight-dimension-group-rules',
+              risk_model: 'trained-academic-risk-model',
+              target_label: '综合测评低等级风险',
+              auc: 0.9342,
+              updated_at: '2026-04-09T09:00:00Z',
+              source: 'trained',
+              accuracy: 0.88,
+              precision: 0.81,
+              recall: 0.79,
+              f1: 0.8,
+              sample_count: 200,
+              positive_sample_count: 64,
+              negative_sample_count: 136,
+              train_sample_count: 120,
+              valid_sample_count: 30,
+              test_sample_count: 50,
+            },
+            meta: { request_id: 'demo-request', term: '2024-2' },
+          }),
+      }),
+    )
+
+    await expect(getModelSummary('2024-2')).resolves.toEqual({
+      cluster_method: 'stub-eight-dimension-group-rules',
+      risk_model: 'trained-academic-risk-model',
+      target_label: '综合测评低等级风险',
+      auc: 0.9342,
+      updated_at: '2026-04-09T09:00:00Z',
+      source: 'trained',
+      accuracy: 0.88,
+      precision: 0.81,
+      recall: 0.79,
+      f1: 0.8,
+      sample_count: 200,
+      positive_sample_count: 64,
+      negative_sample_count: 136,
+      train_sample_count: 120,
+      valid_sample_count: 30,
+      test_sample_count: 50,
+    })
   })
 
   it('normalizes overview and related payloads from the current demo-api shape', async () => {

@@ -180,6 +180,7 @@ def test_main_build_writes_all_expected_artifacts(
         "risk_model": "stub-eight-dimension-risk-rules",
         "target_label": "学期级八维学业风险",
         "auc": 0.8347,
+        "source": "stub",
         "updated_at": model_summary["updated_at"],
     }
     assert warnings["generated_at"] == "2024-01-02T03:04:05Z"

@@ -347,6 +347,12 @@ def test_build_demo_features_from_excels_generates_filtered_csv(tmp_path: Path):
         "appraisal_status_alert_score_raw",
     }
     assert expected_dimension_columns.issubset(frame.columns)
+    assert {
+        "risk_label_binary",
+        "risk_label_level",
+        "label_source",
+        "label_rule_version",
+    }.issubset(frame.columns)
     expected_support_columns = {
         "absence_count",
         "video_watch_time_sum",
@@ -374,6 +380,11 @@ def test_build_demo_features_from_excels_generates_filtered_csv(tmp_path: Path):
     assert student_frame.loc[0, "student_id"] == student_id
     assert student_frame.loc[0, "term_key"] == "2024-1"
     assert student_frame.loc[0, "failed_course_count"] == 1
+    assert student_frame.loc[0, "risk_label"] == 1
+    assert student_frame.loc[0, "risk_label_binary"] == 1
+    assert student_frame.loc[0, "risk_label_level"] == "较高风险"
+    assert student_frame.loc[0, "label_source"] == "academic_rule_v1"
+    assert student_frame.loc[0, "label_rule_version"] == "2026-04-risk-v1"
     assert student_frame.loc[0, "borderline_course_count"] == 1
     assert student_frame.loc[0, "attempted_credit_sum"] == 5
     assert student_frame.loc[0, "failed_course_ratio"] == 0.5
@@ -416,6 +427,10 @@ def test_build_demo_features_from_excels_generates_filtered_csv(tmp_path: Path):
     assert str(student_frame.loc[0, "negative_status_alert_flag"]).lower() == "true"
 
     assert neutral_status_frame.loc[0, "term_key"] == "2024-1"
+    assert pd.isna(neutral_status_frame.loc[0, "risk_label_binary"])
+    assert pd.isna(neutral_status_frame.loc[0, "risk_label_level"])
+    assert pd.isna(neutral_status_frame.loc[0, "label_source"])
+    assert pd.isna(neutral_status_frame.loc[0, "label_rule_version"])
     assert neutral_status_frame.loc[0, "status_change_count"] == 1
     assert str(neutral_status_frame.loc[0, "negative_status_alert_flag"]).lower() == "false"
     assert pd.isna(neutral_status_frame.loc[0, "scholarship_level_score"])

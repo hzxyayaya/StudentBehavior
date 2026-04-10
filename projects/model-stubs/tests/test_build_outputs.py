@@ -1,15 +1,18 @@
 from datetime import datetime
 import json
+from pathlib import Path
 
 import pandas as pd
 import pytest
 
+import student_behavior_model_stubs.build_outputs as build_outputs_module
 from student_behavior_model_stubs.build_outputs import _coerce_dimension_scores
 from student_behavior_model_stubs.build_outputs import _factor_names
 from student_behavior_model_stubs.build_outputs import build_model_summary
 from student_behavior_model_stubs.build_outputs import build_overview_by_term
 from student_behavior_model_stubs.build_outputs import build_student_reports
 from student_behavior_model_stubs.build_outputs import build_student_results
+from student_behavior_model_stubs.model_registry import build_default_model_registry
 
 
 def _feature_row() -> dict[str, object]:
@@ -328,7 +331,69 @@ def test_build_overview_by_term_includes_required_sections() -> None:
         ]
 
 
-def test_build_model_summary_uses_fixed_now_for_updated_at_and_stub_fields() -> None:
+def test_build_model_summary_prefers_trained_metrics_when_available(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    registry = build_default_model_registry(tmp_path)
+    registry.metrics_path.parent.mkdir(parents=True, exist_ok=True)
+    registry.metrics_path.write_text(
+        json.dumps(
+            {
+                "model_name": "deterministic-risk-scorecard-v1",
+                "target_label": "risk_label",
+                "auc": 0.9123,
+                "accuracy": 0.875,
+                "precision": 0.8,
+                "recall": 0.7778,
+                "f1": 0.7887,
+                "train_sample_count": 120,
+                "valid_sample_count": 24,
+                "test_sample_count": 30,
+                "trained_at": "2024-01-01T00:00:00Z",
+                "evaluated_at": "2024-01-02T00:00:00Z",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        build_outputs_module,
+        "build_default_model_registry",
+        lambda repo_root: registry,
+    )
+
+    fixed_now = datetime(2024, 1, 2, 3, 4, 5)
+    summary = build_model_summary(now=fixed_now)
+
+    assert summary == {
+        "cluster_method": "stub-eight-dimension-group-rules",
+        "risk_model": "deterministic-risk-scorecard-v1",
+        "target_label": "risk_label",
+        "auc": 0.9123,
+        "accuracy": 0.875,
+        "precision": 0.8,
+        "recall": 0.7778,
+        "f1": 0.7887,
+        "train_sample_count": 120,
+        "valid_sample_count": 24,
+        "test_sample_count": 30,
+        "trained_at": "2024-01-01T00:00:00Z",
+        "evaluated_at": "2024-01-02T00:00:00Z",
+        "source": "trained",
+        "updated_at": "2024-01-02T03:04:05",
+    }
+
+
+def test_build_model_summary_falls_back_to_stub_fields_when_metrics_are_absent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    registry = build_default_model_registry(tmp_path)
+    monkeypatch.setattr(
+        build_outputs_module,
+        "build_default_model_registry",
+        lambda repo_root: registry,
+    )
+
     fixed_now = datetime(2024, 1, 2, 3, 4, 5)
     summary = build_model_summary(now=fixed_now)
 
@@ -337,8 +402,48 @@ def test_build_model_summary_uses_fixed_now_for_updated_at_and_stub_fields() -> 
         "risk_model": "stub-eight-dimension-risk-rules",
         "target_label": "学期级八维学业风险",
         "auc": 0.8347,
+        "source": "stub",
         "updated_at": "2024-01-02T03:04:05",
     }
+
+
+@pytest.mark.parametrize(
+    ("patch_target", "replacement"),
+    [
+        ("_resolve_checkout_root", lambda: (_ for _ in ()).throw(RuntimeError("no checkout root"))),
+        ("build_default_model_registry", lambda repo_root: (_ for _ in ()).throw(OSError("registry unavailable"))),
+    ],
+)
+def test_build_model_summary_falls_back_to_stub_when_training_resolution_fails(
+    monkeypatch: pytest.MonkeyPatch,
+    patch_target: str,
+    replacement: object,
+) -> None:
+    monkeypatch.setattr(build_outputs_module, patch_target, replacement)
+
+    summary = build_model_summary(now=datetime(2024, 1, 2, 3, 4, 5))
+
+    assert summary == {
+        "cluster_method": "stub-eight-dimension-group-rules",
+        "risk_model": "stub-eight-dimension-risk-rules",
+        "target_label": "学期级八维学业风险",
+        "auc": 0.8347,
+        "source": "stub",
+        "updated_at": "2024-01-02T03:04:05",
+    }
+
+
+def test_build_model_summary_does_not_swallow_unexpected_programming_errors(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        build_outputs_module,
+        "build_default_model_registry",
+        lambda repo_root: (_ for _ in ()).throw(TypeError("programming bug")),
+    )
+
+    with pytest.raises(TypeError, match="programming bug"):
+        build_model_summary(now=datetime(2024, 1, 2, 3, 4, 5))
 
 
 def test_build_model_summary_updated_at_is_not_placeholder_text() -> None:

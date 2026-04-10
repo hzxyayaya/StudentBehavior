@@ -15,6 +15,10 @@ _FEATURE_COLUMNS = (
     "avg_gpa",
     "major_rank_pct",
     "risk_label",
+    "risk_label_binary",
+    "risk_label_level",
+    "label_source",
+    "label_rule_version",
     "attendance_record_count",
     "attendance_normal_rate",
     "selected_course_count",
@@ -30,6 +34,12 @@ _FEATURE_COLUMNS = (
 )
 
 _PRESENT_ATTENDANCE_STATUSES = {"present", "normal", "on_time", "出勤", "正常"}
+_LABEL_SOURCE = "academic_rule_v1"
+_LABEL_RULE_VERSION = "2026-04-risk-v1"
+_HIGH_RISK_LEVEL = "高风险"
+_ELEVATED_RISK_LEVEL = "较高风险"
+_GENERAL_RISK_LEVEL = "一般风险"
+_LOW_RISK_LEVEL = "低风险"
 
 
 def build_student_term_features(
@@ -102,6 +112,7 @@ def build_student_term_features(
 
     risk_metrics = _aggregate_risk_labels(evaluation_labels)
     features = _merge_metrics(features, risk_metrics)
+    features = _add_explicit_risk_labels(features)
 
     features = _ensure_columns(features)
     return features.astype(object).where(pd.notna(features), None)
@@ -366,6 +377,80 @@ def _ensure_columns(frame: pd.DataFrame) -> pd.DataFrame:
         if column not in frame.columns:
             frame[column] = None
     return frame.loc[:, _FEATURE_COLUMNS]
+
+
+def _add_explicit_risk_labels(frame: pd.DataFrame) -> pd.DataFrame:
+    if frame.empty:
+        return frame
+
+    labels = frame.apply(_derive_explicit_risk_labels, axis=1, result_type="expand")
+    labels.columns = ["risk_label_binary", "risk_label_level", "label_source", "label_rule_version"]
+    enriched = frame.copy()
+    for column in labels.columns:
+        enriched[column] = labels[column]
+    return enriched
+
+
+def _derive_explicit_risk_labels(row: pd.Series) -> tuple[int | None, str | None, str | None, str | None]:
+    failed_course_count = _coerce_number(row.get("failed_course_count"))
+    avg_gpa = _coerce_number(row.get("avg_gpa"))
+    avg_course_score = _coerce_number(row.get("avg_course_score"))
+    evaluation_risk_label = _coerce_number(row.get("risk_label"))
+
+    if all(
+        value is None
+        for value in (failed_course_count, avg_gpa, avg_course_score, evaluation_risk_label)
+    ):
+        return None, None, None, None
+
+    risk_level = _derive_risk_level(
+        failed_course_count=failed_course_count,
+        avg_gpa=avg_gpa,
+        avg_course_score=avg_course_score,
+        evaluation_risk_label=evaluation_risk_label,
+    )
+    risk_label_binary = 1 if risk_level in {_HIGH_RISK_LEVEL, _ELEVATED_RISK_LEVEL} else 0
+    return risk_label_binary, risk_level, _LABEL_SOURCE, _LABEL_RULE_VERSION
+
+
+def _derive_risk_level(
+    *,
+    failed_course_count: float | None,
+    avg_gpa: float | None,
+    avg_course_score: float | None,
+    evaluation_risk_label: float | None,
+) -> str:
+    if (failed_course_count is not None and failed_course_count >= 2) or (
+        avg_gpa is not None and avg_gpa < 1.5
+    ):
+        return _HIGH_RISK_LEVEL
+
+    if (evaluation_risk_label is not None and evaluation_risk_label >= 1) or (
+        avg_gpa is not None and avg_gpa < 2.0
+    ):
+        return _ELEVATED_RISK_LEVEL
+
+    if (
+        (failed_course_count is not None and failed_course_count >= 1)
+        or (avg_course_score is not None and avg_course_score < 75)
+        or (avg_gpa is not None and avg_gpa < 2.5)
+    ):
+        return _GENERAL_RISK_LEVEL
+
+    return _LOW_RISK_LEVEL
+
+
+def _coerce_number(raw: Any) -> float | None:
+    if raw is None or pd.isna(raw):
+        return None
+    if isinstance(raw, bool):
+        return 1.0 if raw else 0.0
+    if isinstance(raw, (int, float)):
+        return float(raw)
+    try:
+        return float(str(raw).strip())
+    except (TypeError, ValueError):
+        return None
 
 
 def _is_false_like(raw: Any) -> bool:
