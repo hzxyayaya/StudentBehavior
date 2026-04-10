@@ -148,3 +148,45 @@ Last Updated: 2026-04-08
 - 专业/群体对比
 
 不要一开始就做复杂去向预测模型。
+
+## 10. 当前 Phase 2 进度
+
+截至当前版本，Phase 2 已推进到以下程度：
+
+### 已完成
+
+1. `analytics-db`
+   - 已新增 `load_fact_destinations.py`
+   - 已接入真实源表 `毕业去向.xlsx`
+   - 已输出：
+     - `destination_label`
+     - `destination_source`
+   - 已保留原始去向、单位性质、行业等字段
+2. `analytics-db` 特征产物
+   - 去向真值已进入当前导出的学期特征/演示特征 artifact
+3. `model-stubs`
+   - 已将 `destination_label`
+   - `destination_source`
+   透传到学生结果
+   - 已新增：
+     - `destination_distribution`
+     - `major_destination_summary`
+     - `group_destination_association`
+4. `demo-api`
+   - `/api/analytics/development`
+   - `/api/results/major-comparison`
+   - `/api/results/behavior-patterns`
+   已支持真实去向分析字段透出
+5. `demo-web`
+   - `/development`
+   已优先展示真实去向分布、专业去向对比、群体去向关联
+
+### 当前尚未完成
+
+1. 还没有补去向预测模型
+2. 还没有补更复杂的“选课路径与去向关联”分析
+3. 还没有刷新该阶段的最终文档和阶段里程碑提交
+
+### 当前判断
+
+Phase 2 已经从“页面占位”推进到“真实去向真值接入 + 统计/关联结果可展示”的状态，已经达到最小闭环版本。
