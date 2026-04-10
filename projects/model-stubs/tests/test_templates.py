@@ -122,6 +122,17 @@ def test_build_report_payload_returns_readable_stub_content() -> None:
     )
 
     assert payload["version"] == "v1_calibrated_report"
+    assert payload["report_source"] == "template"
+    assert payload["prompt_version"] == "template-report-v1"
+    assert payload["report_generation"] == {
+        "source": "template",
+        "prompt_version": "template-report-v1",
+        "fallback_reason": None,
+        "provider": None,
+        "model": None,
+        "requested_source": "template",
+        "requested_prompt_version": "template-report-v1",
+    }
     assert [factor["dimension_code"] for factor in payload["top_risk_factors"]] == [
         "academic_base",
         "network_habits",

@@ -771,6 +771,54 @@ describe('api client', () => {
     expect(groups.groups[0]?.avg_risk_score).toBe(0)
   })
 
+  it('preserves optional report source metadata on student reports when the backend includes it', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        text: async () =>
+          JSON.stringify({
+            code: 200,
+            message: 'OK',
+            data: {
+              top_factors: [{ feature_cn: '课堂学习投入', effect: 'positive', importance: 0.75 }],
+              intervention_advice: ['保持当前节奏'],
+              report_text: '报告摘要',
+              report_source: 'llm_stub',
+              prompt_version: 'prompt-v3',
+              report_generation: {
+                model: 'stub-llm',
+                generated_at: '2026-04-09T09:00:00Z',
+              },
+            },
+            meta: { request_id: 'demo-request', term: '2024-2' },
+          }),
+      }),
+    )
+
+    await expect(getStudentReport('pjwrqxbj901', '2024-2')).resolves.toMatchObject({
+      top_factors: [
+        {
+          dimension: '课堂学习投入',
+          explanation: '课堂学习投入 是当前重点关注维度，重要度 0.75',
+          direction: 'up',
+          impact: 0.75,
+          importance: 0.75,
+          effect: 'positive',
+          feature_cn: '课堂学习投入',
+        },
+      ],
+      intervention_advice: ['保持当前节奏'],
+      report_text: '报告摘要',
+      report_source: 'llm_stub',
+      prompt_version: 'prompt-v3',
+      report_generation: {
+        model: 'stub-llm',
+        generated_at: '2026-04-09T09:00:00Z',
+      },
+    })
+  })
+
   it('omits optional major comparison fields when backend leaves them out', async () => {
     vi.stubGlobal(
       'fetch',

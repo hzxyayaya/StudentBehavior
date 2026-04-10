@@ -127,6 +127,10 @@ def test_build_student_reports_outputs_jsonl_ready_records() -> None:
     assert reports[0]["student_id"] == "20230002"
     assert reports[0]["term_key"] == "2024-1"
     assert reports[0]["version"] == "v1_calibrated_report"
+    assert reports[0]["report_source"] == "template"
+    assert reports[0]["prompt_version"] == "template-report-v1"
+    assert reports[0]["report_generation"]["source"] == "template"
+    assert reports[0]["report_generation"]["fallback_reason"] is None
     assert len(reports[0]["top_risk_factors"]) == 3
     assert len(reports[0]["top_protective_factors"]) == 3
     assert all(

@@ -182,6 +182,9 @@ export type StudentReportData = {
   intervention_advice_items?: Array<{ title?: string; text?: string }>
   intervention_plan?: string | string[]
   report_text: string
+  report_source?: string
+  prompt_version?: string
+  report_generation?: Record<string, unknown>
   risk_level?: RiskLevel
   risk_probability?: number
   base_risk_score?: number

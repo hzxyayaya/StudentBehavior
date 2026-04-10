@@ -435,6 +435,12 @@ function normalizeStudentReportData(raw: unknown): StudentReportData {
   const reportTerm = asOptionalString(data.term)
   if (reportTerm !== undefined) report.term = reportTerm
   if (baseRiskExplanation !== undefined) report.base_risk_explanation = baseRiskExplanation
+  const reportSource = asOptionalString(data.report_source)
+  if (reportSource !== undefined) report.report_source = reportSource
+  const promptVersion = asOptionalString(data.prompt_version)
+  if (promptVersion !== undefined) report.prompt_version = promptVersion
+  const reportGeneration = asOptionalRecord(data.report_generation)
+  if (reportGeneration !== undefined) report.report_generation = reportGeneration
   const behaviorAdjustmentExplanation = asOptionalString(data.behavior_adjustment_explanation)
   if (behaviorAdjustmentExplanation !== undefined) report.behavior_adjustment_explanation = behaviorAdjustmentExplanation
   const riskChangeExplanation = asOptionalString(data.risk_change_explanation)
@@ -819,6 +825,10 @@ function asOptionalString(value: unknown) {
 
 function asOptionalBoolean(value: unknown) {
   return typeof value === 'boolean' ? value : undefined
+}
+
+function asOptionalRecord(value: unknown) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined
 }
 
 function asMetricValue(value: unknown): number | string {

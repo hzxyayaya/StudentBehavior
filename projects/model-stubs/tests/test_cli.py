@@ -154,6 +154,10 @@ def test_main_build_writes_all_expected_artifacts(
     assert reports[0]["student_id"] == "20230001"
     assert reports[0]["term_key"] == "2023-1"
     assert reports[0]["version"] == "v1_calibrated_report"
+    assert reports[0]["report_source"] == "template"
+    assert reports[0]["prompt_version"] == "template-report-v1"
+    assert reports[0]["report_generation"]["source"] == "template"
+    assert reports[0]["report_generation"]["fallback_reason"] is None
     assert len(reports[0]["top_factors"]) == 3
     assert reports[0]["top_factors"][0]["effect"] == "negative"
     assert reports[0]["top_factors"][0]["importance"] > 0

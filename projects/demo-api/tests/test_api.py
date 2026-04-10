@@ -1241,6 +1241,87 @@ def test_get_student_report_falls_back_to_warning_explanations(
     assert payload["data"]["risk_change_explanation"] == "warning change"
 
 
+def test_report_endpoints_expose_optional_llm_metadata(
+    monkeypatch, tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230001",
+                "term_key": "2023-1",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "group_segment": "综合发展优势组",
+                "risk_probability": 0.81,
+                "base_risk_score": 62.0,
+                "risk_adjustment_score": -2.0,
+                "adjusted_risk_score": 60.0,
+                "risk_level": "medium",
+                "risk_delta": -1.0,
+                "risk_change_direction": "falling",
+                "base_risk_explanation": "base",
+                "behavior_adjustment_explanation": "adjust",
+                "risk_change_explanation": "change",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+            }
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.parent.mkdir(parents=True, exist_ok=True)
+    reports_path.write_text(
+        json.dumps(
+            {
+                "student_id": "20230001",
+                "term_key": "2023-1",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "top_factors": [{"dimension": "课堂学习投入", "importance": 0.3}],
+                "intervention_advice": ["优先关注课程作业完成质量"],
+                "report_text": "2023-1 report",
+                "report_source": "llm_stub",
+                "prompt_version": "prompt-v3",
+                "report_generation": {
+                    "model": "stub-llm",
+                    "generated_at": "2026-04-09T09:00:00Z",
+                },
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+    monkeypatch.setattr(main_module, "get_store", lambda: store)
+    client = TestClient(app)
+
+    student_report_response = client.get("/api/students/20230001/report", params={"term": "2023-1"})
+    intervention_response = client.get("/api/results/intervention-advice", params={"term": "2023-1", "student_id": "20230001"})
+
+    assert student_report_response.status_code == 200
+    assert intervention_response.status_code == 200
+    student_report_payload = student_report_response.json()["data"]
+    intervention_payload = intervention_response.json()["data"]
+    assert student_report_payload["report_source"] == "llm_stub"
+    assert student_report_payload["prompt_version"] == "prompt-v3"
+    assert student_report_payload["report_generation"] == {
+        "model": "stub-llm",
+        "generated_at": "2026-04-09T09:00:00Z",
+    }
+    assert intervention_payload["report_source"] == "llm_stub"
+    assert intervention_payload["prompt_version"] == "prompt-v3"
+    assert intervention_payload["report_generation"] == {
+        "model": "stub-llm",
+        "generated_at": "2026-04-09T09:00:00Z",
+    }
+
+
 def test_missing_artifacts_app_starts_and_fails_on_request(monkeypatch) -> None:
     class MissingArtifactStore:
         def get_overview(self, term: str) -> dict:

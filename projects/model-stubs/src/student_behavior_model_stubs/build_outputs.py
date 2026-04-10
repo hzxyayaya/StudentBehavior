@@ -8,6 +8,8 @@ from pathlib import Path
 import pandas as pd
 
 from student_behavior_model_stubs.model_registry import build_default_model_registry
+from student_behavior_model_stubs.llm_reporting import build_report_payload_with_fallback
+from student_behavior_model_stubs.llm_reporting import load_llm_reporting_settings
 from student_behavior_model_stubs.scoring import build_dimension_scores
 from student_behavior_model_stubs.scoring import compute_group_segment
 from student_behavior_model_stubs.scoring import compute_risk_probability
@@ -572,6 +574,7 @@ def build_student_reports(student_results: pd.DataFrame) -> list[dict[str, objec
     if student_results.empty:
         return []
 
+    llm_settings = load_llm_reporting_settings()
     ordered_results = student_results.sort_values(
         by=["student_id", "term_key"], kind="stable"
     ).reset_index(drop=True)
@@ -588,6 +591,10 @@ def build_student_reports(student_results: pd.DataFrame) -> list[dict[str, objec
             risk_level=str(row["risk_level"]),
             group_segment=str(row["group_segment"]),
             dimension_scores=dimension_scores,
+        )
+        payload = build_report_payload_with_fallback(
+            template_payload=payload,
+            llm_settings=llm_settings,
         )
         priority_interventions = payload["priority_interventions"]
         records.append(
@@ -613,6 +620,9 @@ def build_student_reports(student_results: pd.DataFrame) -> list[dict[str, objec
                 "behavior_adjustment_explanation": payload["behavior_adjustment_explanation"],
                 "risk_change_explanation": payload["risk_change_explanation"],
                 "report_text": payload["report_text"],
+                "report_source": payload["report_source"],
+                "prompt_version": payload["prompt_version"],
+                "report_generation": payload["report_generation"],
             }
         )
 

@@ -409,6 +409,99 @@ describe('demo flow links', () => {
     expect(wrapper.text()).toContain('较高风险干预计划')
   })
 
+  it('shows report source metadata on the student page only when the report includes it', async () => {
+    const auth = useAuthStore()
+    auth.signIn('demo-token', '演示管理员', '2024-2')
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input)
+
+        if (url.includes('/profile')) {
+          return Promise.resolve({
+            ok: true,
+            json: async () => ({
+              code: 200,
+              message: 'OK',
+              data: {
+                student_id: 'pjwrqxbj901',
+                student_name: '示例学生',
+                major_name: '计算机科学与技术',
+                group_segment: '作息失衡风险组',
+                risk_level: '较高风险',
+                risk_probability: 0.82,
+                dimension_scores: [
+                  {
+                    dimension: '课堂学习投入',
+                    score: 0.26,
+                    level: 'low',
+                    label: '课堂投入不足',
+                    explanation: '迟到与缺勤较多。',
+                    metrics: [{ metric: '迟到次数', value: 6, display: '6 次' }],
+                  },
+                ],
+                trend: [{ term: '2024-2', risk_probability: 0.82 }],
+              },
+              meta: { request_id: 'req-profile', term: '2024-2' },
+            }),
+          })
+        }
+
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            code: 200,
+            message: 'OK',
+            data: {
+              top_factors: [
+                {
+                  dimension: '课堂学习投入',
+                  explanation: '课堂参与下降',
+                  direction: 'up',
+                  impact: 0.21,
+                },
+              ],
+              intervention_advice: ['安排阶段性学习跟踪'],
+              report_text: '当前学生处于较高风险。',
+              report_source: 'llm_stub',
+              prompt_version: 'prompt-v3',
+              report_generation: {
+                model: 'stub-llm',
+                generated_at: '2026-04-09T09:00:00Z',
+              },
+            },
+            meta: { request_id: 'req-report', term: '2024-2' },
+          }),
+        })
+      }),
+    )
+
+    const { router, vueQueryPlugin } = createPlugins()
+    await router.push('/students/pjwrqxbj901?term=2024-2')
+    await router.isReady()
+
+    const wrapper = mount(StudentPage, {
+      global: {
+        plugins: [router, vueQueryPlugin],
+        stubs: {
+          RouterLink: RouterLinkStub,
+          EChart: { template: '<div class="echart-stub" />' },
+          LazyEChart: { template: '<div class="echart-stub" />' },
+        },
+      },
+    })
+
+    await flushPromises()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('报告来源')
+    expect(wrapper.text()).toContain('llm_stub')
+    expect(wrapper.text()).toContain('prompt-v3')
+    expect(wrapper.text()).toContain('stub-llm')
+    expect(wrapper.text()).toContain('2026-04-09')
+  })
+
 
   it('renders calibrated labels, explanations, and metrics on the group page', async () => {
     const auth = useAuthStore()
@@ -642,6 +735,7 @@ describe('demo flow links', () => {
     expect(firstIncompleteCard.text()).toContain('课堂学习投入')
     expect(firstIncompleteCard.text()).toContain('待补充')
     expect(firstIncompleteCard.text()).toContain('48分')
+    expect(wrapper.text()).not.toContain('报告来源')
     expect(wrapper.text()).not.toContain('低')
   })
 })

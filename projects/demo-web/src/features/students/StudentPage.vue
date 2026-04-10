@@ -197,6 +197,13 @@
             </div>
             <div class="summary-box">
               <p class="muted">报告摘要</p>
+              <div v-if="reportMetadataItems.length" class="report-source-strip" aria-label="报告来源">
+                <span class="report-source-heading">报告来源</span>
+                <span v-for="item in reportMetadataItems" :key="`${item.label}:${item.value}`" class="report-source-pill">
+                  <span class="report-source-label">{{ item.label }}</span>
+                  <strong>{{ item.value }}</strong>
+                </span>
+              </div>
               <div class="markdown-report" v-html="reportMarkdownHtml"></div>
             </div>
           </div>
@@ -263,6 +270,38 @@ const availableTerms = computed(() => {
 })
 const showRadarDetails = ref(false)
 const reportMarkdownHtml = computed(() => renderMarkdown(report.value?.report_text || '暂无报告摘要'))
+const reportMetadataItems = computed(() => {
+  const currentReport = report.value
+  if (!currentReport) return []
+
+  const items: Array<{ label: string; value: string }> = []
+  if (currentReport.report_source) items.push({ label: '来源', value: currentReport.report_source })
+  if (currentReport.prompt_version) items.push({ label: 'Prompt', value: currentReport.prompt_version })
+
+  const generation = asMetadataRecord(currentReport.report_generation)
+  if (!generation) return items
+
+  const generationSource = readMetadataValue(generation.source)
+  if (generationSource && generationSource !== currentReport.report_source) {
+    items.push({ label: '生成方式', value: generationSource })
+  }
+
+  const generationModel = readMetadataValue(generation.model)
+  if (generationModel) items.push({ label: '模型', value: generationModel })
+
+  const generatedAt = readMetadataValue(generation.generated_at)
+  if (generatedAt) items.push({ label: '生成时间', value: formatMetadataTimestamp(generatedAt) })
+
+  const fallbackReason = readMetadataValue(generation.fallback_reason)
+  if (fallbackReason) items.push({ label: '回退原因', value: fallbackReason })
+
+  const requestedPromptVersion = readMetadataValue(generation.requested_prompt_version)
+  if (requestedPromptVersion && requestedPromptVersion !== currentReport.prompt_version) {
+    items.push({ label: '请求 Prompt', value: requestedPromptVersion })
+  }
+
+  return items
+})
 const interventionPlanLines = computed(() => {
   const plan = report.value?.intervention_plan
   if (typeof plan === 'string') {
@@ -424,6 +463,25 @@ function shortText(text: string | undefined, fallback: string) {
   const value = (text ?? '').trim()
   if (!value) return fallback
   return value
+}
+
+function asMetadataRecord(value: unknown) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : null
+}
+
+function readMetadataValue(value: unknown) {
+  if (typeof value === 'string' && value.trim()) return value.trim()
+  if (typeof value === 'number' && Number.isFinite(value)) return String(value)
+  if (typeof value === 'boolean') return value ? 'true' : 'false'
+  return ''
+}
+
+function formatMetadataTimestamp(value: string) {
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) return value
+  return `${parsed.getUTCFullYear()}-${String(parsed.getUTCMonth() + 1).padStart(2, '0')}-${String(
+    parsed.getUTCDate(),
+  ).padStart(2, '0')} ${String(parsed.getUTCHours()).padStart(2, '0')}:${String(parsed.getUTCMinutes()).padStart(2, '0')} UTC`
 }
 
 function detailDimensionLevelText(level?: string) {
@@ -953,6 +1011,39 @@ h3 {
 
 .summary-box p {
   margin: 0 0 6px;
+}
+
+.report-source-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+
+.report-source-heading {
+  display: inline-flex;
+  align-items: center;
+  color: #475569;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.report-source-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid #d9e2ec;
+  background: #f1f5f9;
+  color: #334155;
+  font-size: 0.82rem;
+  line-height: 1.2;
+}
+
+.report-source-label {
+  color: #64748b;
 }
 
 .markdown-report {

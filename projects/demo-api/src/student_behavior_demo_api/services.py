@@ -20,6 +20,10 @@ MODEL_SUMMARY_BASE_FIELDS = (
     "auc",
     "updated_at",
 )
+REPORT_METADATA_FIELDS = (
+    "report_source",
+    "prompt_version",
+)
 
 
 class DemoApiStore:
@@ -149,7 +153,7 @@ class DemoApiStore:
         if current_warning is None:
             raise KeyError((student_id, term))
 
-        return {
+        payload = {
             "top_factors": _parse_json_field(current_row.get("top_factors"), field_name="top_factors"),
             "intervention_advice": _parse_json_field(
                 current_row.get("intervention_advice"), field_name="intervention_advice"
@@ -189,6 +193,8 @@ class DemoApiStore:
                 for row in sorted(student_rows, key=_sort_term_key)
             ],
         }
+        payload.update(_extract_report_metadata(current_row, parse_json_fields=True))
+        return payload
 
     def get_groups(self, *, term: str) -> dict[str, Any]:
         warning_rows = _load_warning_rows(self._warnings_path or _resolve_warning_artifact_path(self._repo_root))
@@ -404,7 +410,7 @@ class DemoApiStore:
 
     def get_result_intervention_advice(self, *, student_id: str, term: str) -> dict[str, Any]:
         report = self.get_student_report(student_id=student_id, term=term)
-        return {
+        payload = {
             "result_key": "intervention_advice",
             "term": term,
             "student_id": student_id,
@@ -412,6 +418,8 @@ class DemoApiStore:
             "report_text": report.get("report_text"),
             "top_factors": report.get("top_factors", []),
         }
+        payload.update(_extract_report_metadata(report, parse_json_fields=False))
+        return payload
 
     def get_result_term_trend(self, *, term: str) -> dict[str, Any]:
         trajectory = self.get_trajectory_analysis(term=term)
@@ -552,6 +560,27 @@ def _normalize_model_summary_payload(payload: Mapping[str, Any]) -> dict[str, An
         if field_name not in summary and field_name not in {"term", "result_key"}:
             summary[field_name] = value
     return summary
+
+
+def _extract_report_metadata(
+    payload: Mapping[str, Any],
+    *,
+    parse_json_fields: bool,
+) -> dict[str, Any]:
+    metadata: dict[str, Any] = {}
+    for field_name in REPORT_METADATA_FIELDS:
+        if field_name in payload and payload.get(field_name) is not None:
+            metadata[field_name] = payload.get(field_name)
+
+    if "report_generation" in payload and payload.get("report_generation") is not None:
+        report_generation = payload.get("report_generation")
+        if parse_json_fields:
+            report_generation = _parse_maybe_json_field(
+                report_generation,
+                field_name="report_generation",
+            )
+        metadata["report_generation"] = report_generation
+    return metadata
 
 
 def _load_warning_rows(path: Path | None) -> list[dict[str, Any]]:

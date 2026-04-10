@@ -1,5 +1,7 @@
 from collections.abc import Iterable, Mapping
 
+from student_behavior_model_stubs.llm_reporting import build_template_report_generation_metadata
+
 
 _DIMENSION_TEMPLATES = [
     ("学业基础表现", "academic_base"),
@@ -580,4 +582,7 @@ def build_report_payload(
         "behavior_adjustment_explanation": behavior_adjustment_explanation,
         "risk_change_explanation": risk_change_explanation,
         "report_text": report_text,
+        "report_source": "template",
+        "prompt_version": "template-report-v1",
+        "report_generation": build_template_report_generation_metadata(),
     }
