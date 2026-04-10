@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import sys
 from pathlib import Path
 from typing import Sequence
@@ -27,8 +28,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         bootstrap()
         return 0
     if args[0] == "build-demo-features":
+        parser = argparse.ArgumentParser(prog="analytics-db build-demo-features")
+        parser.add_argument(
+            "--include-heavy-sources",
+            action="store_true",
+            help="opt in to reading heavyweight source workbooks during feature rebuild",
+        )
+        parsed_args = parser.parse_args(args[1:])
         repo_root = resolve_checkout_root()
-        summary = build_demo_features_from_excels(repo_root=repo_root)
+        summary = build_demo_features_from_excels(
+            repo_root=repo_root,
+            include_heavy_sources=parsed_args.include_heavy_sources,
+        )
         print(f"data_dir={summary['data_dir']}")
         print(f"output_csv={summary['output_csv']}")
         print(f"row_count={summary['row_count']}")

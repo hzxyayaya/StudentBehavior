@@ -174,23 +174,28 @@ def evaluate_risk_model(
     *,
     evaluated_at: datetime | None = None,
 ) -> dict[str, object]:
-    labeled_features = _load_labeled_features(features_csv)
     model_payload = _load_model_payload(model_artifact)
+    labeled_features, target_column = _load_labeled_features(features_csv)
     evaluation_features = _select_evaluation_rows(labeled_features, model_payload)
     probabilities = _predict_probabilities(evaluation_features, model_payload)
 
+    resolved_target_column = str(model_payload.get("target_label") or target_column)
+    if resolved_target_column not in evaluation_features.columns:
+        raise ValueError(f"evaluation target label column '{resolved_target_column}' is missing")
+
+    label_series = evaluation_features[resolved_target_column].astype(int)
     sample_count = int(len(evaluation_features))
-    positive_sample_count = int((evaluation_features["risk_label"].astype(int) == 1).sum())
+    positive_sample_count = int((label_series == 1).sum())
     negative_sample_count = sample_count - positive_sample_count
-    metrics = _compute_binary_metrics(evaluation_features["risk_label"], probabilities)
+    metrics = _compute_binary_metrics(label_series, probabilities)
     metrics_payload = {
         "model_name": model_payload.get("model_name"),
         "task_type": "binary_classification",
-        "target_label": model_payload.get("target_label", "risk_label"),
+        "target_label": resolved_target_column,
         "sample_count": sample_count,
         "positive_sample_count": positive_sample_count,
         "negative_sample_count": negative_sample_count,
-        "auc": _compute_auc(evaluation_features["risk_label"], probabilities),
+        "auc": _compute_auc(label_series, probabilities),
         "accuracy": metrics["accuracy"],
         "precision": metrics["precision"],
         "recall": metrics["recall"],

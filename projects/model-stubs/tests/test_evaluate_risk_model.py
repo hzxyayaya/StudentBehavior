@@ -100,6 +100,31 @@ def _write_explicit_holdout_csv(path: Path) -> None:
     pd.DataFrame(holdout_rows).to_csv(path, index=False, encoding="utf-8")
 
 
+def _write_binary_only_explicit_holdout_csv(path: Path) -> None:
+    holdout_rows: list[dict[str, object]] = []
+    probabilities = [0.9, 0.1, 0.1, 0.1, 0.1, 0.1, 0.2]
+    labels = [1, 1, 1, 1, 1, 1, 0]
+    for index, (probability, label) in enumerate(zip(probabilities, labels, strict=True), start=1):
+        holdout_rows.append(
+            {
+                "student_id": f"2024B{index:04d}",
+                "term_key": "2024-2",
+                "major_name": "软件工程",
+                "risk_label": None,
+                "risk_label_binary": label,
+                "avg_course_score": math.log(probability / (1.0 - probability)),
+                "failed_course_count": 1 if label else 0,
+                "attendance_normal_rate": 0.75,
+                "sign_event_count": 4,
+                "selected_course_count": 5,
+                "library_visit_count": 2,
+                "dataset_split": "test",
+            }
+        )
+
+    pd.DataFrame(holdout_rows).to_csv(path, index=False, encoding="utf-8")
+
+
 def _write_manual_model(path: Path, *, trained_at: str = "2024-01-02T03:04:05Z") -> None:
     payload = {
         "model_name": "manual-risk-model",
@@ -284,3 +309,27 @@ def test_main_evaluate_risk_model_prints_summary_lines(tmp_path: Path, capsys) -
     assert "f1=1.0" in captured.out
     assert f"feature_importance_path={evaluation_output_dir / 'feature_importance.csv'}" in captured.out
     assert f"metrics_path={evaluation_output_dir / 'risk_metrics.json'}" in captured.out
+
+
+def test_evaluate_risk_model_uses_model_target_label_for_binary_only_inputs(tmp_path: Path) -> None:
+    input_csv = tmp_path / "explicit_holdout_binary_only_features.csv"
+    output_dir = tmp_path / "artifacts" / "model_evaluation"
+    model_path = tmp_path / "manual_risk_model.pkl"
+    _write_binary_only_explicit_holdout_csv(input_csv)
+    _write_manual_model(model_path)
+
+    model_payload = pickle.loads(model_path.read_bytes())
+    model_payload["target_label"] = "risk_label_binary"
+    model_path.write_bytes(pickle.dumps(model_payload))
+
+    summary = evaluate_risk_model(
+        input_csv,
+        model_path,
+        output_dir=output_dir,
+        evaluated_at=datetime(2024, 2, 3, 4, 5, 6, tzinfo=timezone.utc),
+    )
+
+    metrics_payload = json.loads((output_dir / "risk_metrics.json").read_text(encoding="utf-8"))
+
+    assert summary["auc"] == 0.1667
+    assert metrics_payload["target_label"] == "risk_label_binary"

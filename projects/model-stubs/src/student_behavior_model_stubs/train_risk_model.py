@@ -14,6 +14,7 @@ from student_behavior_model_stubs.model_registry import build_default_model_regi
 
 _MODEL_NAME = "deterministic-risk-scorecard-v1"
 _TARGET_COLUMN = "risk_label"
+_FALLBACK_TARGET_COLUMNS = ("risk_label_binary",)
 _SPLIT_SEQUENCE = ("train", "valid", "test")
 _EXCLUDED_FEATURE_COLUMNS = {
     "student_id",
@@ -21,6 +22,7 @@ _EXCLUDED_FEATURE_COLUMNS = {
     "major_name",
     "dataset_split",
     _TARGET_COLUMN,
+    *_FALLBACK_TARGET_COLUMNS,
 }
 _MIN_STABLE_NON_NULL_RATIO = 0.6
 
@@ -53,15 +55,29 @@ def _build_registry(output_dir: Path | None) -> ModelArtifactRegistry:
     )
 
 
-def _load_labeled_features(features_csv: Path) -> pd.DataFrame:
+def _resolve_target_column(features: pd.DataFrame) -> str | None:
+    for column in (_TARGET_COLUMN, *_FALLBACK_TARGET_COLUMNS):
+        if column not in features.columns:
+            continue
+        numeric_labels = pd.to_numeric(features[column], errors="coerce")
+        if numeric_labels.notna().any():
+            return column
+    return None
+
+
+def _load_labeled_features(features_csv: Path) -> tuple[pd.DataFrame, str]:
     features = read_features(features_csv).copy()
-    numeric_labels = pd.to_numeric(features.get(_TARGET_COLUMN), errors="coerce")
+    target_column = _resolve_target_column(features)
+    if target_column is None:
+        raise ValueError("training requires at least one labeled row with risk_label or risk_label_binary")
+
+    numeric_labels = pd.to_numeric(features.get(target_column), errors="coerce")
     labeled = features.loc[numeric_labels.notna()].copy()
     if labeled.empty:
-        raise ValueError("training requires at least one labeled row with risk_label")
+        raise ValueError("training requires at least one labeled row with risk_label or risk_label_binary")
 
-    labeled.loc[:, _TARGET_COLUMN] = (numeric_labels.loc[labeled.index] > 0).astype(int)
-    return labeled.sort_values(by=["student_id", "term_key"], kind="stable").reset_index(drop=True)
+    labeled.loc[:, target_column] = (numeric_labels.loc[labeled.index] > 0).astype(int)
+    return labeled.sort_values(by=["student_id", "term_key"], kind="stable").reset_index(drop=True), target_column
 
 
 def _split_counts(total_count: int) -> dict[str, int]:
@@ -74,8 +90,11 @@ def _split_counts(total_count: int) -> dict[str, int]:
     if total_count == 3:
         return {"train": 1, "valid": 1, "test": 1}
 
-    valid_count = 1
-    test_count = 1
+    valid_count = max(1, round(total_count * 0.15))
+    test_count = max(1, round(total_count * 0.15))
+    if valid_count + test_count >= total_count:
+        valid_count = 1
+        test_count = 1
     train_count = total_count - valid_count - test_count
     return {"train": train_count, "valid": valid_count, "test": test_count}
 
@@ -152,8 +171,14 @@ def _select_stable_numeric_features(train_frame: pd.DataFrame) -> list[str]:
     return stable_features
 
 
-def _fit_scorecard(train_frame: pd.DataFrame, feature_columns: list[str], trained_at: str) -> dict[str, object]:
-    labels = train_frame[_TARGET_COLUMN].astype(int)
+def _fit_scorecard(
+    train_frame: pd.DataFrame,
+    feature_columns: list[str],
+    trained_at: str,
+    *,
+    target_column: str,
+) -> dict[str, object]:
+    labels = train_frame[target_column].astype(int)
     positive_rate = float(labels.mean()) if len(labels) else 0.5
     positive_rate = min(max(positive_rate, 0.05), 0.95)
     intercept = math.log(positive_rate / (1.0 - positive_rate))
@@ -188,7 +213,7 @@ def _fit_scorecard(train_frame: pd.DataFrame, feature_columns: list[str], traine
 
     return {
         "model_name": _MODEL_NAME,
-        "target_label": _TARGET_COLUMN,
+        "target_label": target_column,
         "trained_at": trained_at,
         "intercept": round(intercept, 6),
         "feature_columns": feature_columns,
@@ -231,7 +256,7 @@ def train_risk_model(
     trained_at: datetime | None = None,
 ) -> dict[str, object]:
     registry = _build_registry(output_dir)
-    labeled_features = _load_labeled_features(features_csv)
+    labeled_features, target_column = _load_labeled_features(features_csv)
     split_features, split_strategy = _assign_group_splits(labeled_features)
 
     train_frame = split_features.loc[split_features["dataset_split"] == "train"].reset_index(drop=True)
@@ -240,7 +265,12 @@ def train_risk_model(
 
     feature_columns = _select_stable_numeric_features(train_frame)
     trained_at_text = _format_timestamp(trained_at)
-    model_payload = _fit_scorecard(train_frame, feature_columns, trained_at_text)
+    model_payload = _fit_scorecard(
+        train_frame,
+        feature_columns,
+        trained_at_text,
+        target_column=target_column,
+    )
     model_payload["evaluation_split"] = {
         "kind": "row_keys",
         "split_name": "test",
@@ -253,22 +283,22 @@ def train_risk_model(
     metrics_payload = {
         "model_name": _MODEL_NAME,
         "task_type": "binary_classification",
-        "target_label": _TARGET_COLUMN,
+        "target_label": target_column,
         "split_strategy": split_strategy,
         "feature_count": len(feature_columns),
         "train_sample_count": int((split_features["dataset_split"] == "train").sum()),
         "valid_sample_count": int((split_features["dataset_split"] == "valid").sum()),
         "test_sample_count": int((split_features["dataset_split"] == "test").sum()),
         "train_accuracy": _compute_accuracy(
-            split_features.loc[split_features["dataset_split"] == "train", _TARGET_COLUMN],
+            split_features.loc[split_features["dataset_split"] == "train", target_column],
             probabilities.loc[split_features["dataset_split"] == "train"],
         ),
         "valid_accuracy": _compute_accuracy(
-            split_features.loc[split_features["dataset_split"] == "valid", _TARGET_COLUMN],
+            split_features.loc[split_features["dataset_split"] == "valid", target_column],
             probabilities.loc[split_features["dataset_split"] == "valid"],
         ),
         "test_accuracy": _compute_accuracy(
-            split_features.loc[split_features["dataset_split"] == "test", _TARGET_COLUMN],
+            split_features.loc[split_features["dataset_split"] == "test", target_column],
             probabilities.loc[split_features["dataset_split"] == "test"],
         ),
         "trained_at": trained_at_text,
@@ -276,7 +306,7 @@ def train_risk_model(
 
     training_config = {
         "model_name": _MODEL_NAME,
-        "target_label": _TARGET_COLUMN,
+        "target_label": target_column,
         "feature_columns": feature_columns,
         "split_strategy": split_strategy,
         "stable_feature_min_non_null_ratio": _MIN_STABLE_NON_NULL_RATIO,

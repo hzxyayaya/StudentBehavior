@@ -1,17 +1,17 @@
 {
   "cluster_method": "stub-eight-dimension-group-rules",
   "risk_model": "deterministic-risk-scorecard-v1",
-  "target_label": "risk_label",
-  "auc": 0.9215,
+  "target_label": "risk_label_binary",
+  "auc": 0.9772,
   "source": "trained",
-  "updated_at": "2026-04-11T00:15:46",
-  "trained_at": "2026-04-10T16:14:28Z",
-  "evaluated_at": "2026-04-10T16:15:29Z",
-  "accuracy": 0.7024,
+  "updated_at": "2026-04-11T00:51:44",
+  "trained_at": "2026-04-10T16:50:25Z",
+  "evaluated_at": "2026-04-10T16:50:42Z",
+  "accuracy": 0.7703,
   "precision": 1.0,
-  "recall": 0.1366,
-  "f1": 0.2404,
-  "sample_count": 467,
-  "positive_sample_count": 161,
-  "negative_sample_count": 306
+  "recall": 0.3469,
+  "f1": 0.5152,
+  "sample_count": 418,
+  "positive_sample_count": 147,
+  "negative_sample_count": 271
 }

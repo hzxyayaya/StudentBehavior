@@ -69,6 +69,37 @@ def _write_single_student_training_csv(path: Path) -> None:
     ).to_csv(path, index=False, encoding="utf-8")
 
 
+def _write_binary_only_training_csv(path: Path) -> None:
+    rows: list[dict[str, object]] = []
+    student_specs = [
+        ("20230001", 0, 88.0, 0, 0.97, 12, 8, 9),
+        ("20230002", 0, 85.0, 0, 0.95, 11, 8, 8),
+        ("20230003", 0, 79.0, 1, 0.88, 9, 7, 7),
+        ("20230004", 1, 66.0, 2, 0.72, 5, 5, 4),
+        ("20230005", 1, 61.0, 3, 0.61, 3, 4, 3),
+        ("20230006", 1, 58.0, 4, 0.55, 2, 3, 2),
+    ]
+    for student_id, label, score, failures, attendance, signs, courses, visits in student_specs:
+        for term_suffix, score_shift in [("2024-1", 0.0), ("2024-2", -2.0)]:
+            rows.append(
+                {
+                    "student_id": student_id,
+                    "term_key": term_suffix,
+                    "major_name": "软件工程",
+                    "risk_label": None,
+                    "risk_label_binary": label,
+                    "risk_label_level": "较高风险" if label else "低风险",
+                    "avg_course_score": score + score_shift,
+                    "failed_course_count": failures,
+                    "attendance_normal_rate": attendance,
+                    "sign_event_count": signs,
+                    "selected_course_count": courses,
+                    "library_visit_count": visits,
+                }
+            )
+    pd.DataFrame(rows).to_csv(path, index=False, encoding="utf-8")
+
+
 def test_train_risk_model_writes_registry_artifacts_with_grouped_student_split(tmp_path: Path) -> None:
     input_csv = tmp_path / "semester_features.csv"
     output_dir = tmp_path / "artifacts" / "model_training"
@@ -189,3 +220,42 @@ def test_main_train_risk_model_prints_summary_lines(tmp_path: Path, capsys) -> N
     assert "feature_count=6" in captured.out
     assert f"model_path={output_dir / 'risk_model.pkl'}" in captured.out
     assert f"training_config_path={output_dir / 'training_config.json'}" in captured.out
+
+
+def test_train_risk_model_uses_explicit_binary_label_when_primary_label_column_is_empty(tmp_path: Path) -> None:
+    input_csv = tmp_path / "semester_features_binary_only.csv"
+    output_dir = tmp_path / "artifacts" / "model_training"
+    _write_binary_only_training_csv(input_csv)
+
+    summary = train_risk_model(
+        input_csv,
+        output_dir=output_dir,
+        trained_at=datetime(2024, 3, 4, 5, 6, 7, tzinfo=timezone.utc),
+    )
+
+    model_payload = pickle.loads((output_dir / "risk_model.pkl").read_bytes())
+    metrics_payload = json.loads((output_dir / "risk_metrics.json").read_text(encoding="utf-8"))
+
+    assert summary["split_strategy"] == "grouped_by_student_id"
+    assert model_payload["target_label"] == "risk_label_binary"
+    assert metrics_payload["target_label"] == "risk_label_binary"
+
+
+def test_assign_group_splits_uses_ratio_based_holdout_for_large_student_sets() -> None:
+    frame = pd.DataFrame(
+        [
+            {
+                "student_id": f"S{index:03d}",
+                "term_key": "2024-1",
+                "major_name": "软件工程",
+                "risk_label": index % 2,
+            }
+            for index in range(20)
+        ]
+    )
+
+    split_frame, split_strategy = _assign_group_splits(frame)
+    counts = split_frame["dataset_split"].value_counts().to_dict()
+
+    assert split_strategy == "grouped_by_student_id"
+    assert counts == {"train": 14, "valid": 3, "test": 3}

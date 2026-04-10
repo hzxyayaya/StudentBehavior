@@ -1,25 +1,24 @@
 {
   "model_name": "deterministic-risk-scorecard-v1",
-  "target_label": "risk_label",
+  "target_label": "risk_label_binary",
   "feature_columns": [
-    "term_gpa",
+    "avg_course_score",
     "failed_course_count",
+    "avg_gpa",
+    "selected_course_count",
+    "avg_course_score_metric",
+    "avg_gpa_metric",
+    "attempted_credit_sum",
+    "course_record_count",
     "borderline_course_count",
     "failed_course_ratio",
-    "dim_academic_base_score",
-    "dim_appraisal_status_alert_score",
-    "dim_class_engagement_score",
-    "dim_daily_routine_boundary_score",
-    "dim_library_immersion_score",
-    "dim_network_habits_score",
-    "dim_online_activeness_score",
-    "dim_physical_resilience_score"
+    "academic_base_score_raw"
   ],
   "split_strategy": "grouped_by_student_id",
   "stable_feature_min_non_null_ratio": 0.6,
   "deterministic": true,
-  "train_sample_count": 3033,
-  "valid_sample_count": 1,
-  "test_sample_count": 1,
-  "trained_at": "2026-04-10T16:14:28Z"
+  "train_sample_count": 1934,
+  "valid_sample_count": 419,
+  "test_sample_count": 418,
+  "trained_at": "2026-04-10T16:50:25Z"
 }
