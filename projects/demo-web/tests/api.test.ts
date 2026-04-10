@@ -1,6 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { getGroups, getOverview, loginDemo, getStudentProfile, getStudentReport } from '@/lib/api'
+import {
+  getDevelopmentAnalysis,
+  getGroups,
+  getModelSummary,
+  getOverview,
+  loginDemo,
+  getStudentProfile,
+  getStudentReport,
+} from '@/lib/api'
 
 describe('api client', () => {
   beforeEach(() => {
@@ -57,6 +65,58 @@ describe('api client', () => {
     await expect(loginDemo()).rejects.toThrow('demo-api returned an empty response')
   })
 
+  it('passes through trained model summary extras without rewriting the payload', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        text: async () =>
+          JSON.stringify({
+            code: 200,
+            message: 'OK',
+            data: {
+              cluster_method: 'stub-eight-dimension-group-rules',
+              risk_model: 'trained-academic-risk-model',
+              target_label: '综合测评低等级风险',
+              auc: 0.9342,
+              updated_at: '2026-04-09T09:00:00Z',
+              source: 'trained',
+              accuracy: 0.88,
+              precision: 0.81,
+              recall: 0.79,
+              f1: 0.8,
+              sample_count: 200,
+              positive_sample_count: 64,
+              negative_sample_count: 136,
+              train_sample_count: 120,
+              valid_sample_count: 30,
+              test_sample_count: 50,
+            },
+            meta: { request_id: 'demo-request', term: '2024-2' },
+          }),
+      }),
+    )
+
+    await expect(getModelSummary('2024-2')).resolves.toEqual({
+      cluster_method: 'stub-eight-dimension-group-rules',
+      risk_model: 'trained-academic-risk-model',
+      target_label: '综合测评低等级风险',
+      auc: 0.9342,
+      updated_at: '2026-04-09T09:00:00Z',
+      source: 'trained',
+      accuracy: 0.88,
+      precision: 0.81,
+      recall: 0.79,
+      f1: 0.8,
+      sample_count: 200,
+      positive_sample_count: 64,
+      negative_sample_count: 136,
+      train_sample_count: 120,
+      valid_sample_count: 30,
+      test_sample_count: 50,
+    })
+  })
+
   it('normalizes overview and related payloads from the current demo-api shape', async () => {
     const fetchMock = vi.fn((input: RequestInfo | URL) => {
       const url = String(input)
@@ -71,6 +131,7 @@ describe('api client', () => {
               data: {
                 student_count: 179,
                 risk_distribution: { high: 0, medium: 0, low: 179 },
+                risk_band_distribution: { 高风险: 12, 较高风险: 21, 一般风险: 34, 低风险: 112 },
                 group_distribution: { 作息失衡风险组: 179 },
                 dimension_summary: [
                   {
@@ -102,6 +163,26 @@ describe('api client', () => {
                     },
                   ],
                 },
+                risk_trend_summary: [
+                  {
+                    term: '2024-1',
+                    avg_risk_score: 49.8,
+                    high_risk_count: 10,
+                    elevated_risk_count: 10,
+                    risk_change_direction: 'rising',
+                  },
+                  {
+                    term: '2024-2',
+                    avg_risk_score: 52.1,
+                    high_risk_count: 12,
+                    elevated_risk_count: 12,
+                    risk_change_direction: 'rising',
+                  },
+                ],
+                risk_factor_summary: [
+                  { feature: 'academic_base', feature_cn: '学业基础表现', count: 52, importance: 0.82 },
+                  { feature: 'class_engagement', feature_cn: '课堂学习投入', count: 41, importance: 0.66 },
+                ],
               },
               meta: { request_id: 'demo-request', term: '2024-2' },
             }),
@@ -121,6 +202,9 @@ describe('api client', () => {
                     group_segment: '作息失衡风险组',
                     student_count: 81,
                     avg_risk_probability: 0.38,
+                    avg_risk_score: 57.4,
+                    avg_risk_level: '较高风险',
+                    risk_change_summary: { rising: 31, steady: 40, falling: 10 },
                     avg_dimension_scores: [
                       {
                         dimension: '学业基础表现',
@@ -147,6 +231,22 @@ describe('api client', () => {
                         label: '网络使用偏强',
                         explanation: '覆盖 81 人，重要度 0.75',
                         metrics: [{ metric: '月均上网时长', value: 66, display: '66 小时' }],
+                      },
+                    ],
+                    risk_amplifiers: [
+                      {
+                        feature: 'academic_base',
+                        feature_cn: '学业基础表现',
+                        count: 51,
+                        importance: 0.79,
+                      },
+                    ],
+                    protective_factors: [
+                      {
+                        feature: 'library_immersion',
+                        feature_cn: '图书馆沉浸度',
+                        count: 29,
+                        importance: 0.52,
                       },
                     ],
                   },
@@ -243,6 +343,7 @@ describe('api client', () => {
         { risk_level: 'medium', count: 0 },
         { risk_level: 'low', count: 179 },
       ],
+      risk_band_distribution: { 高风险: 12, 较高风险: 21, 一般风险: 34, 低风险: 112 },
       group_distribution: [{ group_segment: '作息失衡风险组', count: 179 }],
       dimension_summary: [
         {
@@ -267,6 +368,14 @@ describe('api client', () => {
       ],
       major_risk_summary: [{ major_name: '应用化学', high_risk_count: 0, student_count: 7 }],
       trend_summary: [{ term: '2024-2', high_risk_count: 0 }],
+      risk_trend_summary: [
+        { term: '2024-1', avg_risk_score: 49.8, high_risk_count: 10, elevated_risk_count: 10, risk_change_direction: 'rising' },
+        { term: '2024-2', avg_risk_score: 52.1, high_risk_count: 12, elevated_risk_count: 12, risk_change_direction: 'rising' },
+      ],
+      risk_factor_summary: [
+        { feature: 'academic_base', feature_cn: '学业基础表现', count: 52, importance: 0.82 },
+        { feature: 'class_engagement', feature_cn: '课堂学习投入', count: 41, importance: 0.66 },
+      ],
     })
 
     await expect(getGroups('2024-2')).resolves.toEqual({
@@ -275,6 +384,9 @@ describe('api client', () => {
           group_segment: '作息失衡风险组',
           student_count: 81,
           avg_risk_probability: 0.38,
+          avg_risk_score: 57.4,
+          avg_risk_level: '较高风险',
+          risk_change_summary: { rising: 31, steady: 40, falling: 10 },
           avg_dimension_scores: [
             {
               dimension: '学业基础表现',
@@ -303,6 +415,22 @@ describe('api client', () => {
               count: 81,
               label: '网络使用偏强',
               metrics: [{ metric: '月均上网时长', value: 66, display: '66 小时' }],
+            },
+          ],
+          risk_amplifiers: [
+            {
+              feature: 'academic_base',
+              feature_cn: '学业基础表现',
+              count: 51,
+              importance: 0.79,
+            },
+          ],
+          protective_factors: [
+            {
+              feature: 'library_immersion',
+              feature_cn: '图书馆沉浸度',
+              count: 29,
+              importance: 0.52,
             },
           ],
         },
@@ -591,5 +719,116 @@ describe('api client', () => {
       },
     ])
     expect(profile.trend[0]).not.toHaveProperty('risk_probability')
+  })
+
+  it('preserves explicit zero avg_risk_score instead of falling back to probability-based score', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input)
+
+        if (url.includes('/analytics/groups')) {
+          return Promise.resolve({
+            ok: true,
+            text: async () =>
+              JSON.stringify({
+                code: 200,
+                message: 'OK',
+                data: {
+                  groups: [
+                    {
+                      group_segment: '稳态组',
+                      student_count: 12,
+                      avg_risk_probability: 0.61,
+                      avg_risk_score: 0,
+                      avg_dimension_scores: [],
+                      top_factors: [],
+                      risk_amplifiers: [],
+                      protective_factors: [],
+                    },
+                  ],
+                },
+                meta: { request_id: 'demo-request', term: '2024-2' },
+              }),
+          })
+        }
+
+        return Promise.resolve({
+          ok: true,
+          text: async () =>
+            JSON.stringify({
+              code: 200,
+              message: 'OK',
+              data: {},
+              meta: { request_id: 'demo-request', term: '2024-2' },
+            }),
+        })
+      }),
+    )
+
+    const groups = await getGroups('2024-2')
+    expect(groups.groups[0]?.avg_risk_probability).toBe(0.61)
+    expect(groups.groups[0]?.avg_risk_score).toBe(0)
+  })
+
+  it('omits optional major comparison fields when backend leaves them out', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input)
+
+        if (url.includes('/analytics/overview')) {
+          return Promise.resolve({
+            ok: true,
+            text: async () =>
+              JSON.stringify({
+                code: 200,
+                message: 'OK',
+                data: {
+                  student_count: 1,
+                  risk_distribution: { high: 0, medium: 0, low: 1 },
+                  risk_band_distribution: { 高风险: 0, 较高风险: 0, 一般风险: 0, 低风险: 1 },
+                  group_distribution: {},
+                  dimension_summary: [],
+                  major_risk_summary: [{ major_name: '应用化学', high_risk_count: 0, student_count: 7 }],
+                  trend_summary: { terms: [] },
+                  risk_trend_summary: [],
+                  risk_factor_summary: [],
+                },
+                meta: { request_id: 'demo-request', term: '2024-2' },
+              }),
+          })
+        }
+
+        return Promise.resolve({
+          ok: true,
+          text: async () =>
+            JSON.stringify({
+              code: 200,
+              message: 'OK',
+              data: {
+                term: '2024-2',
+                major_comparison: [{ major_name: '应用化学', high_risk_count: 0, student_count: 7 }],
+                dimension_highlights: [],
+                group_direction_segments: [],
+                direction_chains: [],
+                disclaimer: '去向真值暂未接入',
+              },
+              meta: { request_id: 'demo-request', term: '2024-2' },
+            }),
+        })
+      }),
+    )
+
+    const overview = await getOverview('2024-2')
+    const development = await getDevelopmentAnalysis('2024-2')
+
+    expect(overview.major_risk_summary[0]).not.toHaveProperty('elevated_risk_count')
+    expect(overview.major_risk_summary[0]).not.toHaveProperty('elevated_risk_ratio')
+    expect(overview.major_risk_summary[0]).not.toHaveProperty('average_risk_probability')
+
+    expect(development.major_comparison[0]).not.toHaveProperty('elevated_risk_count')
+    expect(development.major_comparison[0]).not.toHaveProperty('elevated_risk_ratio')
+    expect(development.major_comparison[0]).not.toHaveProperty('average_risk_probability')
   })
 })

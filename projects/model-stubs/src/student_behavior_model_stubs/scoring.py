@@ -4,6 +4,13 @@ import math
 from student_behavior_model_stubs.calibration import CALIBRATED_DIMENSIONS
 from student_behavior_model_stubs.calibration import DIMENSION_LABELS
 from student_behavior_model_stubs.calibration import METRIC_RULE_DECLARATIONS
+from student_behavior_model_stubs.risk_calibration import build_risk_calibration as _build_risk_calibration
+from student_behavior_model_stubs.risk_calibration import compute_adjusted_risk_score
+from student_behavior_model_stubs.risk_calibration import compute_base_risk_score
+from student_behavior_model_stubs.risk_calibration import compute_risk_adjustment_score
+from student_behavior_model_stubs.risk_calibration import compute_risk_change_direction
+from student_behavior_model_stubs.risk_calibration import compute_risk_delta
+from student_behavior_model_stubs.risk_calibration import map_adjusted_risk_level
 
 _MIN_PROBABILITY = 0.05
 _MAX_PROBABILITY = 0.95
@@ -36,6 +43,10 @@ _LEVEL_EXPLANATION_SUFFIX = {
 _DIMENSION_EXPLANATION_SUFFIX = {
     "network_habits": "当前网络使用强度需结合聚合时长观察。",
 }
+_UNAVAILABLE_LABEL = "当前学期无有效数据"
+_UNAVAILABLE_REASON = "no_metrics"
+
+_MISSING_METRIC = object()
 
 _METRIC_THRESHOLD_HINTS = {
     "term_gpa": (2.0, 4.0),
@@ -81,7 +92,7 @@ def _coerce_float(value: object, default: float) -> float:
         coerced = float(value)
     except (TypeError, ValueError):
         return default
-    if math.isnan(coerced):
+    if not math.isfinite(coerced):
         return default
     return coerced
 
@@ -98,6 +109,23 @@ def _coerce_metric_value(value: object) -> float | int:
     if rounded.is_integer():
         return int(rounded)
     return rounded
+
+
+def _usable_metric_input(value: object) -> float | int | None | object:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, (int, float)):
+        numeric = float(value)
+        if math.isfinite(numeric):
+            return numeric
+        return _MISSING_METRIC
+    if isinstance(value, str):
+        if not value.strip() or value.strip().lower() == "nan":
+            return None
+        return _MISSING_METRIC
+    return _MISSING_METRIC
 
 
 def _distribution_context(row: Mapping[str, object]) -> Mapping[str, Mapping[str, object]]:
@@ -167,14 +195,14 @@ def _score_metric(rule: Mapping[str, object], value: object, row: Mapping[str, o
 
 def _metric_value(row: Mapping[str, object], rule: Mapping[str, object]) -> object:
     metric_name = str(rule["metric"])
-    if metric_name in row:
-        return row[metric_name]
-    raw_fields = rule.get("raw_fields", [])
-    if raw_fields:
-        first_field = raw_fields[0]
-        if isinstance(first_field, str) and first_field in row:
-            return row[first_field]
-    return 0.0
+    if metric_name not in row:
+        return _MISSING_METRIC
+    value = _usable_metric_input(row[metric_name])
+    if value is _MISSING_METRIC:
+        return _MISSING_METRIC
+    if value is None:
+        return _MISSING_METRIC
+    return value
 
 
 def _build_metrics(
@@ -185,6 +213,8 @@ def _build_metrics(
     metric_scores: list[float] = []
     for rule in METRIC_RULE_DECLARATIONS[dimension_code]:
         value = _metric_value(row, rule)
+        if value is _MISSING_METRIC:
+            continue
         metrics.append(
             {
                 "metric": rule["metric"],
@@ -243,6 +273,8 @@ def _build_explanation(
     label: str,
     metrics: list[dict[str, object]],
 ) -> str:
+    if not metrics:
+        return f"{DIMENSION_LABELS[dimension_code]}当前学期无有效源表指标，暂不做该维度判定。"
     evidence_metrics = _primary_evidence_metrics(dimension_code, metrics)
     metric_text = "、".join(
         f"{metric['label']} {_format_metric_value(metric['value'])}" for metric in evidence_metrics
@@ -280,11 +312,15 @@ def _dimension_provenance(metrics: list[dict[str, object]]) -> dict[str, object]
                 has_caveated_metrics = True
         if "caveat" in metric:
             has_caveated_metrics = True
-    return {
+    provenance = {
         "has_caveated_metrics": has_caveated_metrics,
         "has_deferred_metrics": has_deferred_metrics,
         "threshold_strategies": threshold_strategies,
     }
+    if not metrics:
+        provenance["is_unavailable"] = True
+        provenance["unavailable_reason"] = _UNAVAILABLE_REASON
+    return provenance
 
 
 def _dimension_score_map(row: Mapping[str, object]) -> dict[str, float]:
@@ -337,7 +373,7 @@ def build_dimension_scores(row: Mapping[str, object]) -> list[dict[str, object]]
         metrics, metric_scores = _build_metrics(dimension_code, row)
         score = _aggregate_dimension_score(metric_scores)
         level = _score_level(score)
-        label = _DIMENSION_BUSINESS_LABELS[dimension_code][level]
+        label = _UNAVAILABLE_LABEL if not metrics else _DIMENSION_BUSINESS_LABELS[dimension_code][level]
         dimension_scores.append(
             {
                 "dimension": DIMENSION_LABELS[dimension_code],
@@ -351,3 +387,7 @@ def build_dimension_scores(row: Mapping[str, object]) -> list[dict[str, object]]
             }
         )
     return dimension_scores
+
+
+def build_risk_calibration(row: Mapping[str, object]) -> dict[str, object]:
+    return _build_risk_calibration(row, build_dimension_scores(row))

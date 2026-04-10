@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-04-01T01:22:16Z",
-  "input_row_count": 2905,
-  "output_row_count": 2905,
+  "generated_at": "2026-04-06T10:21:16Z",
+  "input_row_count": 3035,
+  "output_row_count": 3035,
   "dropped_row_count": 0,
   "null_metric_summary": {
-    "avg_course_score": 2905,
-    "failed_course_count": 2905,
-    "attendance_normal_rate": 2726,
-    "sign_event_count": 225,
-    "selected_course_count": 157,
-    "library_visit_count": 2442
+    "avg_course_score": 264,
+    "failed_course_count": 264,
+    "attendance_normal_rate": 2856,
+    "sign_event_count": 355,
+    "selected_course_count": 287,
+    "library_visit_count": 2572
   },
   "notes": [
     "build completed"

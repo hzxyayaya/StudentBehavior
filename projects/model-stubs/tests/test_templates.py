@@ -111,46 +111,65 @@ def test_build_top_factors_matches_api_contract_shape() -> None:
 
 def test_build_report_payload_returns_readable_stub_content() -> None:
     payload = build_report_payload(
-        risk_level="high",
+        base_risk_score=86.0,
+        risk_adjustment_score=-12.0,
+        adjusted_risk_score=74.0,
+        risk_delta=8.5,
+        risk_change_direction="rising",
+        risk_level="较高风险",
         group_segment="作息失衡风险组",
         dimension_scores=_dimension_scores(),
     )
 
     assert payload["version"] == "v1_calibrated_report"
-    assert [factor["dimension_code"] for factor in payload["top_factors"]] == [
+    assert [factor["dimension_code"] for factor in payload["top_risk_factors"]] == [
         "academic_base",
         "network_habits",
         "daily_routine_boundary",
     ]
-    assert len(payload["intervention_advice"]) == 3
-    assert len(payload["intervention_advice_items"]) == 3
-    assert [item["priority"] for item in payload["intervention_advice_items"]] == [1, 2, 3]
-    assert [item["text"] for item in payload["intervention_advice_items"]] == payload["intervention_advice"]
-    assert [item["key"] for item in payload["intervention_advice_items"]] == [
-        "stabilize_core_learning",
-        "set_routine_boundaries",
-        "protect_strengths_focus_weakest",
+    assert [factor["dimension_code"] for factor in payload["top_protective_factors"]] == [
+        "physical_resilience",
+        "appraisal_status_alert",
+        "library_immersion",
     ]
+    assert all(factor["effect"] != "negative" for factor in payload["top_protective_factors"])
+    assert payload["intervention_priority"] == 2
+    assert "学期GPA" in payload["base_risk_explanation"]
+    assert "行为调整" in payload["behavior_adjustment_explanation"]
+    assert "风险变化" in payload["risk_change_explanation"]
+    assert any(token in payload["risk_change_explanation"] for token in ["挂科", "课堂", "作息", "在线学习", "体质"])
+    assert "较高风险" in payload["intervention_plan"]
+    assert payload["top_risk_factors"][0]["feature_cn"] in payload["intervention_plan"]
     assert "作息失衡风险组" in payload["report_text"]
-    assert "高风险" in payload["report_text"]
+    assert "较高风险" in payload["report_text"]
     assert "证据提示：当前维度包含 caveated/deferred 证据" in payload["report_text"]
 
 
 def test_build_report_payload_is_deterministic() -> None:
     payload_one = build_report_payload(
-        risk_level="medium",
+        base_risk_score=51.0,
+        risk_adjustment_score=0.0,
+        adjusted_risk_score=51.0,
+        risk_delta=0.0,
+        risk_change_direction="steady",
+        risk_level="一般风险",
         group_segment="课堂参与薄弱组",
         dimension_scores=[{"dimension": "课堂学习投入", "score": 0.24}],
     )
     payload_two = build_report_payload(
-        risk_level="medium",
+        base_risk_score=51.0,
+        risk_adjustment_score=0.0,
+        adjusted_risk_score=51.0,
+        risk_delta=0.0,
+        risk_change_direction="steady",
+        risk_level="一般风险",
         group_segment="课堂参与薄弱组",
         dimension_scores=[{"dimension": "课堂学习投入", "score": 0.24}],
     )
 
     assert payload_one == payload_two
     assert payload_one["report_text"].strip() != ""
-    assert payload_one["intervention_advice"]
+    assert payload_one["priority_interventions"]
 
 
 def test_build_report_payload_handles_one_shot_dimension_scores() -> None:
@@ -158,12 +177,17 @@ def test_build_report_payload_handles_one_shot_dimension_scores() -> None:
         yield from _dimension_scores()
 
     payload = build_report_payload(
-        risk_level="high",
+        base_risk_score=88.0,
+        risk_adjustment_score=-6.0,
+        adjusted_risk_score=82.0,
+        risk_delta=-3.5,
+        risk_change_direction="falling",
+        risk_level="高风险",
         group_segment="作息失衡风险组",
         dimension_scores=score_rows(),
     )
 
-    assert [factor["dimension_code"] for factor in payload["top_factors"]] == [
+    assert [factor["dimension_code"] for factor in payload["top_risk_factors"]] == [
         "academic_base",
         "network_habits",
         "daily_routine_boundary",
@@ -176,41 +200,108 @@ def test_build_report_payload_handles_one_shot_dimension_scores() -> None:
 
 def test_build_report_payload_handles_sparse_dimension_scores() -> None:
     payload = build_report_payload(
-        risk_level="low",
+        base_risk_score=16.0,
+        risk_adjustment_score=0.0,
+        adjusted_risk_score=16.0,
+        risk_delta=0.0,
+        risk_change_direction="steady",
+        risk_level="低风险",
         group_segment="学习投入稳定组",
         dimension_scores=[],
     )
 
-    assert len(payload["top_factors"]) == 3
-    assert [factor["dimension_code"] for factor in payload["top_factors"]] == [
+    assert len(payload["top_risk_factors"]) == 3
+    assert [factor["dimension_code"] for factor in payload["top_risk_factors"]] == [
         "academic_base",
         "class_engagement",
         "online_activeness",
     ]
-    assert all(factor["effect"] == "neutral" for factor in payload["top_factors"])
-    assert all(factor["importance"] == 0.0 for factor in payload["top_factors"])
-    assert all(factor["label"] == "" for factor in payload["top_factors"])
-    assert all(factor["explanation"] == "" for factor in payload["top_factors"])
-    assert all(factor["provenance"] == {} for factor in payload["top_factors"])
+    assert len(payload["top_protective_factors"]) == 3
+    assert all(factor["effect"] == "neutral" for factor in payload["top_risk_factors"])
+    assert all(factor["importance"] == 0.0 for factor in payload["top_risk_factors"])
+    assert all(factor["label"] == "" for factor in payload["top_risk_factors"])
+    assert all(factor["explanation"] == "" for factor in payload["top_risk_factors"])
+    assert all(factor["provenance"] == {} for factor in payload["top_risk_factors"])
     assert payload["report_text"].strip() != ""
     assert "学习投入稳定组" in payload["report_text"]
     assert "低风险" in payload["report_text"]
-    assert "暂无有效数据" in payload["report_text"]
+    assert "暂无可核对指标" in payload["report_text"]
     assert "low" not in payload["report_text"]
+    assert "仅作中性参考" in payload["report_text"]
+    assert "可作为稳定支撑" not in payload["report_text"]
     assert payload["version"] == "v1_calibrated_report"
-    assert len(payload["intervention_advice_items"]) == 3
+    assert len(payload["priority_interventions"]) == 3
+
+
+def test_build_report_payload_falls_back_when_academic_metrics_are_missing() -> None:
+    payload = build_report_payload(
+        base_risk_score=16.0,
+        risk_adjustment_score=0.0,
+        adjusted_risk_score=16.0,
+        risk_delta=0.0,
+        risk_change_direction="steady",
+        risk_level="低风险",
+        group_segment="学习投入稳定组",
+        dimension_scores=[
+            {
+                "dimension": "学业基础表现",
+                "dimension_code": "academic_base",
+                "score": 0.2,
+                "level": "low",
+                "label": "学业基础预警",
+                "metrics": [],
+                "explanation": "学业基础表现处于学业基础预警。",
+                "provenance": {"has_caveated_metrics": False, "has_deferred_metrics": False},
+            }
+        ],
+    )
+
+    assert payload["base_risk_explanation"] == "学业结果指标暂缺，基础风险解释仅供参考。"
+    assert "学期GPA 未提供" not in payload["base_risk_explanation"]
+    assert "基础风险分" not in payload["base_risk_explanation"]
+    assert "仅供参考" in payload["base_risk_explanation"]
 
 
 def test_build_top_factors_prefers_calibrated_explanations_over_plain_scores() -> None:
     payload = build_report_payload(
-        risk_level="high",
+        base_risk_score=86.0,
+        risk_adjustment_score=-12.0,
+        adjusted_risk_score=74.0,
+        risk_delta=8.5,
+        risk_change_direction="rising",
+        risk_level="较高风险",
         group_segment="作息失衡风险组",
         dimension_scores=_dimension_scores(),
     )
 
-    assert payload["top_factors"][1]["feature"] == "network_habits"
+    assert payload["top_risk_factors"][1]["feature"] == "network_habits"
     assert "网络作息失衡" in payload["report_text"]
     assert "不声称深夜指标" in payload["report_text"]
+
+
+def test_build_top_factors_pushes_unavailable_dimensions_behind_available_ones() -> None:
+    scores = _dimension_scores()
+    scores[1] = {
+        **scores[1],
+        "score": 0.0,
+        "label": "当前学期无有效数据",
+        "metrics": [],
+        "explanation": "课堂学习投入当前学期无有效源表指标，暂不做该维度判定。",
+        "provenance": {"is_unavailable": True, "unavailable_reason": "no_metrics"},
+    }
+
+    factors = build_top_factors(
+        risk_level="high",
+        group_segment="作息失衡风险组",
+        dimension_scores=scores,
+    )
+
+    assert [factor["dimension_code"] for factor in factors] == [
+        "academic_base",
+        "network_habits",
+        "daily_routine_boundary",
+    ]
+    assert all(factor["dimension_code"] != "class_engagement" for factor in factors)
 
 
 def test_build_report_payload_structurally_uses_metrics_and_provenance() -> None:
@@ -229,19 +320,24 @@ def test_build_report_payload_structurally_uses_metrics_and_provenance() -> None
     }
 
     payload = build_report_payload(
-        risk_level="high",
+        base_risk_score=88.0,
+        risk_adjustment_score=-12.0,
+        adjusted_risk_score=76.0,
+        risk_delta=6.0,
+        risk_change_direction="rising",
+        risk_level="较高风险",
         group_segment="作息失衡风险组",
         dimension_scores=scores,
     )
 
     assert "指标：学期GPA 2.1" in payload["report_text"]
-    assert "当前维度得分 0.18，水平 low。" in payload["report_text"]
+    assert "当前维度得分 0.18，水平 低。" in payload["report_text"]
     assert "证据提示：当前维度包含 caveated/deferred 证据，解读时需保留口径限制。" in payload["report_text"]
-    assert payload["top_factors"][0]["dimension_code"] == "academic_base"
-    assert payload["top_factors"][0]["label"] == "学业基础预警"
-    assert payload["top_factors"][0]["explanation"] == "占位说明，不应成为唯一信息来源。"
+    assert payload["top_risk_factors"][0]["dimension_code"] == "academic_base"
+    assert payload["top_risk_factors"][0]["label"] == "学业基础预警"
+    assert payload["top_risk_factors"][0]["explanation"] == "占位说明，不应成为唯一信息来源。"
     network_factor = next(
-        factor for factor in payload["top_factors"] if factor["dimension_code"] == "network_habits"
+        factor for factor in payload["top_risk_factors"] if factor["dimension_code"] == "network_habits"
     )
     assert network_factor["provenance"]["has_deferred_metrics"] is True
-    assert [item["priority"] for item in payload["intervention_advice_items"]] == [1, 2, 3]
+    assert [item["priority"] for item in payload["priority_interventions"]] == [1, 2, 3]

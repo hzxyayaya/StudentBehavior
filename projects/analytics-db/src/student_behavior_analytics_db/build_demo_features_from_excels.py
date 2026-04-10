@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -34,6 +35,16 @@ _DEFERRED_CLASS_ATTENTION_COLUMNS = (
     "avg_front_row_rate",
     "avg_bowing_rate",
 )
+_ARTIFACT_DIMENSION_RAW_COLUMNS = {
+    "academic_base": "academic_base_score_raw",
+    "class_engagement": "class_engagement_score_raw",
+    "online_activeness": "online_activeness_score_raw",
+    "library_immersion": "library_immersion_score_raw",
+    "network_habits": "network_habits_score_raw",
+    "daily_routine_boundary": "daily_routine_boundary_score_raw",
+    "physical_resilience": "physical_resilience_score_raw",
+    "appraisal_status_alert": "appraisal_status_alert_score_raw",
+}
 
 
 @dataclass(frozen=True)
@@ -196,8 +207,16 @@ def build_demo_features_from_excels(
     output_csv: Path | None = None,
     include_heavy_sources: bool = True,
 ) -> dict[str, object]:
-    resolved_data_dir = data_dir or discover_data_dir(repo_root)
     resolved_output_csv = output_csv or repo_root / "artifacts" / "semester_features" / "v1_semester_features.csv"
+    try:
+        resolved_data_dir = data_dir or discover_data_dir(repo_root)
+    except FileNotFoundError:
+        fallback = _build_demo_features_from_artifacts(
+            repo_root=repo_root,
+            output_csv=resolved_output_csv,
+        )
+        fallback["include_heavy_sources"] = include_heavy_sources
+        return fallback
 
     normalized_frames = {
         name: spec.loader(_read_excel_rows(_resolve_source_file(resolved_data_dir, spec), spec.usecols))
@@ -258,11 +277,118 @@ def build_demo_features_from_excels(
     }
 
 
+def _build_demo_features_from_artifacts(
+    *,
+    repo_root: Path,
+    output_csv: Path,
+) -> dict[str, object]:
+    artifact_path = repo_root / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    if not artifact_path.exists():
+        raise FileNotFoundError("未找到 Excel 数据目录，且缺少可回退的 model_stubs 产物")
+
+    artifact_frame = pd.read_csv(artifact_path)
+    if artifact_frame.empty:
+        raise ValueError("model_stubs 学生结果产物为空，无法回退生成 semester_features")
+
+    features = artifact_frame.loc[:, [column for column in artifact_frame.columns if column in {"student_id", "term_key", "student_name", "major_name"}]].copy()
+    if "student_id" not in features.columns or "term_key" not in features.columns:
+        raise ValueError("model_stubs 学生结果产物缺少 student_id 或 term_key")
+
+    features["college_name"] = None
+    features["avg_course_score"] = None
+    features["failed_course_count"] = None
+    features["avg_gpa"] = None
+    features["major_rank_pct"] = None
+    features["risk_label"] = artifact_frame["risk_level"] if "risk_level" in artifact_frame.columns else None
+    features["attendance_record_count"] = None
+    features["attendance_normal_rate"] = None
+    features["selected_course_count"] = None
+    features["sign_event_count"] = None
+    features["assignment_submit_count"] = None
+    features["exam_submit_count"] = None
+    features["task_participation_rate"] = None
+    features["discussion_reply_count"] = None
+    features["library_visit_count"] = None
+    features["library_active_days"] = None
+    features["running_punch_count"] = None
+    features["morning_activity_rate"] = None
+
+    dimension_rows = artifact_frame.get("dimension_scores_json")
+    if dimension_rows is None:
+        dimension_rows = pd.Series([None] * len(artifact_frame))
+
+    for dimension_code, raw_column in _ARTIFACT_DIMENSION_RAW_COLUMNS.items():
+        features[raw_column] = [
+            _extract_artifact_dimension_raw_score(value, dimension_code)
+            for value in dimension_rows
+        ]
+
+    resolved = features.loc[features["term_key"].isin(_ANALYSIS_TERMS)].copy()
+    resolved = resolved.sort_values(["student_id", "term_key"], kind="stable").reset_index(drop=True)
+
+    output_csv.parent.mkdir(parents=True, exist_ok=True)
+    resolved.to_csv(output_csv, index=False, encoding="utf-8-sig")
+
+    return {
+        "data_dir": "artifact_fallback:model_stubs/v1_student_results.csv",
+        "output_csv": str(output_csv),
+        "row_count": int(len(resolved)),
+        "term_counts": {
+            str(term_key): int(count)
+            for term_key, count in resolved["term_key"].value_counts().sort_index().items()
+        },
+        "source_row_counts": {
+            "artifact_student_results": int(len(artifact_frame)),
+        },
+        "source_mode": "artifact_fallback",
+    }
+
+
+def _extract_artifact_dimension_raw_score(value: object, dimension_code: str) -> float | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+
+    try:
+        payload = json.loads(value)
+    except json.JSONDecodeError:
+        return None
+
+    if not isinstance(payload, list):
+        return None
+
+    for item in payload:
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("dimension_code", "")).strip() != dimension_code:
+            continue
+        score = _normalize_number(item.get("score"))
+        if score is None:
+            return None
+        return round(score * 100, 2)
+    return None
+
+
 def _resolve_source_file(data_dir: Path, spec: SourceSpec) -> Path:
     path = data_dir / spec.filename
     if path.exists():
         return path
+    fallback = _resolve_source_file_by_header(data_dir, spec.usecols)
+    if fallback is not None:
+        return fallback
     raise FileNotFoundError(f"未找到数据源文件: {spec.filename}")
+
+
+def _resolve_source_file_by_header(data_dir: Path, usecols: tuple[str, ...]) -> Path | None:
+    expected = set(usecols)
+    for candidate in sorted(data_dir.glob("*.xlsx")):
+        try:
+            header_frame = pd.read_excel(candidate, nrows=0, dtype=object)
+        except Exception:
+            continue
+        columns = {str(column) for column in header_frame.columns}
+        if expected.issubset(columns):
+            return candidate
+    return None
 
 
 def _read_excel_rows(path: Path, usecols: tuple[str, ...]) -> list[dict[str, object]]:
@@ -702,16 +828,21 @@ def _aggregate_library_support_metrics(data_dir: Path, *, official_student_ids: 
         ordered = group.sort_values("visited_at", kind="stable")
         current_entry: pd.Timestamp | None = None
         stay_minutes: list[float] = []
+        active_days = int(ordered["visited_at"].dt.date.nunique())
         for row in ordered.itertuples(index=False):
             direction = str(row.direction).strip().lower()
             visited_at = row.visited_at
-            if direction == "in":
+            is_entry = direction in {"in", "1", "entry", "enter"}
+            is_exit = direction in {"out", "2", "exit", "leave"}
+            if is_entry:
                 current_entry = visited_at
                 continue
-            if direction == "out" and current_entry is not None and visited_at >= current_entry:
+            if is_exit and current_entry is not None and visited_at >= current_entry:
                 stay_minutes.append((visited_at - current_entry).total_seconds() / 60)
                 current_entry = None
         visit_count = len(stay_minutes)
+        if visit_count == 0:
+            visit_count = active_days
         avg_stay = None if not stay_minutes else sum(stay_minutes) / len(stay_minutes)
         visits.append(
             {

@@ -123,6 +123,10 @@ def test_build_student_term_features_outputs_expected_columns_and_metrics():
         "avg_gpa",
         "major_rank_pct",
         "risk_label",
+        "risk_label_binary",
+        "risk_label_level",
+        "label_source",
+        "label_rule_version",
         "attendance_record_count",
         "attendance_normal_rate",
         "selected_course_count",
@@ -148,6 +152,10 @@ def test_build_student_term_features_outputs_expected_columns_and_metrics():
             "avg_gpa": 2.9,
             "major_rank_pct": None,
             "risk_label": None,
+            "risk_label_binary": 0,
+            "risk_label_level": "一般风险",
+            "label_source": "academic_rule_v1",
+            "label_rule_version": "2026-04-risk-v1",
             "attendance_record_count": 2,
             "attendance_normal_rate": 0.5,
             "selected_course_count": 2,
@@ -220,6 +228,10 @@ def test_build_student_term_features_keeps_draft_source_metrics_null_when_inputs
             "avg_gpa": 3.8,
             "major_rank_pct": None,
             "risk_label": None,
+            "risk_label_binary": 0,
+            "risk_label_level": "低风险",
+            "label_source": "academic_rule_v1",
+            "label_rule_version": "2026-04-risk-v1",
             "attendance_record_count": 1,
             "attendance_normal_rate": None,
             "selected_course_count": 1,
@@ -233,4 +245,62 @@ def test_build_student_term_features_keeps_draft_source_metrics_null_when_inputs
             "running_punch_count": None,
             "morning_activity_rate": None,
         }
+    ]
+
+
+def test_build_student_term_features_derives_explicit_risk_labels_from_stable_signals():
+    features = build_student_term_features(
+        grades=pd.DataFrame(
+            [
+                {"student_id": "stu-high", "term_key": "2024-1", "score": 50, "gpa": 1.0, "passed": False},
+                {"student_id": "stu-high", "term_key": "2024-1", "score": 58, "gpa": 1.3, "passed": False},
+                {"student_id": "stu-elevated", "term_key": "2024-1", "score": 82, "gpa": 2.8, "passed": True},
+                {"student_id": "stu-general", "term_key": "2024-1", "score": 59, "gpa": 2.6, "passed": False},
+                {"student_id": "stu-low", "term_key": "2024-1", "score": 88, "gpa": 3.4, "passed": True},
+            ]
+        ),
+        evaluation_labels=pd.DataFrame(
+            [
+                {"student_id": "stu-elevated", "term_key": "2024-1", "risk_label": 1},
+                {"student_id": "stu-low", "term_key": "2024-1", "risk_label": 0},
+            ]
+        ),
+    )
+
+    actual = features.loc[:, ["student_id", "risk_label", "risk_label_binary", "risk_label_level", "label_source", "label_rule_version"]]
+    actual = actual.sort_values("student_id", kind="stable").reset_index(drop=True)
+
+    assert actual.to_dict(orient="records") == [
+        {
+            "student_id": "stu-elevated",
+            "risk_label": 1.0,
+            "risk_label_binary": 1,
+            "risk_label_level": "较高风险",
+            "label_source": "academic_rule_v1",
+            "label_rule_version": "2026-04-risk-v1",
+        },
+        {
+            "student_id": "stu-general",
+            "risk_label": None,
+            "risk_label_binary": 0,
+            "risk_label_level": "一般风险",
+            "label_source": "academic_rule_v1",
+            "label_rule_version": "2026-04-risk-v1",
+        },
+        {
+            "student_id": "stu-high",
+            "risk_label": None,
+            "risk_label_binary": 1,
+            "risk_label_level": "高风险",
+            "label_source": "academic_rule_v1",
+            "label_rule_version": "2026-04-risk-v1",
+        },
+        {
+            "student_id": "stu-low",
+            "risk_label": 0.0,
+            "risk_label_binary": 0,
+            "risk_label_level": "低风险",
+            "label_source": "academic_rule_v1",
+            "label_rule_version": "2026-04-risk-v1",
+        },
     ]

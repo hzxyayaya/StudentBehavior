@@ -149,13 +149,15 @@ def test_main_build_writes_all_expected_artifacts(
     assert isinstance(dimension_scores[0]["label"], str)
     assert dimension_scores[0]["label"] not in {"high", "medium", "low"}
     assert dimension_scores[0]["metrics"]
-    assert "学期GPA" in dimension_scores[0]["explanation"]
+    assert dimension_scores[0]["dimension"] in dimension_scores[0]["explanation"]
+    assert "主要依据" in dimension_scores[0]["explanation"]
     assert reports[0]["student_id"] == "20230001"
     assert reports[0]["term_key"] == "2023-1"
     assert reports[0]["version"] == "v1_calibrated_report"
     assert len(reports[0]["top_factors"]) == 3
-    assert all(factor["effect"] == "positive" for factor in reports[0]["top_factors"])
-    assert all(factor["importance"] == 0.75 for factor in reports[0]["top_factors"])
+    assert reports[0]["top_factors"][0]["effect"] == "negative"
+    assert reports[0]["top_factors"][0]["importance"] > 0
+    assert all(factor["effect"] in {"negative", "neutral"} for factor in reports[0]["top_factors"])
     assert len(reports[0]["intervention_advice_items"]) == 3
     assert [item["priority"] for item in reports[0]["intervention_advice_items"]] == [1, 2, 3]
     assert [item["text"] for item in reports[0]["intervention_advice_items"]] == reports[0]["intervention_advice"]
@@ -178,6 +180,7 @@ def test_main_build_writes_all_expected_artifacts(
         "risk_model": "stub-eight-dimension-risk-rules",
         "target_label": "学期级八维学业风险",
         "auc": 0.8347,
+        "source": "stub",
         "updated_at": model_summary["updated_at"],
     }
     assert warnings["generated_at"] == "2024-01-02T03:04:05Z"

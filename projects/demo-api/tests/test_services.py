@@ -21,7 +21,12 @@ def sample_store(tmp_path: Path, sample_artifacts_dir: Path) -> DemoApiStore:
                 "major_name": "软件工程",
                 "group_segment": "综合发展优势组",
                 "risk_probability": 0.55,
+                "base_risk_score": 55.0,
+                "risk_adjustment_score": -1.0,
+                "adjusted_risk_score": 54.0,
                 "risk_level": "low",
+                "risk_delta": 0.0,
+                "risk_change_direction": "steady",
                 "dimension_scores_json": json.dumps(
                     [
                         {"dimension": "学业基础表现", "score": 82},
@@ -35,6 +40,17 @@ def sample_store(tmp_path: Path, sample_artifacts_dir: Path) -> DemoApiStore:
                     ],
                     ensure_ascii=False,
                 ),
+                "top_risk_factors_json": json.dumps(
+                    [{"feature": "academic_base", "feature_cn": "学业基础表现", "importance": 0.6}],
+                    ensure_ascii=False,
+                ),
+                "top_protective_factors_json": json.dumps(
+                    [{"feature": "class_engagement", "feature_cn": "课堂学习投入", "importance": 0.2}],
+                    ensure_ascii=False,
+                ),
+                "base_risk_explanation": "base explanation",
+                "behavior_adjustment_explanation": "adjustment explanation",
+                "risk_change_explanation": "change explanation",
             },
             {
                 "student_id": "20230002",
@@ -43,7 +59,12 @@ def sample_store(tmp_path: Path, sample_artifacts_dir: Path) -> DemoApiStore:
                 "major_name": "软件工程",
                 "group_segment": "课堂参与薄弱组",
                 "risk_probability": 0.92,
+                "base_risk_score": 82.0,
+                "risk_adjustment_score": 6.0,
+                "adjusted_risk_score": 88.0,
                 "risk_level": "high",
+                "risk_delta": 2.0,
+                "risk_change_direction": "rising",
                 "dimension_scores_json": json.dumps(
                     [
                         {"dimension": "学业基础表现", "score": 91},
@@ -57,6 +78,17 @@ def sample_store(tmp_path: Path, sample_artifacts_dir: Path) -> DemoApiStore:
                     ],
                     ensure_ascii=False,
                 ),
+                "top_risk_factors_json": json.dumps(
+                    [{"feature": "academic_base", "feature_cn": "学业基础表现", "importance": 0.9}],
+                    ensure_ascii=False,
+                ),
+                "top_protective_factors_json": json.dumps(
+                    [{"feature": "library_immersion", "feature_cn": "图书馆沉浸度", "importance": 0.3}],
+                    ensure_ascii=False,
+                ),
+                "base_risk_explanation": "base explanation",
+                "behavior_adjustment_explanation": "adjustment explanation",
+                "risk_change_explanation": "change explanation",
             },
             {
                 "student_id": "20230001",
@@ -65,7 +97,12 @@ def sample_store(tmp_path: Path, sample_artifacts_dir: Path) -> DemoApiStore:
                 "major_name": "软件工程",
                 "group_segment": "综合发展优势组",
                 "risk_probability": 0.81,
+                "base_risk_score": 62.0,
+                "risk_adjustment_score": -2.0,
+                "adjusted_risk_score": 60.0,
                 "risk_level": "medium",
+                "risk_delta": -1.0,
+                "risk_change_direction": "falling",
                 "dimension_scores_json": json.dumps(
                     [
                         {"dimension": "学业基础表现", "score": 88},
@@ -79,6 +116,17 @@ def sample_store(tmp_path: Path, sample_artifacts_dir: Path) -> DemoApiStore:
                     ],
                     ensure_ascii=False,
                 ),
+                "top_risk_factors_json": json.dumps(
+                    [{"feature": "academic_base", "feature_cn": "学业基础表现", "importance": 0.7}],
+                    ensure_ascii=False,
+                ),
+                "top_protective_factors_json": json.dumps(
+                    [{"feature": "class_engagement", "feature_cn": "课堂学习投入", "importance": 0.2}],
+                    ensure_ascii=False,
+                ),
+                "base_risk_explanation": "base explanation",
+                "behavior_adjustment_explanation": "adjustment explanation",
+                "risk_change_explanation": "change explanation",
             },
             {
                 "student_id": "20230004",
@@ -87,7 +135,12 @@ def sample_store(tmp_path: Path, sample_artifacts_dir: Path) -> DemoApiStore:
                 "major_name": "软件工程",
                 "group_segment": "综合发展优势组",
                 "risk_probability": 0.77,
+                "base_risk_score": 60.0,
+                "risk_adjustment_score": 1.0,
+                "adjusted_risk_score": 61.0,
                 "risk_level": "medium",
+                "risk_delta": 0.5,
+                "risk_change_direction": "steady",
                 "dimension_scores_json": json.dumps(
                     [
                         {"dimension": "学业基础表现", "score": 84},
@@ -101,6 +154,17 @@ def sample_store(tmp_path: Path, sample_artifacts_dir: Path) -> DemoApiStore:
                     ],
                     ensure_ascii=False,
                 ),
+                "top_risk_factors_json": json.dumps(
+                    [{"feature": "online_activeness", "feature_cn": "在线学习积极性", "importance": 0.5}],
+                    ensure_ascii=False,
+                ),
+                "top_protective_factors_json": json.dumps(
+                    [{"feature": "library_immersion", "feature_cn": "图书馆沉浸度", "importance": 0.4}],
+                    ensure_ascii=False,
+                ),
+                "base_risk_explanation": "base explanation",
+                "behavior_adjustment_explanation": "adjustment explanation",
+                "risk_change_explanation": "change explanation",
             },
             {
                 "student_id": "20230005",
@@ -109,7 +173,12 @@ def sample_store(tmp_path: Path, sample_artifacts_dir: Path) -> DemoApiStore:
                 "major_name": "软件工程",
                 "group_segment": "综合发展优势组",
                 "risk_probability": 0.73,
+                "base_risk_score": 58.0,
+                "risk_adjustment_score": -1.0,
+                "adjusted_risk_score": 57.0,
                 "risk_level": "medium",
+                "risk_delta": -0.5,
+                "risk_change_direction": "falling",
                 "dimension_scores_json": json.dumps(
                     [
                         {"dimension": "学业基础表现", "score": 83},
@@ -123,6 +192,17 @@ def sample_store(tmp_path: Path, sample_artifacts_dir: Path) -> DemoApiStore:
                     ],
                     ensure_ascii=False,
                 ),
+                "top_risk_factors_json": json.dumps(
+                    [{"feature": "academic_base", "feature_cn": "学业基础表现", "importance": 0.6}],
+                    ensure_ascii=False,
+                ),
+                "top_protective_factors_json": json.dumps(
+                    [{"feature": "class_engagement", "feature_cn": "课堂学习投入", "importance": 0.2}],
+                    ensure_ascii=False,
+                ),
+                "base_risk_explanation": "base explanation",
+                "behavior_adjustment_explanation": "adjustment explanation",
+                "risk_change_explanation": "change explanation",
             },
             {
                 "student_id": "20230003",
@@ -131,7 +211,12 @@ def sample_store(tmp_path: Path, sample_artifacts_dir: Path) -> DemoApiStore:
                 "major_name": "软件工程",
                 "group_segment": "学习投入稳定组",
                 "risk_probability": 0.65,
+                "base_risk_score": 50.0,
+                "risk_adjustment_score": -3.0,
+                "adjusted_risk_score": 47.0,
                 "risk_level": "low",
+                "risk_delta": -2.0,
+                "risk_change_direction": "falling",
                 "dimension_scores_json": json.dumps(
                     [
                         {"dimension": "学业基础表现", "score": 95},
@@ -145,6 +230,17 @@ def sample_store(tmp_path: Path, sample_artifacts_dir: Path) -> DemoApiStore:
                     ],
                     ensure_ascii=False,
                 ),
+                "top_risk_factors_json": json.dumps(
+                    [{"feature": "academic_base", "feature_cn": "学业基础表现", "importance": 0.4}],
+                    ensure_ascii=False,
+                ),
+                "top_protective_factors_json": json.dumps(
+                    [{"feature": "physical_resilience", "feature_cn": "体质及运动状况", "importance": 0.5}],
+                    ensure_ascii=False,
+                ),
+                "base_risk_explanation": "base explanation",
+                "behavior_adjustment_explanation": "adjustment explanation",
+                "risk_change_explanation": "change explanation",
             },
         ]
     ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
@@ -232,6 +328,185 @@ def test_get_overview_by_term_returns_single_term_payload(sample_store) -> None:
     assert len(payload["dimension_summary"]) == 8
 
 
+def test_get_overview_exposes_risk_band_distribution_and_factor_summary(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    overview_path = tmp_path / "artifacts" / "model_stubs" / "v1_overview_by_term.json"
+    overview_path.parent.mkdir(parents=True, exist_ok=True)
+    overview_path.write_text(
+        json.dumps(
+            {
+                "student_count": 2,
+                "risk_distribution": {"high": 1, "medium": 1, "low": 0},
+                "risk_band_distribution": {"高风险": 1, "较高风险": 1, "一般风险": 0, "低风险": 0},
+                "risk_factor_summary": [
+                    {"feature": "academic_base", "feature_cn": "学业基础表现", "count": 2},
+                ],
+                "group_distribution": {"课堂参与薄弱组": 2},
+                "major_risk_summary": [],
+                "trend_summary": {"terms": [{"term_key": "2024-2"}]},
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230001",
+                "term_key": "2024-2",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.52,
+                "base_risk_score": 52.0,
+                "risk_adjustment_score": 5.0,
+                "adjusted_risk_score": 57.0,
+                "risk_level": "较高风险",
+                "risk_delta": 5.0,
+                "risk_change_direction": "rising",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+                "top_risk_factors_json": json.dumps([], ensure_ascii=False),
+                "top_protective_factors_json": json.dumps([], ensure_ascii=False),
+                "base_risk_explanation": "base",
+                "behavior_adjustment_explanation": "adjust",
+                "risk_change_explanation": "change",
+            },
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.write_text("", encoding="utf-8")
+    store = DemoApiStore(
+        overview_path=overview_path,
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+
+def test_overview_dimension_summary_prefers_available_dimension_details(sample_store: DemoApiStore) -> None:
+    warnings_path = Path(sample_store._warnings_path)
+    rows = pd.read_csv(warnings_path)
+    rows.loc[rows["term_key"] == "2024-1", "dimension_scores_json"] = json.dumps(
+        [
+            {
+                "dimension": "课堂学习投入",
+                "dimension_code": "class_engagement",
+                "score": 0.0,
+                "level": "unavailable",
+                "label": "当前学期无有效数据",
+                "metrics": [],
+                "explanation": "课堂学习投入当前学期无有效源表指标，暂不做该维度判定。",
+                "provenance": {
+                    "is_unavailable": True,
+                    "unavailable_reason": "no_metrics",
+                },
+            },
+            {
+                "dimension": "图书馆沉浸度",
+                "dimension_code": "library_immersion",
+                "score": 0.0,
+                "level": "unavailable",
+                "label": "当前学期无有效数据",
+                "metrics": [],
+                "explanation": "图书馆沉浸度当前学期无有效源表指标，暂不做该维度判定。",
+                "provenance": {
+                    "is_unavailable": True,
+                    "unavailable_reason": "no_metrics",
+                },
+            },
+        ],
+        ensure_ascii=False,
+    )
+    rows = pd.concat(
+        [
+            rows,
+            pd.DataFrame(
+                [
+                    {
+                        "student_id": "20239999",
+                        "term_key": "2024-1",
+                        "student_name": "Faye",
+                        "major_name": "软件工程",
+                        "group_segment": "学习投入稳定组",
+                        "risk_probability": 0.42,
+                        "base_risk_score": 42.0,
+                        "risk_adjustment_score": 0.0,
+                        "adjusted_risk_score": 42.0,
+                        "risk_level": "low",
+                        "risk_delta": 0.0,
+                        "risk_change_direction": "steady",
+                        "dimension_scores_json": json.dumps(
+                            [
+                                {
+                                    "dimension": "课堂学习投入",
+                                    "dimension_code": "class_engagement",
+                                    "score": 0.64,
+                                    "level": "medium",
+                                    "label": "课堂投入稳定",
+                                    "metrics": [
+                                        {"name": "出勤率", "value": 0.93},
+                                    ],
+                                    "explanation": "课堂投入整体稳定，出勤率表现较好。",
+                                    "provenance": {"is_unavailable": False},
+                                }
+                            ],
+                            ensure_ascii=False,
+                        ),
+                        "top_risk_factors_json": "[]",
+                        "top_protective_factors_json": "[]",
+                        "base_risk_explanation": "base explanation",
+                        "behavior_adjustment_explanation": "adjustment explanation",
+                        "risk_change_explanation": "change explanation",
+                    }
+                ]
+            ),
+        ],
+        ignore_index=True,
+    )
+    rows.to_csv(warnings_path, index=False, encoding="utf-8-sig")
+
+    overview = sample_store.get_overview("2024-1")
+    dimension_summary = {
+        item["dimension_code"]: item for item in overview["dimension_summary"]
+    }
+
+    class_summary = dimension_summary["class_engagement"]
+    assert class_summary["label"] == "课堂投入稳定"
+    assert class_summary["metrics"] == [{"name": "出勤率", "value": 0.93}]
+    assert class_summary["explanation"] == "课堂投入整体稳定，出勤率表现较好。"
+    assert class_summary["provenance"] == {"is_unavailable": False}
+
+
+def test_get_trajectory_analysis_repackages_overview_groups_and_warning_samples(sample_store: DemoApiStore) -> None:
+    payload = sample_store.get_trajectory_analysis(term="2024-1")
+
+    assert payload["term"] == "2024-1"
+    assert payload["risk_trend_summary"]
+    assert payload["current_dimensions"]
+    assert payload["key_factors"]
+    assert payload["group_changes"]
+    assert payload["student_samples"]
+    assert payload["student_samples"][0]["student_id"] == "20230003"
+    assert payload["student_samples"][0]["top_risk_factors"][0]["feature_cn"] == "学业基础表现"
+
+
+def test_get_development_analysis_repackages_major_group_and_dimension_views(sample_store: DemoApiStore) -> None:
+    payload = sample_store.get_development_analysis(term="2024-1")
+
+    assert payload["term"] == "2024-1"
+    assert payload["major_comparison"]
+    assert payload["group_direction_segments"]
+    assert payload["dimension_highlights"]
+    assert payload["direction_chains"]
+    assert payload["disclaimer"] == "去向真值暂未接入"
+    assert payload["group_direction_segments"][0]["group_segment"]
+    assert "direction_label" in payload["group_direction_segments"][0]
+
+
 @pytest.mark.parametrize(
     ("term_key", "student_count", "risk_distribution", "group_distribution", "major_risk_summary"),
     [
@@ -241,14 +516,16 @@ def test_get_overview_by_term_returns_single_term_payload(sample_store) -> None:
             1,
             {"high": 0, "medium": 0, "low": 1},
             {"学习投入稳定组": 1},
-            [
-                {
-                    "major_name": "软件工程",
-                    "student_count": 1,
-                    "high_risk_count": 0,
-                    "average_risk_probability": 0.65,
-                }
-            ],
+                [
+                    {
+                        "major_name": "软件工程",
+                        "student_count": 1,
+                        "high_risk_count": 0,
+                        "elevated_risk_count": 0,
+                        "elevated_risk_ratio": 0.0,
+                        "average_risk_probability": 0.65,
+                    }
+                ],
         ),
         ("2024-2", 179, {"high": 12, "medium": 64, "low": 103}, None, None),
     ],
@@ -278,6 +555,112 @@ def test_get_overview_accepts_all_real_terms(
 def test_get_model_summary_returns_stub_summary(sample_store) -> None:
     payload = sample_store.get_model_summary(term="2024-2")
     assert payload["risk_model"] == "stub-eight-dimension-risk-rules"
+
+
+def test_get_model_summary_preserves_legacy_stub_shape(sample_store) -> None:
+    payload = sample_store.get_model_summary(term="2024-2")
+
+    assert payload == {
+        "cluster_method": "stub-eight-dimension-group-rules",
+        "risk_model": "stub-eight-dimension-risk-rules",
+        "target_label": "学期级八维学业风险",
+        "auc": 0.91,
+        "updated_at": "2024-09-01T00:00:00Z",
+    }
+
+
+def test_get_model_summary_exposes_trained_metrics_when_present(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    trained_summary_path = tmp_path / "artifacts" / "model_stubs" / "v1_model_summary.json"
+    trained_summary_path.parent.mkdir(parents=True, exist_ok=True)
+    trained_summary_path.write_text(
+        json.dumps(
+            {
+                "cluster_method": "stub-eight-dimension-group-rules",
+                "risk_model": "trained-academic-risk-model",
+                "target_label": "学期级八维学业风险",
+                "auc": 0.9342,
+                "updated_at": "2026-04-09T09:00:00Z",
+                "source": "trained",
+                "accuracy": 0.88,
+                "precision": 0.81,
+                "recall": 0.79,
+                "f1": 0.8,
+                "trained_at": "2026-04-08T18:15:00Z",
+                "evaluated_at": "2026-04-09T09:00:00Z",
+                "train_sample_count": 120,
+                "valid_sample_count": 30,
+                "test_sample_count": 50,
+                "feature_count": 64,
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=trained_summary_path,
+        overview_term="2024-2",
+        warnings_path=sample_artifacts_dir / "v1_student_results.csv",
+        repo_root=sample_artifacts_dir.parent.parent,
+    )
+
+    payload = store.get_model_summary(term="2024-2")
+
+    assert payload["cluster_method"] == "stub-eight-dimension-group-rules"
+    assert payload["risk_model"] == "trained-academic-risk-model"
+    assert payload["source"] == "trained"
+    assert payload["accuracy"] == 0.88
+    assert payload["precision"] == 0.81
+    assert payload["recall"] == 0.79
+    assert payload["f1"] == 0.8
+    assert payload["trained_at"] == "2026-04-08T18:15:00Z"
+    assert payload["evaluated_at"] == "2026-04-09T09:00:00Z"
+    assert payload["train_sample_count"] == 120
+    assert payload["valid_sample_count"] == 30
+    assert payload["test_sample_count"] == 50
+    assert payload["feature_count"] == 64
+
+
+def test_get_result_model_summary_preserves_reserved_api_fields(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    trained_summary_path = tmp_path / "artifacts" / "model_stubs" / "v1_model_summary.json"
+    trained_summary_path.parent.mkdir(parents=True, exist_ok=True)
+    trained_summary_path.write_text(
+        json.dumps(
+            {
+                "cluster_method": "stub-eight-dimension-group-rules",
+                "risk_model": "trained-academic-risk-model",
+                "target_label": "学期级八维学业风险",
+                "auc": 0.9342,
+                "updated_at": "2026-04-09T09:00:00Z",
+                "source": "trained",
+                "term": "artifact-term",
+                "result_key": "artifact-result-key",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=trained_summary_path,
+        overview_term="2024-2",
+        warnings_path=sample_artifacts_dir / "v1_student_results.csv",
+        repo_root=sample_artifacts_dir.parent.parent,
+    )
+
+    payload = store.get_result_model_summary(term="2024-2")
+
+    assert payload["result_key"] == "model_summary"
+    assert payload["term"] == "2024-2"
+    assert payload["risk_model"] == "trained-academic-risk-model"
+    assert "artifact-result-key" not in payload.values()
+    assert "artifact-term" not in payload.values()
 
 
 def test_get_student_profile_expands_dimension_scores(sample_store) -> None:
@@ -358,8 +741,97 @@ def test_get_student_profile_preserves_calibrated_dimension_objects(
 
 def test_get_student_report_returns_exact_term_record(sample_store) -> None:
     payload = sample_store.get_student_report(student_id="20230001", term="2023-1")
-    assert set(payload) == {"top_factors", "intervention_advice", "report_text"}
+    assert set(payload) == {
+        "top_factors",
+        "intervention_advice",
+        "report_text",
+        "base_risk_explanation",
+        "behavior_adjustment_explanation",
+        "risk_change_explanation",
+        "intervention_plan",
+        "risk_level",
+        "risk_probability",
+        "base_risk_score",
+        "risk_adjustment_score",
+        "adjusted_risk_score",
+        "risk_delta",
+        "risk_change_direction",
+        "trend",
+    }
     assert payload["intervention_advice"][0].startswith("优先")
+
+
+def test_get_student_profile_includes_risk_metadata(sample_store) -> None:
+    payload = sample_store.get_student_profile(student_id="20230001", term="2023-1")
+    assert payload["risk_level"] == "medium"
+    assert payload["base_risk_score"] == 62.0
+    assert payload["risk_change_direction"] == "falling"
+
+
+def test_get_student_report_includes_risk_explanations(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230001",
+                "term_key": "2024-2",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.52,
+                "base_risk_score": 52.0,
+                "risk_adjustment_score": 5.0,
+                "adjusted_risk_score": 57.0,
+                "risk_level": "较高风险",
+                "risk_delta": 5.0,
+                "risk_change_direction": "rising",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+                "top_risk_factors_json": json.dumps([], ensure_ascii=False),
+                "top_protective_factors_json": json.dumps([], ensure_ascii=False),
+                "base_risk_explanation": "base",
+                "behavior_adjustment_explanation": "adjust",
+                "risk_change_explanation": "change",
+            },
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.parent.mkdir(parents=True, exist_ok=True)
+    reports_path.write_text(
+        json.dumps(
+            {
+                "student_id": "20230001",
+                "term_key": "2024-2",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "top_factors": [],
+                "intervention_advice": ["plan"],
+                "report_text": "report",
+                "base_risk_explanation": "base",
+                "behavior_adjustment_explanation": "adjust",
+                "risk_change_explanation": "change",
+                "intervention_plan": ["plan"],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    payload = store.get_student_report(student_id="20230001", term="2024-2")
+
+    assert payload["base_risk_explanation"] == "base"
+    assert payload["behavior_adjustment_explanation"] == "adjust"
+    assert payload["risk_change_explanation"] == "change"
+    assert payload["intervention_plan"] == ["plan"]
 
 
 def test_get_groups_groups_students_by_group_segment(sample_store) -> None:
@@ -374,6 +846,86 @@ def test_get_groups_groups_students_by_group_segment(sample_store) -> None:
     assert len(dominant["avg_dimension_scores"]) == 8
 
 
+def test_get_groups_exposes_risk_summaries_and_factors(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230001",
+                "term_key": "2024-2",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.52,
+                "base_risk_score": 52.0,
+                "risk_adjustment_score": 5.0,
+                "adjusted_risk_score": 57.0,
+                "risk_level": "较高风险",
+                "risk_delta": 5.0,
+                "risk_change_direction": "rising",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+                "top_risk_factors_json": json.dumps(
+                    [{"feature": "academic_base", "feature_cn": "学业基础表现", "importance": 0.9}],
+                    ensure_ascii=False,
+                ),
+                "top_protective_factors_json": json.dumps(
+                    [{"feature": "class_engagement", "feature_cn": "课堂学习投入", "importance": 0.2}],
+                    ensure_ascii=False,
+                ),
+                "base_risk_explanation": "base",
+                "behavior_adjustment_explanation": "adjust",
+                "risk_change_explanation": "change",
+            },
+            {
+                "student_id": "20230002",
+                "term_key": "2024-2",
+                "student_name": "Alice",
+                "major_name": "软件工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.48,
+                "base_risk_score": 48.0,
+                "risk_adjustment_score": -3.0,
+                "adjusted_risk_score": 45.0,
+                "risk_level": "一般风险",
+                "risk_delta": -2.0,
+                "risk_change_direction": "falling",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+                "top_risk_factors_json": json.dumps(
+                    [{"feature": "academic_base", "feature_cn": "学业基础表现", "importance": 0.7}],
+                    ensure_ascii=False,
+                ),
+                "top_protective_factors_json": json.dumps(
+                    [{"feature": "library_immersion", "feature_cn": "图书馆沉浸度", "importance": 0.4}],
+                    ensure_ascii=False,
+                ),
+                "base_risk_explanation": "base",
+                "behavior_adjustment_explanation": "adjust",
+                "risk_change_explanation": "change",
+            },
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.write_text("", encoding="utf-8")
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    payload = store.get_groups(term="2024-2")
+
+    group = payload["groups"][0]
+    assert group["avg_risk_score"] == pytest.approx((57.0 + 45.0) / 2)
+    assert group["avg_risk_level"] in {"较高风险", "一般风险"}
+    assert group["risk_amplifiers"][0]["feature"] == "academic_base"
+    assert group["protective_factors"][0]["feature"] in {"class_engagement", "library_immersion"}
+
+
 def test_get_groups_aggregates_top_factors_from_reports(sample_store) -> None:
     payload = sample_store.get_groups(term="2023-1")
     dominant = next(item for item in payload["groups"] if item["group_segment"] == "综合发展优势组")
@@ -381,6 +933,267 @@ def test_get_groups_aggregates_top_factors_from_reports(sample_store) -> None:
     assert counts["图书馆沉浸度"] == 1
     assert counts["课堂学习投入"] == 3
     assert counts["图书馆沉浸度"] != counts["课堂学习投入"]
+
+
+def test_get_groups_normalizes_report_ids_to_match_warning_rows(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230006",
+                "term_key": "2023-1",
+                "student_name": "Frank",
+                "major_name": "软件工程",
+                "group_segment": "综合发展优势组",
+                "risk_probability": 0.66,
+                "base_risk_score": 58.0,
+                "risk_adjustment_score": -1.0,
+                "adjusted_risk_score": 57.0,
+                "risk_level": "medium",
+                "risk_delta": -0.2,
+                "risk_change_direction": "steady",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+                "top_risk_factors_json": json.dumps([], ensure_ascii=False),
+                "top_protective_factors_json": json.dumps([], ensure_ascii=False),
+                "base_risk_explanation": "base",
+                "behavior_adjustment_explanation": "adjust",
+                "risk_change_explanation": "change",
+            }
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.parent.mkdir(parents=True, exist_ok=True)
+    reports_path.write_text(
+        json.dumps(
+            {
+                "student_id": 20230006,
+                "term_key": "2023-1",
+                "student_name": "Frank",
+                "major_name": "软件工程",
+                "top_factors": [
+                    {
+                        "dimension": "课堂学习投入",
+                        "importance": 0.8,
+                        "feature": "class_engagement",
+                        "feature_cn": "课堂学习投入",
+                        "effect": "negative",
+                    }
+                ],
+                "intervention_advice": ["补齐课堂互动"],
+                "report_text": "report",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    payload = store.get_groups(term="2023-1")
+
+    dominant = payload["groups"][0]
+    assert dominant["top_factors"] == [
+        {
+            "dimension": "课堂学习投入",
+            "importance": 0.8,
+            "count": 1,
+            "feature": "class_engagement",
+            "feature_cn": "课堂学习投入",
+            "effect": "negative",
+        }
+    ]
+
+
+def test_get_groups_accepts_string_importance_in_report_factors(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230007",
+                "term_key": "2023-1",
+                "student_name": "Gina",
+                "major_name": "软件工程",
+                "group_segment": "综合发展优势组",
+                "risk_probability": 0.66,
+                "base_risk_score": 58.0,
+                "risk_adjustment_score": -1.0,
+                "adjusted_risk_score": 57.0,
+                "risk_level": "medium",
+                "risk_delta": -0.2,
+                "risk_change_direction": "steady",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+                "top_risk_factors_json": json.dumps([], ensure_ascii=False),
+                "top_protective_factors_json": json.dumps([], ensure_ascii=False),
+                "base_risk_explanation": "base",
+                "behavior_adjustment_explanation": "adjust",
+                "risk_change_explanation": "change",
+            }
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.parent.mkdir(parents=True, exist_ok=True)
+    reports_path.write_text(
+        json.dumps(
+            {
+                "student_id": "20230007",
+                "term_key": "2023-1",
+                "student_name": "Gina",
+                "major_name": "软件工程",
+                "top_factors": [
+                    {
+                        "dimension": "图书馆沉浸度",
+                        "importance": "0.6",
+                        "feature": "library_immersion",
+                        "feature_cn": "图书馆沉浸度",
+                        "effect": "positive",
+                    }
+                ],
+                "intervention_advice": ["增加自习"],
+                "report_text": "report",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    payload = store.get_groups(term="2023-1")
+
+    dominant = payload["groups"][0]
+    assert dominant["top_factors"] == [
+        {
+            "dimension": "图书馆沉浸度",
+            "importance": 0.6,
+            "count": 1,
+            "feature": "library_immersion",
+            "feature_cn": "图书馆沉浸度",
+            "effect": "positive",
+        }
+    ]
+
+
+@pytest.mark.parametrize("importance_value", ["nan", "inf", "-inf", "not-a-number"])
+def test_get_groups_rejects_non_finite_importance_in_report_factors(
+    importance_value: str, tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230008",
+                "term_key": "2023-1",
+                "student_name": "Hana",
+                "major_name": "软件工程",
+                "group_segment": "综合发展优势组",
+                "risk_probability": 0.66,
+                "base_risk_score": 58.0,
+                "risk_adjustment_score": -1.0,
+                "adjusted_risk_score": 57.0,
+                "risk_level": "medium",
+                "risk_delta": -0.2,
+                "risk_change_direction": "steady",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+                "top_risk_factors_json": json.dumps([], ensure_ascii=False),
+                "top_protective_factors_json": json.dumps([], ensure_ascii=False),
+                "base_risk_explanation": "base",
+                "behavior_adjustment_explanation": "adjust",
+                "risk_change_explanation": "change",
+            }
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.parent.mkdir(parents=True, exist_ok=True)
+    reports_path.write_text(
+        json.dumps(
+            {
+                "student_id": "20230008",
+                "term_key": "2023-1",
+                "student_name": "Hana",
+                "major_name": "软件工程",
+                "top_factors": [
+                    {
+                        "dimension": "图书馆沉浸度",
+                        "importance": importance_value,
+                        "feature": "library_immersion",
+                        "feature_cn": "图书馆沉浸度",
+                        "effect": "positive",
+                    }
+                ],
+                "intervention_advice": ["增加自习"],
+                "report_text": "report",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    with pytest.raises(ValueError, match="top_factors items must be strings or factor objects"):
+        store.get_groups(term="2023-1")
+
+
+def test_get_student_profile_accepts_blank_dimension_scores_json(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230012",
+                "term_key": "2023-1",
+                "student_name": "Luna",
+                "major_name": "软件工程",
+                "group_segment": "综合发展优势组",
+                "risk_probability": 0.55,
+                "risk_level": "low",
+                "dimension_scores_json": "",
+                "top_risk_factors_json": json.dumps([], ensure_ascii=False),
+                "top_protective_factors_json": json.dumps([], ensure_ascii=False),
+                "base_risk_explanation": "base",
+                "behavior_adjustment_explanation": "adjust",
+                "risk_change_explanation": "change",
+            }
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.write_text("", encoding="utf-8")
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    payload = store.get_student_profile(student_id="20230012", term="2023-1")
+
+    assert payload["dimension_scores"] == []
+    assert payload["trend"][0]["dimension_scores"] == []
 
 
 def test_get_groups_preserves_richer_factor_summary_fields(
@@ -505,6 +1318,279 @@ def test_get_overview_preserves_richer_dimension_summary_when_present(
     payload = store.get_overview("2024-2")
 
     assert payload["dimension_summary"] == rich_dimension_summary
+
+
+def test_get_overview_enriches_sparse_dimension_summary_from_warning_rows(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    overview_path = tmp_path / "artifacts" / "model_stubs" / "v1_overview_by_term.json"
+    overview_path.parent.mkdir(parents=True, exist_ok=True)
+    overview_payload = json.loads(
+        (sample_artifacts_dir / "v1_overview_by_term.json").read_text(encoding="utf-8")
+    )
+    overview_payload["dimension_summary"] = [
+        {
+            "dimension": "课堂学习投入",
+            "dimension_code": "class_engagement",
+            "average_score": 0.48,
+        }
+    ]
+    overview_path.write_text(json.dumps(overview_payload, ensure_ascii=False), encoding="utf-8")
+
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    calibrated_dimension_scores = [
+        {
+            "dimension": "课堂学习投入",
+            "dimension_code": "class_engagement",
+            "score": 0.48,
+            "level": "low",
+            "label": "课堂投入不足",
+            "metrics": [{"name": "attendance_rate", "value": 0.63, "display": "63%"}],
+            "explanation": "课堂到课率偏低。",
+        }
+    ]
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230001",
+                "term_key": "2024-2",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.81,
+                "risk_level": "一般风险",
+                "dimension_scores_json": json.dumps(calibrated_dimension_scores, ensure_ascii=False),
+            },
+            {
+                "student_id": "20230002",
+                "term_key": "2024-2",
+                "student_name": "Alice",
+                "major_name": "软件工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.83,
+                "risk_level": "一般风险",
+                "dimension_scores_json": json.dumps(calibrated_dimension_scores, ensure_ascii=False),
+            },
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+
+    store = DemoApiStore(
+        overview_path=overview_path,
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    payload = store.get_overview("2024-2")
+
+    assert payload["dimension_summary"] == [
+        {
+            "dimension": "课堂学习投入",
+            "dimension_code": "class_engagement",
+            "average_score": 0.48,
+            "score_count": 2,
+            "level": "low",
+            "label": "课堂投入不足",
+            "metrics": [{"name": "attendance_rate", "value": 0.63, "display": "63%"}],
+            "explanation": "课堂到课率偏低。",
+        }
+    ]
+
+
+def test_get_overview_prefers_richer_dimension_summary_fields_across_warning_rows(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    overview_path = tmp_path / "artifacts" / "model_stubs" / "v1_overview_by_term.json"
+    overview_path.parent.mkdir(parents=True, exist_ok=True)
+    overview_payload = json.loads(
+        (sample_artifacts_dir / "v1_overview_by_term.json").read_text(encoding="utf-8")
+    )
+    overview_payload["dimension_summary"] = [
+        {
+            "dimension": "课堂学习投入",
+            "dimension_code": "class_engagement",
+            "average_score": 0.28,
+        }
+    ]
+    overview_path.write_text(json.dumps(overview_payload, ensure_ascii=False), encoding="utf-8")
+
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230001",
+                "term_key": "2024-2",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.81,
+                "risk_level": "一般风险",
+                "dimension_scores_json": json.dumps(
+                    [
+                        {
+                            "dimension": "课堂学习投入",
+                            "dimension_code": "class_engagement",
+                            "score": 0.28,
+                            "level": "low",
+                        }
+                    ],
+                    ensure_ascii=False,
+                ),
+            },
+            {
+                "student_id": "20230002",
+                "term_key": "2024-2",
+                "student_name": "Alice",
+                "major_name": "软件工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.83,
+                "risk_level": "一般风险",
+                "dimension_scores_json": json.dumps(
+                    [
+                        {
+                            "dimension": "课堂学习投入",
+                            "dimension_code": "class_engagement",
+                            "score": 0.28,
+                            "level": "low",
+                            "label": "课堂投入薄弱",
+                            "metrics": [
+                                {
+                                    "name": "attendance_rate",
+                                    "value": 0.64,
+                                    "display": "64%",
+                                }
+                            ],
+                            "explanation": "课堂到课率偏低，当前已进入关注区间。",
+                        }
+                    ],
+                    ensure_ascii=False,
+                ),
+            },
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+
+    store = DemoApiStore(
+        overview_path=overview_path,
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    payload = store.get_overview("2024-2")
+
+    assert payload["dimension_summary"] == [
+        {
+            "dimension": "课堂学习投入",
+            "dimension_code": "class_engagement",
+            "average_score": 0.28,
+            "score_count": 2,
+            "level": "low",
+            "label": "课堂投入薄弱",
+            "metrics": [{"name": "attendance_rate", "value": 0.64, "display": "64%"}],
+            "explanation": "课堂到课率偏低，当前已进入关注区间。",
+        }
+    ]
+
+
+def test_get_overview_replaces_empty_metric_placeholders_with_real_metrics(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    overview_path = tmp_path / "artifacts" / "model_stubs" / "v1_overview_by_term.json"
+    overview_path.parent.mkdir(parents=True, exist_ok=True)
+    overview_payload = json.loads(
+        (sample_artifacts_dir / "v1_overview_by_term.json").read_text(encoding="utf-8")
+    )
+    overview_payload["dimension_summary"] = [
+        {
+            "dimension": "课堂学习投入",
+            "dimension_code": "class_engagement",
+            "average_score": 0.5,
+        }
+    ]
+    overview_path.write_text(json.dumps(overview_payload, ensure_ascii=False), encoding="utf-8")
+
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230001",
+                "term_key": "2024-2",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.81,
+                "risk_level": "一般风险",
+                "dimension_scores_json": json.dumps(
+                    [
+                        {
+                            "dimension": "课堂学习投入",
+                            "dimension_code": "class_engagement",
+                            "score": 0.0,
+                            "level": "low",
+                            "label": "课堂投入薄弱",
+                            "metrics": [],
+                            "explanation": "课堂学习投入处于课堂投入薄弱，主要依据是当前可用指标有限。",
+                        }
+                    ],
+                    ensure_ascii=False,
+                ),
+            },
+            {
+                "student_id": "20230002",
+                "term_key": "2024-2",
+                "student_name": "Alice",
+                "major_name": "软件工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.83,
+                "risk_level": "一般风险",
+                "dimension_scores_json": json.dumps(
+                    [
+                        {
+                            "dimension": "课堂学习投入",
+                            "dimension_code": "class_engagement",
+                            "score": 1.0,
+                            "level": "high",
+                            "label": "课堂投入积极",
+                            "metrics": [
+                                {
+                                    "metric": "attendance_rate",
+                                    "label": "出勤率",
+                                    "value": 1.0,
+                                }
+                            ],
+                            "explanation": "课堂学习投入处于课堂投入积极，主要依据是出勤率 1.0。",
+                        }
+                    ],
+                    ensure_ascii=False,
+                ),
+            },
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+
+    store = DemoApiStore(
+        overview_path=overview_path,
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    payload = store.get_overview("2024-2")
+
+    assert payload["dimension_summary"] == [
+        {
+            "dimension": "课堂学习投入",
+            "dimension_code": "class_engagement",
+            "average_score": 0.5,
+            "score_count": 2,
+            "level": "low",
+            "label": "课堂投入薄弱",
+            "metrics": [{"metric": "attendance_rate", "label": "出勤率", "value": 1.0}],
+            "explanation": "课堂学习投入处于课堂投入薄弱，主要依据是当前可用指标有限。",
+        }
+    ]
 
 
 def test_get_overview_uses_term_specific_fallback_when_stub_is_multi_term(
@@ -672,12 +1758,16 @@ def test_get_overview_uses_term_specific_fallback_when_stub_is_multi_term(
             "major_name": "电子信息工程",
             "student_count": 1,
             "high_risk_count": 1,
+            "elevated_risk_count": 1,
+            "elevated_risk_ratio": 1.0,
             "average_risk_probability": 0.91,
         },
         {
             "major_name": "软件工程",
             "student_count": 2,
             "high_risk_count": 0,
+            "elevated_risk_count": 0,
+            "elevated_risk_ratio": 0.0,
             "average_risk_probability": 0.42,
         },
     ]
@@ -982,6 +2072,14 @@ def test_get_student_profile_uses_injected_results_path(
     assert len(payload["trend"][0]["dimension_scores"]) == 8
 
 
+def test_get_student_profile_includes_risk_explanations(sample_store) -> None:
+    payload = sample_store.get_student_profile(student_id="20230001", term="2023-1")
+
+    assert payload["base_risk_explanation"] == "base explanation"
+    assert payload["behavior_adjustment_explanation"] == "adjustment explanation"
+    assert payload["risk_change_explanation"] == "change explanation"
+
+
 def test_list_warnings_filters_by_term_and_risk_level(sample_store) -> None:
     payload = sample_store.list_warnings(term="2023-1", risk_level="high")
     assert payload["total"] == 1
@@ -999,9 +2097,557 @@ def test_list_warnings_sorts_by_risk_probability_desc_then_student_id(sample_sto
     assert [item["student_id"] for item in payload["items"]] == ["20230002", "20230001"]
 
 
+def test_list_warnings_normalizes_risk_level_filter(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230001",
+                "term_key": "2024-2",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.92,
+                "risk_level": "高风险",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+            },
+            {
+                "student_id": "20230002",
+                "term_key": "2024-2",
+                "student_name": "Alice",
+                "major_name": "软件工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.48,
+                "risk_level": "较高风险",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+            },
+            {
+                "student_id": "20230003",
+                "term_key": "2024-2",
+                "student_name": "Carol",
+                "major_name": "软件工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.32,
+                "risk_level": "一般风险",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+            },
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.write_text("", encoding="utf-8")
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    payload = store.list_warnings(term="2024-2", risk_level="high")
+
+    assert payload["total"] == 2
+    assert [item["student_id"] for item in payload["items"]] == ["20230001", "20230002"]
+
+    localized_payload = store.list_warnings(term="2024-2", risk_level="较高风险")
+
+    assert localized_payload["total"] == 1
+    assert localized_payload["items"][0]["student_id"] == "20230002"
+
+
+def test_list_warnings_exposes_risk_fields_and_filters_by_change_direction(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230001",
+                "term_key": "2024-2",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.52,
+                "base_risk_score": 52.0,
+                "risk_adjustment_score": 5.0,
+                "adjusted_risk_score": 57.0,
+                "risk_level": "较高风险",
+                "risk_delta": 5.0,
+                "risk_change_direction": "rising",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+                "top_risk_factors_json": json.dumps(
+                    [{"feature": "academic_base", "feature_cn": "学业基础表现", "importance": 0.9}],
+                    ensure_ascii=False,
+                ),
+                "top_protective_factors_json": json.dumps(
+                    [{"feature": "class_engagement", "feature_cn": "课堂学习投入", "importance": 0.2}],
+                    ensure_ascii=False,
+                ),
+                "base_risk_explanation": "base",
+                "behavior_adjustment_explanation": "adjust",
+                "risk_change_explanation": "change",
+            },
+            {
+                "student_id": "20230002",
+                "term_key": "2024-2",
+                "student_name": "Alice",
+                "major_name": "软件工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.48,
+                "base_risk_score": 48.0,
+                "risk_adjustment_score": -3.0,
+                "adjusted_risk_score": 45.0,
+                "risk_level": "一般风险",
+                "risk_delta": -2.0,
+                "risk_change_direction": "falling",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+                "top_risk_factors_json": json.dumps([], ensure_ascii=False),
+                "top_protective_factors_json": json.dumps([], ensure_ascii=False),
+                "base_risk_explanation": "base",
+                "behavior_adjustment_explanation": "adjust",
+                "risk_change_explanation": "change",
+            },
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.write_text("", encoding="utf-8")
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    payload = store.list_warnings(term="2024-2", risk_change_direction="rising")
+
+    assert payload["total"] == 1
+    item = payload["items"][0]
+    assert item["base_risk_score"] == 52.0
+    assert item["risk_change_direction"] == "rising"
+    assert item["top_risk_factors"][0]["feature"] == "academic_base"
+    assert item["top_protective_factors"][0]["feature"] == "class_engagement"
+
+
 def test_list_warnings_raises_for_unknown_term(sample_store) -> None:
     with pytest.raises(KeyError, match="2099-1"):
         sample_store.list_warnings(term="2099-1")
+
+
+def test_list_warnings_raises_for_missing_term_key(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230001",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "group_segment": "综合发展优势组",
+                "risk_probability": 0.55,
+                "risk_level": "low",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+            }
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.write_text("", encoding="utf-8")
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    with pytest.raises(ValueError, match="warnings rows must include term_key"):
+        store.list_warnings(term="2023-1")
+
+
+def test_list_warnings_raises_for_missing_group_segment(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230001",
+                "term_key": "2023-1",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "risk_probability": 0.55,
+                "risk_level": "low",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+            }
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.write_text("", encoding="utf-8")
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    with pytest.raises(ValueError, match="warnings rows must include group_segment"):
+        store.list_warnings(term="2023-1")
+
+
+def test_get_groups_accepts_blank_dimension_scores_json(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230009",
+                "term_key": "2023-1",
+                "student_name": "Ian",
+                "major_name": "软件工程",
+                "group_segment": "综合发展优势组",
+                "risk_probability": 0.66,
+                "risk_level": "medium",
+                "dimension_scores_json": "",
+                "top_risk_factors_json": json.dumps([], ensure_ascii=False),
+                "top_protective_factors_json": json.dumps([], ensure_ascii=False),
+                "base_risk_explanation": "base",
+                "behavior_adjustment_explanation": "adjust",
+                "risk_change_explanation": "change",
+            }
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.write_text("", encoding="utf-8")
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    payload = store.get_groups(term="2023-1")
+
+    assert payload["groups"][0]["avg_dimension_scores"] == []
+
+
+def test_get_groups_raises_for_missing_dimension_scores_json(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230010",
+                "term_key": "2023-1",
+                "student_name": "Jade",
+                "major_name": "软件工程",
+                "group_segment": "综合发展优势组",
+                "risk_probability": 0.66,
+                "risk_level": "medium",
+            }
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.write_text("", encoding="utf-8")
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    with pytest.raises(ValueError, match="warnings rows must include dimension_scores_json"):
+        store.get_groups(term="2023-1")
+
+
+@pytest.mark.parametrize("risk_probability", ["nan", "inf", "-inf"])
+def test_list_warnings_rejects_non_finite_risk_probability(
+    risk_probability: str, tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230011",
+                "term_key": "2023-1",
+                "student_name": "Kai",
+                "major_name": "软件工程",
+                "group_segment": "综合发展优势组",
+                "risk_probability": risk_probability,
+                "risk_level": "low",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+            }
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.write_text("", encoding="utf-8")
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    with pytest.raises(ValueError, match="warnings rows must include finite risk_probability"):
+        store.list_warnings(term="2023-1")
+
+
+def test_get_student_report_includes_risk_trend_metadata(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230001",
+                "term_key": "2022-2",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "group_segment": "综合发展优势组",
+                "risk_probability": 0.55,
+                "base_risk_score": 55.0,
+                "risk_adjustment_score": -1.0,
+                "adjusted_risk_score": 54.0,
+                "risk_level": "low",
+                "risk_delta": 0.0,
+                "risk_change_direction": "steady",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+            },
+            {
+                "student_id": "20230001",
+                "term_key": "2023-1",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "group_segment": "综合发展优势组",
+                "risk_probability": 0.81,
+                "base_risk_score": 62.0,
+                "risk_adjustment_score": -2.0,
+                "adjusted_risk_score": 60.0,
+                "risk_level": "medium",
+                "risk_delta": -1.0,
+                "risk_change_direction": "falling",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+            },
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.parent.mkdir(parents=True, exist_ok=True)
+    reports_path.write_text(
+        json.dumps(
+            {
+                "student_id": "20230001",
+                "term_key": "2023-1",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "top_factors": [],
+                "intervention_advice": [],
+                "report_text": "report",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    payload = store.get_student_report(student_id="20230001", term="2023-1")
+
+    assert payload["risk_level"] == "medium"
+    assert payload["risk_delta"] == -1.0
+    assert payload["risk_change_direction"] == "falling"
+    assert [item["term"] for item in payload["trend"]] == ["2022-2", "2023-1"]
+
+
+def test_get_overview_counts_localized_high_risk_levels(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    overview_path = tmp_path / "artifacts" / "model_stubs" / "v1_overview_by_term.json"
+    overview_path.parent.mkdir(parents=True, exist_ok=True)
+    overview_path.write_text(
+        json.dumps(
+            {
+                "student_count": 1,
+                "risk_distribution": {"high": 1, "medium": 0, "low": 0},
+                "group_distribution": {"课堂参与薄弱组": 1},
+                "major_risk_summary": [],
+                "trend_summary": {"terms": [{"term_key": "2024-2"}]},
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230001",
+                "term_key": "2024-2",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.91,
+                "risk_level": "高风险",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+            }
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.write_text("", encoding="utf-8")
+    store = DemoApiStore(
+        overview_path=overview_path,
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-1",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    payload = store.get_overview("2024-2")
+
+    assert payload["major_risk_summary"][0]["high_risk_count"] == 1
+
+
+def test_get_overview_normalizes_localized_risk_distribution(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    overview_path = tmp_path / "artifacts" / "model_stubs" / "v1_overview_by_term.json"
+    overview_path.parent.mkdir(parents=True, exist_ok=True)
+    overview_path.write_text(
+        json.dumps(
+            {
+                "student_count": 4,
+                "risk_distribution": {"high": 0, "medium": 0, "low": 0},
+                "group_distribution": {"课堂参与薄弱组": 4},
+                "major_risk_summary": [],
+                "trend_summary": {"terms": [{"term_key": "2024-2"}]},
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230001",
+                "term_key": "2024-2",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.91,
+                "risk_level": "高风险",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+            },
+            {
+                "student_id": "20230002",
+                "term_key": "2024-2",
+                "student_name": "Alice",
+                "major_name": "软件工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.88,
+                "risk_level": "较高风险",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+            },
+            {
+                "student_id": "20230003",
+                "term_key": "2024-2",
+                "student_name": "Carol",
+                "major_name": "软件工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.55,
+                "risk_level": "一般风险",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+            },
+            {
+                "student_id": "20230004",
+                "term_key": "2024-2",
+                "student_name": "Dora",
+                "major_name": "软件工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.2,
+                "risk_level": "低风险",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+            },
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.write_text("", encoding="utf-8")
+    store = DemoApiStore(
+        overview_path=overview_path,
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-1",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    payload = store.get_overview("2024-2")
+
+    assert payload["risk_distribution"] == {"high": 2, "medium": 1, "low": 1}
+
+
+def test_get_groups_avg_risk_level_scales_probability(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230001",
+                "term_key": "2024-2",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.82,
+                "risk_level": "medium",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+            },
+            {
+                "student_id": "20230002",
+                "term_key": "2024-2",
+                "student_name": "Alice",
+                "major_name": "软件工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.7,
+                "risk_level": "medium",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+            },
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.write_text("", encoding="utf-8")
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+
+    payload = store.get_groups(term="2024-2")
+
+    assert payload["groups"][0]["avg_risk_level"] == "较高风险"
 
 
 def test_missing_default_artifact_resolution_only_uses_current_worktree(tmp_path: Path) -> None:

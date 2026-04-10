@@ -1,11 +1,13 @@
-import { createRouter as createVueRouter, createWebHistory } from 'vue-router'
+﻿import { createRouter as createVueRouter, createWebHistory } from 'vue-router'
 
 import { useAuthStore } from './auth'
-import LoginPage from '@/features/auth/LoginPage.vue'
-import OverviewPage from '@/features/overview/OverviewPage.vue'
-import GroupsPage from '@/features/quadrants/QuadrantsPage.vue'
-import StudentPage from '@/features/students/StudentPage.vue'
-import WarningsPage from '@/features/warnings/WarningsPage.vue'
+const LoginPage = () => import('@/features/auth/LoginPage.vue')
+const DevelopmentPage = () => import('@/features/development/DevelopmentPage.vue')
+const OverviewPage = () => import('@/features/overview/OverviewPage.vue')
+const GroupsPage = () => import('@/features/quadrants/QuadrantsPage.vue')
+const StudentPage = () => import('@/features/students/StudentPage.vue')
+const TrajectoryPage = () => import('@/features/trajectory/TrajectoryPage.vue')
+const WarningsPage = () => import('@/features/warnings/WarningsPage.vue')
 
 export function createRouter() {
   const router = createVueRouter({
@@ -14,10 +16,15 @@ export function createRouter() {
       { path: '/', redirect: '/overview' },
       { path: '/login', component: LoginPage },
       { path: '/overview', component: OverviewPage, meta: { requiresAuth: true } },
-      { path: '/groups', component: GroupsPage, meta: { requiresAuth: true } },
-      { path: '/quadrants', redirect: '/groups' },
       { path: '/warnings', component: WarningsPage, meta: { requiresAuth: true } },
+      { path: '/trajectory', component: TrajectoryPage, meta: { requiresAuth: true } },
+      { path: '/profiles', component: GroupsPage, meta: { requiresAuth: true } },
+      { path: '/development', component: DevelopmentPage, meta: { requiresAuth: true } },
       { path: '/students/:studentId', component: StudentPage, meta: { requiresAuth: true } },
+      { path: '/risk-overview', redirect: '/overview' },
+      { path: '/risk', redirect: '/warnings' },
+      { path: '/groups', redirect: '/profiles' },
+      { path: '/quadrants', redirect: '/profiles' },
       { path: '/:pathMatch(.*)*', redirect: '/overview' },
     ],
   })

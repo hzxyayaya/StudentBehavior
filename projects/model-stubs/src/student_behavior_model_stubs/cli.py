@@ -11,8 +11,10 @@ from student_behavior_model_stubs.build_outputs import build_student_reports
 from student_behavior_model_stubs.build_outputs import build_student_results
 from student_behavior_model_stubs.config import DefaultPaths
 from student_behavior_model_stubs.config import build_default_paths
+from student_behavior_model_stubs.evaluate_risk_model import evaluate_risk_model
 from student_behavior_model_stubs.io import read_features
 from student_behavior_model_stubs.reporting import build_warnings_from_features
+from student_behavior_model_stubs.train_risk_model import train_risk_model
 
 
 def resolve_checkout_root() -> Path:
@@ -96,6 +98,15 @@ def main(argv: list[str] | None = None) -> int:
     build_parser.add_argument("features_csv", type=Path)
     build_parser.add_argument("--output-dir", type=Path)
 
+    train_parser = subparsers.add_parser("train-risk-model")
+    train_parser.add_argument("features_csv", type=Path)
+    train_parser.add_argument("--output-dir", type=Path)
+
+    evaluate_parser = subparsers.add_parser("evaluate-risk-model")
+    evaluate_parser.add_argument("features_csv", type=Path)
+    evaluate_parser.add_argument("model_artifact", type=Path)
+    evaluate_parser.add_argument("--output-dir", type=Path)
+
     args = parser.parse_args(argv)
     if args.command == "build":
         summary = run_build(args.features_csv, args.output_dir)
@@ -107,5 +118,33 @@ def main(argv: list[str] | None = None) -> int:
         print(f"overview_json={summary['overview_json']}")
         print(f"model_summary_json={summary['model_summary_json']}")
         print(f"warnings_json={summary['warnings_json']}")
+        return 0
+    if args.command == "train-risk-model":
+        summary = train_risk_model(args.features_csv, args.output_dir)
+        print(f"split_strategy={summary['split_strategy']}")
+        print(f"feature_count={summary['feature_count']}")
+        print(f"train_sample_count={summary['train_sample_count']}")
+        print(f"valid_sample_count={summary['valid_sample_count']}")
+        print(f"test_sample_count={summary['test_sample_count']}")
+        print(f"model_path={summary['model_path']}")
+        print(f"metrics_path={summary['metrics_path']}")
+        print(f"feature_importance_path={summary['feature_importance_path']}")
+        print(f"training_config_path={summary['training_config_path']}")
+        return 0
+    if args.command == "evaluate-risk-model":
+        summary = evaluate_risk_model(args.features_csv, args.model_artifact, args.output_dir)
+        print(f"sample_count={summary['sample_count']}")
+        print(f"positive_sample_count={summary['positive_sample_count']}")
+        print(f"negative_sample_count={summary['negative_sample_count']}")
+        print(f"auc={summary['auc']}")
+        print(f"accuracy={summary['accuracy']}")
+        print(f"precision={summary['precision']}")
+        print(f"recall={summary['recall']}")
+        print(f"f1={summary['f1']}")
+        print(f"trained_at={summary['trained_at']}")
+        print(f"evaluated_at={summary['evaluated_at']}")
+        print(f"model_path={summary['model_path']}")
+        print(f"metrics_path={summary['metrics_path']}")
+        print(f"feature_importance_path={summary['feature_importance_path']}")
         return 0
     return 1

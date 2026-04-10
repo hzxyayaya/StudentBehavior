@@ -46,6 +46,72 @@ def test_demo_login_returns_fixed_demo_session() -> None:
     assert response.json()["data"]["session_token"] == "demo-token"
 
 
+def test_scalar_docs_page_is_available(client) -> None:
+    response = client.get("/scalar")
+
+    assert response.status_code == 200
+    assert "Scalar" in response.text
+    assert "/openapi.json" in response.text
+
+
+def test_openapi_exposes_route_and_schema_descriptions(client) -> None:
+    response = client.get("/openapi.json")
+
+    assert response.status_code == 200
+    payload = response.json()
+    trajectory_operation = payload["paths"]["/api/analytics/trajectory"]["get"]
+    assert trajectory_operation["summary"] == "获取学业轨迹演化与关键行为分析"
+    assert "学期风险轨迹" in trajectory_operation["description"]
+
+    login_schema = payload["components"]["schemas"]["DemoLoginRequest"]
+    assert login_schema["properties"]["username"]["description"] == "演示登录用户名"
+    assert login_schema["properties"]["role"]["description"] == "演示账号角色"
+
+
+def test_openapi_exposes_tags_and_examples(client) -> None:
+    response = client.get("/openapi.json")
+
+    assert response.status_code == 200
+    payload = response.json()
+    tag_names = {tag["name"] for tag in payload["tags"]}
+    assert {"认证", "总览分析", "画像分层", "轨迹分析", "发展分析", "模型说明", "学生画像", "学生报告", "风险预警"} <= tag_names
+
+    warnings_operation = payload["paths"]["/api/warnings"]["get"]
+    assert warnings_operation["tags"] == ["风险预警"]
+    term_parameter = next(parameter for parameter in warnings_operation["parameters"] if parameter["name"] == "term")
+    assert term_parameter["schema"]["examples"] == ["2024-2"]
+
+    login_schema = payload["components"]["schemas"]["DemoLoginRequest"]
+    assert login_schema["example"] == {
+        "username": "demo_admin",
+        "password": "demo_only",
+        "role": "manager",
+    }
+
+
+def test_openapi_exposes_response_examples(client) -> None:
+    response = client.get("/openapi.json")
+
+    assert response.status_code == 200
+    payload = response.json()
+
+    login_examples = payload["paths"]["/api/auth/demo-login"]["post"]["responses"]["200"]["content"]["application/json"][
+        "example"
+    ]
+    assert login_examples["data"]["session_token"] == "demo-token"
+
+    trajectory_examples = payload["paths"]["/api/analytics/trajectory"]["get"]["responses"]["200"]["content"][
+        "application/json"
+    ]["example"]
+    assert trajectory_examples["data"]["term"] == "2024-2"
+    assert trajectory_examples["data"]["risk_trend_summary"][0]["term"] == "2024-1"
+
+    warning_not_found = payload["paths"]["/api/warnings"]["get"]["responses"]["404"]["content"]["application/json"][
+        "example"
+    ]
+    assert warning_not_found["message"] == "term not found"
+
+
 def test_get_overview_returns_404_for_unknown_term(client) -> None:
     response = client.get("/api/analytics/overview", params={"term": "2099-1"})
     assert response.status_code == 404
@@ -54,6 +120,133 @@ def test_get_overview_returns_404_for_unknown_term(client) -> None:
     assert payload["message"] == "term not found"
     assert payload["data"] == {}
     assert payload["meta"]["term"] == "2099-1"
+
+
+def test_get_trajectory_analysis_returns_envelope(client) -> None:
+    response = client.get("/api/analytics/trajectory", params={"term": "2023-1"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["code"] == 200
+    assert payload["meta"]["term"] == "2023-1"
+    assert payload["data"]["term"] == "2023-1"
+    assert "student_samples" in payload["data"]
+
+
+def test_get_development_analysis_returns_envelope(client) -> None:
+    response = client.get("/api/analytics/development", params={"term": "2023-1"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["code"] == 200
+    assert payload["meta"]["term"] == "2023-1"
+    assert payload["data"]["term"] == "2023-1"
+    assert payload["data"]["disclaimer"] == "去向真值暂未接入"
+
+
+@pytest.mark.parametrize(
+    ("path", "params", "expected_keys"),
+    [
+        (
+            "/api/results/individual-profile",
+            {"term": "2023-1", "student_id": "20230001"},
+            {"result_key", "term", "student_id", "student_name", "dimension_scores", "trend"},
+        ),
+        (
+            "/api/results/group-profile",
+            {"term": "2023-1"},
+            {"result_key", "term", "groups"},
+        ),
+        (
+            "/api/results/behavior-patterns",
+            {"term": "2023-1"},
+            {"result_key", "term", "group_distribution", "group_patterns"},
+        ),
+        (
+            "/api/results/risk-probability",
+            {"term": "2023-1"},
+            {"result_key", "term", "risk_distribution", "risk_band_distribution", "student_count"},
+        ),
+        (
+            "/api/results/risk-warning-level",
+            {"term": "2023-1"},
+            {"result_key", "term", "warning_counts", "warning_items"},
+        ),
+        (
+            "/api/results/key-factors",
+            {"term": "2023-1"},
+            {"result_key", "term", "risk_factor_summary", "top_warning_factors"},
+        ),
+        (
+            "/api/results/intervention-advice",
+            {"term": "2023-1", "student_id": "20230001"},
+            {"result_key", "term", "student_id", "intervention_advice", "report_text"},
+        ),
+        (
+            "/api/results/term-trend",
+            {"term": "2023-1"},
+            {"result_key", "term", "risk_trend_summary"},
+        ),
+        (
+            "/api/results/major-comparison",
+            {"term": "2023-1"},
+            {"result_key", "term", "major_comparison"},
+        ),
+        (
+            "/api/results/model-summary",
+            {"term": "2023-1"},
+            {"result_key", "term", "cluster_method", "risk_model", "auc"},
+        ),
+    ],
+)
+def test_result_endpoints_return_independent_output_views(
+    client,
+    path: str,
+    params: dict[str, str],
+    expected_keys: set[str],
+) -> None:
+    response = client.get(path, params=params)
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["code"] == 200
+    assert expected_keys <= set(payload["data"])
+
+
+def test_openapi_exposes_result_output_routes(client) -> None:
+    response = client.get("/openapi.json")
+
+    assert response.status_code == 200
+    payload = response.json()
+    tag_names = {tag["name"] for tag in payload["tags"]}
+    assert "结果输出" in tag_names
+
+    result_operation = payload["paths"]["/api/results/behavior-patterns"]["get"]
+    assert result_operation["tags"] == ["结果输出"]
+    assert result_operation["summary"] == "获取四类行为模式识别结果"
+
+
+def test_result_group_profile_returns_500_for_internal_key_error(monkeypatch, sample_artifacts_dir: Path) -> None:
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=sample_artifacts_dir / "v1_student_results.csv",
+        repo_root=sample_artifacts_dir.parent.parent,
+    )
+
+    def broken_group_profile(*, term: str) -> dict:
+        raise KeyError("top_factors")
+
+    monkeypatch.setattr(store, "get_result_group_profile", broken_group_profile)
+    monkeypatch.setattr(main_module, "get_store", lambda: store)
+    client = TestClient(app)
+
+    response = client.get("/api/results/group-profile", params={"term": "2023-1"})
+
+    assert response.status_code == 500
+    payload = response.json()
+    assert payload["message"] == "artifacts unavailable"
 
 
 @pytest.mark.parametrize(
@@ -236,12 +429,16 @@ def test_get_overview_returns_term_specific_fallback_payload(
             "major_name": "电子信息工程",
             "student_count": 1,
             "high_risk_count": 1,
+            "elevated_risk_count": 1,
+            "elevated_risk_ratio": 1.0,
             "average_risk_probability": 0.91,
         },
         {
             "major_name": "软件工程",
             "student_count": 2,
             "high_risk_count": 0,
+            "elevated_risk_count": 0,
+            "elevated_risk_ratio": 0.0,
             "average_risk_probability": 0.42,
         },
     ]
@@ -258,6 +455,15 @@ def test_get_overview_returns_term_specific_fallback_payload(
             "score_count": 3,
         }
     ]
+
+
+def test_get_overview_exposes_risk_band_distribution_and_factor_summary(client) -> None:
+    response = client.get("/api/analytics/overview", params={"term": "2024-2"})
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["code"] == 200
+    assert "risk_band_distribution" in payload["data"]
+    assert "risk_factor_summary" in payload["data"]
 
 
 def test_api_returns_500_when_artifacts_missing(app_without_artifacts) -> None:
@@ -408,6 +614,17 @@ def test_get_groups_returns_500_envelope_for_invalid_report_top_factors_item_sch
     assert payload["meta"]["term"] == "2023-1"
 
 
+def test_get_groups_exposes_risk_fields(client) -> None:
+    response = client.get("/api/analytics/groups", params={"term": "2023-1"})
+    assert response.status_code == 200
+    payload = response.json()
+    group = payload["data"]["groups"][0]
+    assert "avg_risk_score" in group
+    assert "avg_risk_level" in group
+    assert "risk_amplifiers" in group
+    assert "protective_factors" in group
+
+
 def test_get_models_summary_returns_envelope_payload(client) -> None:
     response = client.get("/api/models/summary", params={"term": "2024-2"})
     assert response.status_code == 200
@@ -416,6 +633,174 @@ def test_get_models_summary_returns_envelope_payload(client) -> None:
     assert payload["data"]["cluster_method"] == "stub-eight-dimension-group-rules"
     assert payload["data"]["risk_model"] == "stub-eight-dimension-risk-rules"
     assert payload["meta"]["term"] == "2024-2"
+
+
+def test_get_models_summary_preserves_legacy_stub_shape(client) -> None:
+    response = client.get("/api/models/summary", params={"term": "2024-2"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["data"] == {
+        "cluster_method": "stub-eight-dimension-group-rules",
+        "risk_model": "stub-eight-dimension-risk-rules",
+        "target_label": "学期级八维学业风险",
+        "auc": 0.91,
+        "updated_at": "2024-09-01T00:00:00Z",
+    }
+
+
+def test_get_models_summary_exposes_trained_metrics_when_present(
+    monkeypatch, tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    trained_summary_path = tmp_path / "artifacts" / "model_stubs" / "v1_model_summary.json"
+    trained_summary_path.parent.mkdir(parents=True, exist_ok=True)
+    trained_summary_path.write_text(
+        json.dumps(
+            {
+                "cluster_method": "stub-eight-dimension-group-rules",
+                "risk_model": "trained-academic-risk-model",
+                "target_label": "学期级八维学业风险",
+                "auc": 0.9342,
+                "updated_at": "2026-04-09T09:00:00Z",
+                "source": "trained",
+                "accuracy": 0.88,
+                "precision": 0.81,
+                "recall": 0.79,
+                "f1": 0.8,
+                "trained_at": "2026-04-08T18:15:00Z",
+                "evaluated_at": "2026-04-09T09:00:00Z",
+                "train_sample_count": 120,
+                "valid_sample_count": 30,
+                "test_sample_count": 50,
+                "feature_count": 64,
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=trained_summary_path,
+        overview_term="2024-2",
+        warnings_path=sample_artifacts_dir / "v1_student_results.csv",
+        repo_root=sample_artifacts_dir.parent.parent,
+    )
+    monkeypatch.setattr(main_module, "get_store", lambda: store)
+    client = TestClient(app)
+
+    response = client.get("/api/models/summary", params={"term": "2024-2"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["data"]["cluster_method"] == "stub-eight-dimension-group-rules"
+    assert payload["data"]["risk_model"] == "trained-academic-risk-model"
+    assert payload["data"]["source"] == "trained"
+    assert payload["data"]["accuracy"] == 0.88
+    assert payload["data"]["precision"] == 0.81
+    assert payload["data"]["recall"] == 0.79
+    assert payload["data"]["f1"] == 0.8
+    assert payload["data"]["trained_at"] == "2026-04-08T18:15:00Z"
+    assert payload["data"]["evaluated_at"] == "2026-04-09T09:00:00Z"
+    assert payload["data"]["train_sample_count"] == 120
+
+
+def test_get_result_model_summary_exposes_trained_metrics_when_present(
+    monkeypatch, tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    trained_summary_path = tmp_path / "artifacts" / "model_stubs" / "v1_model_summary.json"
+    trained_summary_path.parent.mkdir(parents=True, exist_ok=True)
+    trained_summary_path.write_text(
+        json.dumps(
+            {
+                "cluster_method": "stub-eight-dimension-group-rules",
+                "risk_model": "trained-academic-risk-model",
+                "target_label": "学期级八维学业风险",
+                "auc": 0.9342,
+                "updated_at": "2026-04-09T09:00:00Z",
+                "source": "trained",
+                "accuracy": 0.88,
+                "precision": 0.81,
+                "recall": 0.79,
+                "f1": 0.8,
+                "trained_at": "2026-04-08T18:15:00Z",
+                "evaluated_at": "2026-04-09T09:00:00Z",
+                "train_sample_count": 120,
+                "valid_sample_count": 30,
+                "test_sample_count": 50,
+                "feature_count": 64,
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=trained_summary_path,
+        overview_term="2024-2",
+        warnings_path=sample_artifacts_dir / "v1_student_results.csv",
+        repo_root=sample_artifacts_dir.parent.parent,
+    )
+    monkeypatch.setattr(main_module, "get_store", lambda: store)
+    client = TestClient(app)
+
+    response = client.get("/api/results/model-summary", params={"term": "2024-2"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["data"]["result_key"] == "model_summary"
+    assert payload["data"]["risk_model"] == "trained-academic-risk-model"
+    assert payload["data"]["source"] == "trained"
+    assert payload["data"]["accuracy"] == 0.88
+    assert payload["data"]["precision"] == 0.81
+    assert payload["data"]["recall"] == 0.79
+    assert payload["data"]["f1"] == 0.8
+    assert payload["data"]["train_sample_count"] == 120
+    assert payload["data"]["valid_sample_count"] == 30
+    assert payload["data"]["test_sample_count"] == 50
+    assert payload["data"]["valid_sample_count"] == 30
+    assert payload["data"]["test_sample_count"] == 50
+    assert payload["data"]["feature_count"] == 64
+    assert payload["meta"]["term"] == "2024-2"
+
+
+def test_get_result_model_summary_preserves_reserved_api_fields(
+    monkeypatch, tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    trained_summary_path = tmp_path / "artifacts" / "model_stubs" / "v1_model_summary.json"
+    trained_summary_path.parent.mkdir(parents=True, exist_ok=True)
+    trained_summary_path.write_text(
+        json.dumps(
+            {
+                "cluster_method": "stub-eight-dimension-group-rules",
+                "risk_model": "trained-academic-risk-model",
+                "target_label": "学期级八维学业风险",
+                "auc": 0.9342,
+                "updated_at": "2026-04-09T09:00:00Z",
+                "source": "trained",
+                "term": "artifact-term",
+                "result_key": "artifact-result-key",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=trained_summary_path,
+        overview_term="2024-2",
+        warnings_path=sample_artifacts_dir / "v1_student_results.csv",
+        repo_root=sample_artifacts_dir.parent.parent,
+    )
+    monkeypatch.setattr(main_module, "get_store", lambda: store)
+    client = TestClient(app)
+
+    response = client.get("/api/results/model-summary", params={"term": "2024-2"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["data"]["result_key"] == "model_summary"
+    assert payload["data"]["term"] == "2024-2"
+    assert payload["data"]["risk_model"] == "trained-academic-risk-model"
 
 
 def test_get_warnings_rejects_invalid_page(client) -> None:
@@ -444,6 +829,20 @@ def test_get_warnings_returns_404_for_unknown_term(client) -> None:
     payload = response.json()
     assert payload["code"] == 404
     assert payload["message"] == "term not found"
+
+
+def test_get_warnings_exposes_richer_warning_fields(client) -> None:
+    response = client.get("/api/warnings", params={"term": "2023-1"})
+    assert response.status_code == 200
+    payload = response.json()
+    item = payload["data"]["items"][0]
+    assert "base_risk_score" in item
+    assert "risk_adjustment_score" in item
+    assert "adjusted_risk_score" in item
+    assert "risk_delta" in item
+    assert "risk_change_direction" in item
+    assert "top_risk_factors" in item
+    assert "top_protective_factors" in item
 
 
 def test_get_student_profile_returns_404_for_unknown_student(client) -> None:
@@ -501,9 +900,137 @@ def test_get_student_profile_returns_calibrated_dimension_payload(
     assert first_dimension == calibrated_dimension_scores[0]
 
 
+def test_get_student_profile_includes_risk_metadata(client) -> None:
+    response = client.get("/api/students/20230001/profile", params={"term": "2023-1"})
+    assert response.status_code == 200
+    payload = response.json()
+    assert "base_risk_score" in payload["data"]
+    assert "risk_change_direction" in payload["data"]
+    assert "base_risk_explanation" in payload["data"]
+    assert "behavior_adjustment_explanation" in payload["data"]
+    assert "risk_change_explanation" in payload["data"]
+
+
 def test_get_student_report_returns_404_for_unknown_student(client) -> None:
     response = client.get("/api/students/404/report", params={"term": "2023-1"})
     assert response.status_code == 404
+
+
+def test_get_student_profile_accepts_blank_dimension_scores_json(
+    monkeypatch, tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230012",
+                "term_key": "2023-1",
+                "student_name": "Luna",
+                "major_name": "软件工程",
+                "group_segment": "综合发展优势组",
+                "risk_probability": 0.55,
+                "risk_level": "low",
+                "dimension_scores_json": "",
+                "top_risk_factors_json": json.dumps([], ensure_ascii=False),
+                "top_protective_factors_json": json.dumps([], ensure_ascii=False),
+                "base_risk_explanation": "base",
+                "behavior_adjustment_explanation": "adjust",
+                "risk_change_explanation": "change",
+            }
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.write_text("", encoding="utf-8")
+
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+    monkeypatch.setattr(main_module, "get_store", lambda: store)
+    client = TestClient(app)
+
+    response = client.get("/api/students/20230012/profile", params={"term": "2023-1"})
+
+    assert response.status_code == 200
+    payload = response.json()["data"]
+    assert payload["dimension_scores"] == []
+    assert payload["trend"][0]["dimension_scores"] == []
+
+
+def test_get_student_report_includes_risk_explanations(client) -> None:
+    response = client.get("/api/students/20230001/report", params={"term": "2023-1"})
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["data"]["base_risk_explanation"] == "base risk explanation"
+    assert payload["data"]["behavior_adjustment_explanation"] == "behavior adjustment explanation"
+    assert payload["data"]["risk_change_explanation"] == "risk change explanation"
+    assert "intervention_plan" in payload["data"]
+    assert "risk_level" in payload["data"]
+    assert "risk_delta" in payload["data"]
+    assert "risk_change_direction" in payload["data"]
+    assert "trend" in payload["data"]
+
+
+def test_get_student_report_falls_back_to_warning_explanations(
+    monkeypatch, tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    warnings_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_results.csv"
+    warnings_path.parent.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(
+        [
+            {
+                "student_id": "20230001",
+                "term_key": "2023-1",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "group_segment": "综合发展优势组",
+                "risk_probability": 0.81,
+                "risk_level": "medium",
+                "base_risk_explanation": "warning base",
+                "behavior_adjustment_explanation": "warning adjust",
+                "risk_change_explanation": "warning change",
+                "dimension_scores_json": json.dumps([], ensure_ascii=False),
+            }
+        ]
+    ).to_csv(warnings_path, index=False, encoding="utf-8-sig")
+    reports_path = tmp_path / "artifacts" / "model_stubs" / "v1_student_reports.jsonl"
+    reports_path.parent.mkdir(parents=True, exist_ok=True)
+    reports_path.write_text(
+        json.dumps(
+            {
+                "student_id": "20230001",
+                "term_key": "2023-1",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "top_factors": [],
+                "intervention_advice": [],
+                "report_text": "report",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        overview_term="2024-2",
+        warnings_path=warnings_path,
+        repo_root=tmp_path,
+    )
+    monkeypatch.setattr(main_module, "get_store", lambda: store)
+    client = TestClient(app)
+
+    response = client.get("/api/students/20230001/report", params={"term": "2023-1"})
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["data"]["base_risk_explanation"] == "warning base"
+    assert payload["data"]["behavior_adjustment_explanation"] == "warning adjust"
+    assert payload["data"]["risk_change_explanation"] == "warning change"
 
 
 def test_missing_artifacts_app_starts_and_fails_on_request(monkeypatch) -> None:

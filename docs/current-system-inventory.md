@@ -1,94 +1,114 @@
 # Current System Inventory
 
-Last Updated: 2026-03-20
+Last Updated: 2026-04-04
 
-## 代码资产
+## 当前工作树
 
-### 前端代码
+- `C:\Users\Orion\Desktop\program\StudentBehavior\.worktrees\academic-risk-warning`
 
-- 路径: `student_behavior_frontend`
-- 主要页面:
-  - `src/views/LoginView.vue`
-  - `src/views/DashboardView.vue`
-  - `src/views/WarningsView.vue`
-  - `src/views/StudentProfileView.vue`
-  - `src/views/SettingsView.vue`
-- 主要业务组件:
-  - 风险学生表格
-  - 学生信息卡
-  - 原始特征表
-  - AI 报告抽屉
-  - 模型训练面板
-- 主要状态管理:
-  - `auth`
-  - `app`
-  - `dashboard`
-  - `warning`
-  - `student`
+## 当前主项目
 
-### 后端代码
+### 1. `projects/analytics-db`
 
-- 路径: `student_behavior_ai_server`
-- 主要 API 域:
-  - 认证
-  - 学生
-  - 预警
-  - 分析
-  - 报告
-  - 模型
-  - 特征计算
-- 主要服务:
-  - 特征工程
-  - 机器学习服务
-  - LLM 报告服务
+职责:
 
-## 数据资产
+- 从 Excel 源表构建学生-学期粒度特征
+- 做学号、学期和字段标准化
+- 产出 `v1_semester_features.csv`
 
-数据目录中已识别的主题包括:
+关键入口:
 
-- 学生基本信息
-- 学生成绩
-- 选课信息
-- 考勤汇总
-- 课堂任务参与
-- 作业提交记录
-- 考试提交记录
-- 线上学习综合表现
-- 门禁数据
-- 上网统计
-- 图书馆打卡记录
-- 体育课与体测数据
-- 跑步打卡与日常锻炼
-- 奖学金、竞赛、社团、四六级、毕业去向等补充信息
+- `src/student_behavior_analytics_db/build_demo_features_from_excels.py`
+- `src/student_behavior_analytics_db/build_student_term_features.py`
 
-结论:
+### 2. `projects/model-stubs`
 
-- 数据源广，适合继续做学生行为画像
-- 但新版未必需要一次性继承所有源
+职责:
 
-## 文档资产
+- 基于学期特征构建 8 维分数
+- 计算学业风险概率、风险等级和变化方向
+- 生成学生结果、报告、总览和预警产物
 
-当前文档可按用途粗分为:
+关键入口:
 
-- 业务与架构说明
-- 前端蓝图与组件设计
-- 后端接口说明
-- 评审与修复记录
-- 工作流 prompts 与模板
+- `src/student_behavior_model_stubs/build_outputs.py`
+- `src/student_behavior_model_stubs/scoring.py`
+- `src/student_behavior_model_stubs/templates.py`
 
-## 当前可提取的稳定内容
+### 3. `projects/demo-api`
 
-这些内容可以优先继承到新版:
+职责:
 
-- 项目主题: 学生行为分析与风险预警
-- 主体模块: 仪表盘、预警列表、学生画像、模型训练、AI 分析报告
-- 技术分层: 前端展示层、后端服务层、数据与模型层
-- 典型能力: 聚类、风险预测、SHAP 归因、LLM 解释
+- 读取 `artifacts/model_stubs` 产物
+- 聚合成总览、群体、轨迹、发展、学生画像、学生报告、预警等接口
+- 提供 OpenAPI 和 Scalar 文档
 
-## 当前不稳定或待确认内容
+关键入口:
 
-- 前端哪些页面已真实接后端，哪些仍是 mock
-- 后端 API 与说明书是否完全一致
-- 模型训练链路是否能在当前环境复现
-- 数据清洗与特征工程脚本是否完整可回放
-- 现有文档之间是否存在互相冲突的表述
+- `src/student_behavior_demo_api/main.py`
+- `src/student_behavior_demo_api/services.py`
+- `src/student_behavior_demo_api/loaders.py`
+
+### 4. `projects/demo-web`
+
+职责:
+
+- 按四类分析任务组织前端页面
+- 调用 `demo-api` 展示风险、轨迹、画像、发展分析和学生详情
+
+关键入口:
+
+- `src/app/router.ts`
+- `src/lib/api.ts`
+- `src/components/layout/AppShell.vue`
+
+## 当前前端任务页
+
+- `/risk`
+- `/trajectory`
+- `/profiles`
+- `/development`
+- `/students/:studentId`
+
+## 当前后端接口
+
+- `POST /api/auth/demo-login`
+- `GET /api/analytics/overview`
+- `GET /api/analytics/groups`
+- `GET /api/analytics/trajectory`
+- `GET /api/analytics/development`
+- `GET /api/models/summary`
+- `GET /api/students/{student_id}/profile`
+- `GET /api/students/{student_id}/report`
+- `GET /api/warnings`
+- `GET /scalar`
+- `GET /openapi.json`
+
+## 当前核心产物
+
+### 学期特征产物
+
+- `artifacts/semester_features/v1_semester_features.csv`
+
+### 规则结果产物
+
+- `artifacts/model_stubs/v1_student_results.csv`
+- `artifacts/model_stubs/v1_student_reports.jsonl`
+- `artifacts/model_stubs/v1_overview_by_term.json`
+- `artifacts/model_stubs/v1_model_summary.json`
+- `artifacts/model_stubs/v1_warnings.json`
+
+## 当前稳定主链路
+
+1. Excel 源表进入 `analytics-db`
+2. 构建学生-学期特征表
+3. 特征表进入 `model-stubs`
+4. 生成风险、画像、报告和总览产物
+5. `demo-api` 读取产物并包装接口
+6. `demo-web` 消费接口并展示四类任务
+
+## 当前系统基线文档
+
+详见:
+
+- `docs/architecture-baseline.md`

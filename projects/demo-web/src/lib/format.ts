@@ -13,6 +13,10 @@ export function formatRiskLevel(level: RiskLevel) {
     high: '高风险',
     medium: '中风险',
     low: '低风险',
+    高风险: '高风险',
+    较高风险: '较高风险',
+    一般风险: '一般风险',
+    低风险: '低风险',
   }[level]
 }
 

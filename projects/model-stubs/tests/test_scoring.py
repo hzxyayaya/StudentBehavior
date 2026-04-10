@@ -5,9 +5,16 @@ import pytest
 
 import student_behavior_model_stubs.scoring as scoring_module
 from student_behavior_model_stubs.scoring import build_dimension_scores
+from student_behavior_model_stubs.scoring import build_risk_calibration
 from student_behavior_model_stubs.scoring import compute_group_segment
+from student_behavior_model_stubs.scoring import compute_adjusted_risk_score
+from student_behavior_model_stubs.scoring import compute_base_risk_score
+from student_behavior_model_stubs.scoring import compute_risk_adjustment_score
+from student_behavior_model_stubs.scoring import compute_risk_change_direction
+from student_behavior_model_stubs.scoring import compute_risk_delta
 from student_behavior_model_stubs.scoring import compute_risk_probability
 from student_behavior_model_stubs.scoring import map_risk_level
+from student_behavior_model_stubs.scoring import map_adjusted_risk_level
 
 
 def _base_row() -> dict[str, object]:
@@ -120,6 +127,209 @@ def test_compute_risk_probability_treats_nan_metrics_as_missing() -> None:
         "failed_course_count": math.nan,
     }
     assert compute_risk_probability(row) == 0.52
+
+
+def test_compute_risk_probability_treats_infinite_metrics_as_missing() -> None:
+    assert compute_risk_probability({"academic_base_score_raw": math.inf}) == 0.52
+    assert compute_risk_probability({"academic_base_score_raw": -math.inf}) == 0.52
+
+
+def test_compute_base_risk_score_rewards_low_gpa_and_many_failed_courses() -> None:
+    row = _base_row() | {
+        "term_gpa": 1.55,
+        "failed_course_count": 5,
+        "borderline_course_count": 4,
+        "failed_course_ratio": 0.3,
+    }
+
+    assert compute_base_risk_score(row) >= 90.0
+
+
+def test_compute_base_risk_score_uses_neutral_gpa_fallback_when_term_gpa_is_missing() -> None:
+    neutral_row = _base_row() | {
+        "term_gpa": None,
+        "academic_base_score_raw": 95.0,
+        "failed_course_count": 2,
+        "borderline_course_count": 1,
+        "failed_course_ratio": 0.1,
+    }
+    neutral_reference = _base_row() | {
+        "term_gpa": None,
+        "academic_base_score_raw": 10.0,
+        "failed_course_count": 2,
+        "borderline_course_count": 1,
+        "failed_course_ratio": 0.1,
+    }
+
+    assert compute_base_risk_score(neutral_row) == compute_base_risk_score(neutral_reference)
+
+
+def test_compute_risk_adjustment_score_moves_with_non_academic_dimensions() -> None:
+    strong_support = build_risk_calibration(
+        _base_row()
+        | {
+            "term_gpa": 2.4,
+            "failed_course_count": 2,
+            "borderline_course_count": 2,
+            "failed_course_ratio": 0.12,
+            "class_engagement_score_raw": 95.0,
+            "online_activeness_score_raw": 94.0,
+            "library_immersion_score_raw": 96.0,
+            "network_habits_score_raw": 95.0,
+            "daily_routine_boundary_score_raw": 93.0,
+            "physical_resilience_score_raw": 97.0,
+            "appraisal_status_alert_score_raw": 94.0,
+        }
+    )
+    weak_support = build_risk_calibration(
+        _base_row()
+        | {
+            "term_gpa": 2.4,
+            "failed_course_count": 2,
+            "borderline_course_count": 2,
+            "failed_course_ratio": 0.12,
+            "class_engagement_score_raw": 12.0,
+            "online_activeness_score_raw": 14.0,
+            "library_immersion_score_raw": 10.0,
+            "network_habits_score_raw": 95.0,
+            "daily_routine_boundary_score_raw": 93.0,
+            "physical_resilience_score_raw": 11.0,
+            "appraisal_status_alert_score_raw": 9.0,
+            "attendance_rate": 0.45,
+            "late_count": 6,
+            "truancy_count": 3,
+            "absence_count": 5,
+            "video_completion_rate": 0.35,
+            "online_test_avg_score": 60.0,
+            "online_work_avg_score": 62.0,
+            "online_exam_avg_score": 58.0,
+            "platform_engagement_score": 40.0,
+            "forum_interaction_total": 0,
+            "library_completed_visit_count": 0,
+            "avg_library_stay_minutes": 20.0,
+            "weekly_library_visit_avg": 0.0,
+            "monthly_online_duration_avg": 80.0,
+            "term_online_duration_sum": 240.0,
+            "online_duration_vs_school_avg_gap": 30.0,
+            "first_daily_access_time_avg": 9.5,
+            "first_daily_access_time_std": 2.5,
+            "late_return_count": 8,
+            "late_return_ratio": 0.3,
+            "daily_access_time_variability": 3.0,
+            "physical_test_avg_score": 60.0,
+            "physical_test_pass_flag": 0,
+            "weekly_running_count_avg": 0.0,
+            "weekly_exercise_count_avg": 0.0,
+            "scholarship_amount_sum": 0.0,
+            "scholarship_level_score": 0.0,
+            "negative_status_alert_flag": 1,
+            "status_change_count": 3,
+        }
+    )
+
+    assert strong_support["risk_adjustment_score"] < 0
+    assert strong_support["adjusted_risk_score"] < strong_support["base_risk_score"]
+    assert weak_support["risk_adjustment_score"] > 0
+    assert weak_support["adjusted_risk_score"] > weak_support["base_risk_score"]
+    assert weak_support["adjusted_risk_score"] > strong_support["adjusted_risk_score"]
+
+
+def test_build_risk_calibration_returns_zero_adjustment_without_non_academic_evidence() -> None:
+    calibration = build_risk_calibration(
+        {
+            "student_id": "20230001",
+            "term_key": "2024-1",
+            "term_gpa": 3.2,
+            "failed_course_count": 0,
+            "borderline_course_count": 0,
+            "failed_course_ratio": 0.0,
+        }
+    )
+
+    assert calibration["risk_adjustment_score"] == 0.0
+    assert calibration["adjusted_risk_score"] == calibration["base_risk_score"]
+
+
+def test_compute_risk_adjustment_score_ignores_non_numeric_source_strings() -> None:
+    assert compute_risk_adjustment_score(
+        {"ZTDM": "present"},
+        [{"dimension_code": "class_engagement", "score": 0.0}],
+    ) == 0.0
+
+
+def test_adjusted_risk_level_maps_to_four_chinese_labels() -> None:
+    assert map_adjusted_risk_level(82.0) == "高风险"
+    assert map_adjusted_risk_level(70.0) == "较高风险"
+    assert map_adjusted_risk_level(55.0) == "一般风险"
+    assert map_adjusted_risk_level(44.0) == "低风险"
+
+
+def test_risk_delta_and_direction_helpers_are_consistent() -> None:
+    assert compute_risk_delta(73.25, 60.0) == 13.25
+    assert compute_risk_change_direction(13.25) == "rising"
+    assert compute_risk_change_direction(-4.0) == "falling"
+    assert compute_risk_change_direction(0.25) == "steady"
+
+
+def test_build_risk_calibration_treats_non_finite_previous_scores_as_missing_history() -> None:
+    calibration = build_risk_calibration(
+        {
+            "student_id": "20230001",
+            "term_key": "2024-1",
+            "term_gpa": 3.2,
+            "failed_course_count": 0,
+            "borderline_course_count": 0,
+            "failed_course_ratio": 0.0,
+            "previous_adjusted_risk_score": math.inf,
+        }
+    )
+
+    assert calibration["risk_delta"] == 0.0
+    assert calibration["risk_change_direction"] == "steady"
+
+
+def test_build_dimension_scores_ignores_non_numeric_source_strings() -> None:
+    score_map = {
+        item["dimension_code"]: item
+        for item in build_dimension_scores(
+            {"student_id": "s1", "term_key": "2024-1", "ZTDM": "present"}
+        )
+    }
+
+    class_engagement = score_map["class_engagement"]
+    assert class_engagement["score"] == 0.0
+    assert class_engagement["metrics"] == []
+    assert "出勤率 0" not in class_engagement["explanation"]
+    assert "迟到次数 0" not in class_engagement["explanation"]
+
+
+def test_build_dimension_scores_does_not_substitute_raw_fields_for_derived_academic_metrics() -> None:
+    score_map = {
+        item["dimension_code"]: item
+        for item in build_dimension_scores(
+            {"student_id": "s1", "term_key": "2024-1", "KCCJ": 59}
+        )
+    }
+
+    academic_base = score_map["academic_base"]
+    assert academic_base["score"] == 0.0
+    assert academic_base["metrics"] == []
+    assert "挂科门数 59" not in academic_base["explanation"]
+    assert "边缘课程数 59" not in academic_base["explanation"]
+    assert "挂科占比 59" not in academic_base["explanation"]
+
+
+def test_build_dimension_scores_rejects_non_finite_metric_inputs() -> None:
+    score_map = {
+        item["dimension_code"]: item
+        for item in build_dimension_scores(
+            {"student_id": "s1", "term_key": "2024-1", "term_gpa": math.inf}
+        )
+    }
+
+    academic_base = score_map["academic_base"]
+    assert all(math.isfinite(float(metric["value"])) for metric in academic_base["metrics"])
+    assert "学期GPA inf" not in academic_base["explanation"]
 
 
 def test_compute_group_segment_returns_readable_group_label() -> None:
@@ -403,22 +613,51 @@ def test_build_dimension_scores_uses_distribution_context_for_hybrid_metrics() -
     assert network_habits["provenance"]["threshold_strategies"] == ["hybrid"]
 
 
-def test_dimension_scores_are_clamped_and_rounded() -> None:
+def test_build_dimension_scores_clamps_and_sanitizes_real_metric_inputs() -> None:
     scores = build_dimension_scores(
         _base_row()
         | {
-            "academic_base_score_raw": 120,
-            "class_engagement_score_raw": -5,
-            "online_activeness_score_raw": 50.555,
-            "library_immersion_score_raw": None,
-            "network_habits_score_raw": math.nan,
-            "daily_routine_boundary_score_raw": 101,
-            "physical_resilience_score_raw": 66.666,
-            "appraisal_status_alert_score_raw": -100,
+            "term_gpa": math.inf,
+            "failed_course_count": 9,
+            "borderline_course_count": 7,
+            "failed_course_ratio": 0.6,
+            "attendance_rate": 1.5,
+            "late_count": -4,
+            "truancy_count": 6,
+            "absence_count": 12,
+            "video_completion_rate": 1.25,
+            "online_test_avg_score": 90.555,
+            "online_work_avg_score": 120.0,
+            "online_exam_avg_score": -5.0,
+            "platform_engagement_score": 99.999,
+            "forum_interaction_total": 999,
+            "library_completed_visit_count": 88,
+            "avg_library_stay_minutes": 200.0,
+            "weekly_library_visit_avg": -2.0,
+            "monthly_online_duration_avg": 0.0,
+            "term_online_duration_sum": 999.0,
+            "online_duration_vs_school_avg_gap": -7.0,
+            "first_daily_access_time_avg": 12.0,
+            "first_daily_access_time_std": -1.0,
+            "late_return_count": 12,
+            "late_return_ratio": 0.9,
+            "daily_access_time_variability": 8.0,
+            "physical_test_avg_score": 100.0,
+            "physical_test_pass_flag": 2,
+            "weekly_running_count_avg": 9.0,
+            "weekly_exercise_count_avg": 11.0,
+            "scholarship_amount_sum": 99999.0,
+            "scholarship_level_score": 9.0,
+            "negative_status_alert_flag": 3,
+            "status_change_count": 10,
         }
     )
 
     assert len(scores) == 8
+    academic_base = next(item for item in scores if item["dimension_code"] == "academic_base")
+    assert all(math.isfinite(float(metric["value"])) for metric in academic_base["metrics"])
+    assert "学期GPA inf" not in academic_base["explanation"]
+    assert academic_base["score"] == round(academic_base["score"], 2)
     for item in scores:
         assert 0.0 <= item["score"] <= 1.0
         assert item["score"] == round(item["score"], 2)
@@ -442,3 +681,25 @@ def test_build_dimension_scores_handles_missing_raw_metrics() -> None:
     assert score_map["图书馆沉浸度"]["metrics"]
     assert score_map["网络作息自律指数"]["metrics"]
     assert score_map["综合荣誉与异动预警"]["metrics"]
+
+
+def test_build_dimension_scores_marks_dimensions_without_metrics_as_unavailable() -> None:
+    scores = build_dimension_scores(
+        _base_row()
+        | {
+            "video_completion_rate": None,
+            "online_test_avg_score": None,
+            "online_work_avg_score": None,
+            "online_exam_avg_score": None,
+            "platform_engagement_score": None,
+            "forum_interaction_total": None,
+        }
+    )
+
+    online = next(item for item in scores if item["dimension_code"] == "online_activeness")
+
+    assert online["metrics"] == []
+    assert online["label"] == "当前学期无有效数据"
+    assert online["explanation"] == "在线学习积极性当前学期无有效源表指标，暂不做该维度判定。"
+    assert online["provenance"]["is_unavailable"] is True
+    assert online["provenance"]["unavailable_reason"] == "no_metrics"
