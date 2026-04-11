@@ -75,14 +75,10 @@
             <span class="table-heading">专业</span>
             <span class="table-heading">群体标签</span>
             <span class="table-heading">风险等级</span>
-            <span class="table-heading">风险详情</span>
-            <span class="table-heading">风险因素</span>
           </div>
 
           <template v-if="query.isLoading.value">
             <div v-for="index in 5" :key="`skeleton-${index}`" class="table-row skeleton-row">
-              <span class="table-cell"><span class="skeleton-block"></span></span>
-              <span class="table-cell"><span class="skeleton-block"></span></span>
               <span class="table-cell"><span class="skeleton-block"></span></span>
               <span class="table-cell"><span class="skeleton-block"></span></span>
               <span class="table-cell"><span class="skeleton-block"></span></span>
@@ -107,16 +103,6 @@
                 {{ formatWarningLevel(item.intervention_priority_level ?? item.risk_level) }}
               </strong>
               <small class="risk-direction">{{ riskChangeText(item.risk_change_direction) }}</small>
-            </span>
-            <span class="table-cell table-cell-detail stack compact" data-label="风险详情">
-              <strong>干预 {{ formatWarningLevel(item.intervention_priority_level ?? item.risk_level) }}</strong>
-              <small>学业 {{ formatWarningLevel(item.academic_risk_level ?? item.risk_level) }}</small>
-              <small>行为 {{ formatWarningLevel(item.behavior_risk_level ?? item.risk_level) }}</small>
-            </span>
-            <span class="table-cell table-cell-factors factor-cell" data-label="风险因素">
-              <small>优先分 {{ formatScore(item.intervention_priority_score ?? item.adjusted_risk_score ?? item.risk_probability * 100) }}</small>
-              <small>风险 {{ factorText(item.top_risk_factors) }}</small>
-              <small>保护 {{ factorText(item.top_protective_factors) }}</small>
             </span>
           </RouterLink>
         </div>
@@ -151,7 +137,7 @@ import EmptyState from '@/components/state/EmptyState.vue'
 import ErrorState from '@/components/state/ErrorState.vue'
 import { getWarnings } from '@/lib/api'
 import { formatApiErrorMessage, formatRisk } from '@/lib/format'
-import type { RiskChangeDirection, RiskLevel, WarningFactor } from '@/lib/types'
+import type { RiskChangeDirection, RiskLevel } from '@/lib/types'
 import {
   buildWarningContextQuery,
   buildWarningQuery,
@@ -310,14 +296,6 @@ function riskChangeText(direction?: RiskChangeDirection) {
   return '未更新'
 }
 
-function formatScore(value: number) {
-  return value.toFixed(1)
-}
-
-function factorText(factors: WarningFactor[]) {
-  const labels = factors.map((item) => item.feature_cn || item.dimension || item.feature).filter(Boolean)
-  return labels.length > 0 ? labels.slice(0, 3).join('、') : '暂无'
-}
 </script>
 
 <style scoped>

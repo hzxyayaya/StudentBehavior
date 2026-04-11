@@ -29,11 +29,6 @@
           </button>
         </div>
 
-        <label v-if="!sidebarCollapsed" class="sidebar-term-picker" aria-label="学期选择">
-          <select class="sidebar-term-select" :value="termStore.term.value" @change="setTerm(($event.target as HTMLSelectElement).value)">
-            <option v-for="item in AVAILABLE_TERMS" :key="item" :value="item">{{ item }}</option>
-          </select>
-        </label>
       </div>
 
       <div class="side-top">
@@ -104,14 +99,14 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 
 import { useAuthStore } from '@/app/auth'
-import { AVAILABLE_TERMS, useTermStore } from '@/app/term'
+import { useTermStore } from '@/app/term'
 import MainParticles from '@/components/layout/MainParticles.vue'
 import NavParticles from '@/components/layout/NavParticles.vue'
 
 const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
-const termStore = useTermStore()
+useTermStore()
 
 const sidebarCollapsed = ref(false)
 const userMenuOpen = ref(false)
@@ -171,10 +166,6 @@ const navItems = [
     ],
   },
 ]
-
-function setTerm(nextTerm: string) {
-  termStore.setTerm(nextTerm)
-}
 
 function toggleSidebar() {
   sidebarCollapsed.value = !sidebarCollapsed.value

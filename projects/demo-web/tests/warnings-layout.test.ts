@@ -151,18 +151,14 @@ describe('warnings page layout hooks', () => {
     expect(firstDataRow).toBeTruthy()
 
     const labeledCells = firstDataRow!.findAll('.table-cell')
-    expect(labeledCells).toHaveLength(7)
+    expect(labeledCells).toHaveLength(5)
     expect(labeledCells.map((cell) => cell.attributes('data-label'))).toEqual([
       '学号',
       '姓名',
       '专业',
       '群体标签',
       '风险等级',
-      '风险详情',
-      '风险因素',
     ])
-    expect(firstDataRow!.find('.table-cell-detail').attributes('data-label')).toBe('风险详情')
-    expect(firstDataRow!.find('.table-cell-factors').attributes('data-label')).toBe('风险因素')
     expect(labeledCells.every((cell) => Boolean(cell.text().trim()))).toBe(true)
   })
 

@@ -53,28 +53,8 @@
             </div>
           </label>
 
-          <label class="field-wrap">
-            <span>学期</span>
-            <div class="field-shell select-shell">
-              <select v-model="term" class="select">
-                <option value="2024-2">2024-2</option>
-                <option value="2024-1">2024-1</option>
-                <option value="2023-2">2023-2</option>
-              </select>
-              <span class="select-caret" aria-hidden="true">
-                <svg viewBox="0 0 24 24" focusable="false">
-                  <path d="m7 10 5 5 5-5" />
-                </svg>
-              </span>
-            </div>
-          </label>
-
           <button class="btn" :disabled="loading" type="button" @click="handleLogin">
             <span>{{ loading ? '登录中...' : '登录系统' }}</span>
-          </button>
-
-          <button class="skip-link" :disabled="loading" type="button" @click="handleSkipLogin">
-            跳过登录，直接进入演示
           </button>
 
           <p v-if="error" class="error-text">{{ error }}</p>
@@ -124,7 +104,6 @@ const termStore = useTermStore()
 
 const username = ref('demo_admin')
 const password = ref('demo_only')
-const term = ref(termStore.term.value)
 const loading = ref(false)
 const error = ref('')
 const showAmbientVisuals = ref(false)
@@ -153,21 +132,13 @@ async function handleLogin() {
   error.value = ''
   try {
     const data = await loginDemo()
-    auth.signIn(data.session_token, username.value, term.value)
-    termStore.setTerm(term.value)
+    auth.signIn(data.session_token, username.value, termStore.term.value)
     await router.push(redirectTarget.value)
   } catch (err) {
     error.value = formatLoginError(err)
   } finally {
     loading.value = false
   }
-}
-
-async function handleSkipLogin() {
-  error.value = ''
-  auth.signIn('local-demo-token', username.value, term.value)
-  termStore.setTerm(term.value)
-  await router.push(redirectTarget.value)
 }
 
 function formatLoginError(err: unknown) {
