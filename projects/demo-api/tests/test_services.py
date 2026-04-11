@@ -390,7 +390,8 @@ def test_get_overview_exposes_risk_band_distribution_and_factor_summary(
 def test_overview_dimension_summary_prefers_available_dimension_details(sample_store: DemoApiStore) -> None:
     warnings_path = Path(sample_store._warnings_path)
     rows = pd.read_csv(warnings_path)
-    rows.loc[rows["term_key"] == "2024-1", "dimension_scores_json"] = json.dumps(
+    rows.loc[:, "term_key"] = "2024-1"
+    rows.loc[:, "dimension_scores_json"] = json.dumps(
         [
             {
                 "dimension": "课堂学习投入",
@@ -823,24 +824,15 @@ def test_result_outputs_expose_destination_analysis_when_available(
 @pytest.mark.parametrize(
     ("term_key", "student_count", "risk_distribution", "group_distribution", "major_risk_summary"),
     [
-        ("2023-2", 0, {"high": 0, "medium": 0, "low": 0}, {}, []),
         (
-            "2024-1",
-            1,
-            {"high": 0, "medium": 0, "low": 1},
-            {"学习投入稳定组": 1},
-                [
-                    {
-                        "major_name": "软件工程",
-                        "student_count": 1,
-                        "high_risk_count": 0,
-                        "elevated_risk_count": 0,
-                        "elevated_risk_ratio": 0.0,
-                        "average_risk_probability": 0.65,
-                    }
-                ],
+            "2023-2",
+            179,
+            {"high": 12, "medium": 64, "low": 103},
+            None,
+            None,
         ),
         ("2024-2", 179, {"high": 12, "medium": 64, "low": 103}, None, None),
+        ("2024-1", 179, {"high": 12, "medium": 64, "low": 103}, None, None),
     ],
 )
 def test_get_overview_accepts_all_real_terms(
@@ -854,15 +846,11 @@ def test_get_overview_accepts_all_real_terms(
     payload = sample_store.get_overview(term_key)
     assert payload["student_count"] == student_count
     assert payload["risk_distribution"] == risk_distribution
+    assert payload["summary_term"] == "all_students_latest_term"
+    assert payload["summary_source"] == "deduped_student_overview"
     if group_distribution is not None:
         assert payload["group_distribution"] == group_distribution
         assert payload["major_risk_summary"] == major_risk_summary
-        assert payload["summary_term"] == term_key
-        assert payload["summary_source"] == "term_fallback"
-        assert payload["summary_unavailable_fields"] == ["trend_summary"]
-        assert payload["trend_summary"] is None
-    else:
-        assert "summary_source" not in payload
 
 
 def test_get_model_summary_returns_stub_summary(sample_store) -> None:
@@ -1991,7 +1979,7 @@ def test_get_overview_replaces_empty_metric_placeholders_with_real_metrics(
     ]
 
 
-def test_get_overview_uses_term_specific_fallback_when_stub_is_multi_term(
+def test_get_overview_uses_deduped_global_summary_when_stub_is_multi_term(
     tmp_path: Path, sample_artifacts_dir: Path
 ) -> None:
     overview_path = tmp_path / "artifacts" / "model_stubs" / "v1_overview_by_term.json"
@@ -2145,43 +2133,27 @@ def test_get_overview_uses_term_specific_fallback_when_stub_is_multi_term(
 
     payload = store.get_overview("2024-1")
 
-    assert payload["student_count"] == 24
-    assert payload["risk_distribution"] == {"high": 2, "medium": 6, "low": 16}
-    assert payload["group_distribution"] == {
-        "综合发展优势组": 1,
-        "课堂参与薄弱组": 2,
-    }
+    assert payload["student_count"] == 12
+    assert payload["risk_distribution"] == {"high": 1, "medium": 4, "low": 7}
+    assert payload["group_distribution"] == {"学习投入稳定组": 12}
     assert payload["major_risk_summary"] == [
         {
             "major_name": "电子信息工程",
-            "student_count": 1,
+            "student_count": 12,
             "high_risk_count": 1,
-            "elevated_risk_count": 1,
-            "elevated_risk_ratio": 1.0,
-            "average_risk_probability": 0.91,
-        },
-        {
-            "major_name": "软件工程",
-            "student_count": 2,
-            "high_risk_count": 0,
-            "elevated_risk_count": 0,
-            "elevated_risk_ratio": 0.0,
-            "average_risk_probability": 0.42,
-        },
+            "average_risk_probability": 0.67,
+        }
     ]
-    assert payload["summary_term"] == "2024-1"
-    assert payload["summary_source"] == "term_fallback"
-    assert payload["summary_unavailable_fields"] == ["trend_summary"]
-    assert payload["trend_summary"] is None
+    assert payload["summary_term"] == "all_students_latest_term"
+    assert payload["summary_source"] == "deduped_student_overview"
+    assert payload["trend_summary"]["terms"][0]["term_key"] == "2024-1"
     assert payload["dimension_summary"] == [
         {
             "feature": "attendance",
             "feature_cn": "课堂学习投入",
-            "dimension": "课堂参与表现",
-            "label": "课堂投入偏弱",
-            "metrics": [{"name": "attendance_rate", "value": 0.63}],
-            "average_score": 0.44,
-            "score_count": 3,
+            "dimension": "课堂学习投入",
+            "average_score": 0.91,
+            "label": "课堂投入稳定",
         }
     ]
 

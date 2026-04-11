@@ -460,14 +460,8 @@ def test_result_group_profile_returns_500_for_internal_key_error(monkeypatch, sa
 @pytest.mark.parametrize(
     ("term", "student_count", "risk_distribution", "group_distribution", "major_risk_summary"),
     [
-        ("2023-2", 0, {"high": 0, "medium": 0, "low": 0}, {}, []),
-        (
-            "2024-1",
-            0,
-            {"high": 0, "medium": 0, "low": 0},
-            {},
-            [],
-        ),
+        ("2023-2", 179, {"high": 12, "medium": 64, "low": 103}, None, None),
+        ("2024-1", 179, {"high": 12, "medium": 64, "low": 103}, None, None),
         ("2024-2", 179, {"high": 12, "medium": 64, "low": 103}, None, None),
     ],
 )
@@ -486,18 +480,14 @@ def test_get_overview_accepts_all_real_terms(
     assert payload["meta"]["term"] == term
     assert payload["data"]["student_count"] == student_count
     assert payload["data"]["risk_distribution"] == risk_distribution
+    assert payload["data"]["summary_term"] == "all_students_latest_term"
+    assert payload["data"]["summary_source"] == "deduped_student_overview"
     if group_distribution is not None:
         assert payload["data"]["group_distribution"] == group_distribution
         assert payload["data"]["major_risk_summary"] == major_risk_summary
-        assert payload["data"]["summary_term"] == term
-        assert payload["data"]["summary_source"] == "term_fallback"
-        assert payload["data"]["summary_unavailable_fields"] == ["trend_summary"]
-        assert payload["data"]["trend_summary"] is None
-    else:
-        assert "summary_source" not in payload["data"]
 
 
-def test_get_overview_returns_term_specific_fallback_payload(
+def test_get_overview_returns_deduped_global_payload(
     monkeypatch, tmp_path: Path, sample_artifacts_dir: Path
 ) -> None:
     overview_path = tmp_path / "artifacts" / "model_stubs" / "v1_overview_by_term.json"
@@ -627,40 +617,26 @@ def test_get_overview_returns_term_specific_fallback_payload(
     assert response.status_code == 200
     payload = response.json()
     assert payload["meta"]["term"] == "2024-1"
-    assert payload["data"]["student_count"] == 24
-    assert payload["data"]["group_distribution"] == {
-        "综合发展优势组": 1,
-        "课堂参与薄弱组": 2,
-    }
+    assert payload["data"]["student_count"] == 12
+    assert payload["data"]["group_distribution"] == {"学习投入稳定组": 12}
     assert payload["data"]["major_risk_summary"] == [
         {
             "major_name": "电子信息工程",
-            "student_count": 1,
+            "student_count": 12,
             "high_risk_count": 1,
-            "elevated_risk_count": 1,
-            "elevated_risk_ratio": 1.0,
-            "average_risk_probability": 0.91,
-        },
-        {
-            "major_name": "软件工程",
-            "student_count": 2,
-            "high_risk_count": 0,
-            "elevated_risk_count": 0,
-            "elevated_risk_ratio": 0.0,
-            "average_risk_probability": 0.42,
-        },
+            "average_risk_probability": 0.67,
+        }
     ]
-    assert payload["data"]["summary_term"] == "2024-1"
-    assert payload["data"]["summary_source"] == "term_fallback"
-    assert payload["data"]["summary_unavailable_fields"] == ["trend_summary"]
-    assert payload["data"]["trend_summary"] is None
+    assert payload["data"]["summary_term"] == "all_students_latest_term"
+    assert payload["data"]["summary_source"] == "deduped_student_overview"
+    assert payload["data"]["trend_summary"]["terms"][0]["term_key"] == "2024-1"
     assert payload["data"]["dimension_summary"] == [
         {
+            "dimension": "课堂参与表现",
+            "score_count": 3,
             "feature": "attendance",
             "feature_cn": "课堂学习投入",
-            "dimension": "课堂参与表现",
             "average_score": 0.44,
-            "score_count": 3,
         }
     ]
 

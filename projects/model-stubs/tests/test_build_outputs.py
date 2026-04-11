@@ -489,6 +489,44 @@ def test_build_overview_by_term_uses_destination_precedence_for_ties() -> None:
     assert list(major_summary["destination_distribution"]) == ["出国出境", "企业就业"]
 
 
+def test_build_overview_by_term_dedupes_students_to_latest_term_for_display_metrics() -> None:
+    student_results = build_student_results(
+        pd.DataFrame(
+            [
+                _feature_row()
+                | {
+                    "student_id": "20230001",
+                    "term_key": "2024-1",
+                    "destination_label": "升学",
+                    "destination_source": "byqx_study",
+                    "failed_course_count": 4,
+                },
+                _feature_row()
+                | {
+                    "student_id": "20230001",
+                    "term_key": "2024-2",
+                    "destination_label": "企业就业",
+                    "destination_source": "byqx_employment",
+                    "failed_course_count": 0,
+                    "academic_base_score_raw": 84.0,
+                },
+                _feature_row()
+                | {
+                    "student_id": "20230002",
+                    "term_key": "2024-1",
+                    "destination_label": "体制内",
+                    "destination_source": "dwxz_public_sector",
+                },
+            ]
+        )
+    )
+    overview = build_overview_by_term(student_results)
+
+    assert overview["student_count"] == 2
+    assert overview["destination_distribution"] == {"企业就业": 1, "体制内": 1}
+    assert overview["major_destination_summary"][0]["destination_distribution"] == {"企业就业": 1, "体制内": 1}
+
+
 def test_build_model_summary_prefers_trained_metrics_when_available(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -578,6 +616,43 @@ def test_build_model_summary_falls_back_to_stub_when_training_resolution_fails(
     replacement: object,
 ) -> None:
     monkeypatch.setattr(build_outputs_module, patch_target, replacement)
+
+    summary = build_model_summary(now=datetime(2024, 1, 2, 3, 4, 5))
+
+    assert summary == {
+        "cluster_method": "stub-eight-dimension-group-rules",
+        "risk_model": "stub-eight-dimension-risk-rules",
+        "target_label": "学期级八维学业风险",
+        "auc": 0.8347,
+        "source": "stub",
+        "updated_at": "2024-01-02T03:04:05",
+    }
+
+
+def test_build_model_summary_falls_back_to_stub_when_trained_metrics_lack_auc(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    registry = build_default_model_registry(tmp_path)
+    registry.metrics_path.parent.mkdir(parents=True, exist_ok=True)
+    registry.metrics_path.write_text(
+        json.dumps(
+            {
+                "model_name": "deterministic-risk-scorecard-v1",
+                "target_label": "risk_label_binary",
+                "train_sample_count": 120,
+                "valid_sample_count": 24,
+                "test_sample_count": 30,
+                "trained_at": "2024-01-01T00:00:00Z",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        build_outputs_module,
+        "build_default_model_registry",
+        lambda repo_root: registry,
+    )
 
     summary = build_model_summary(now=datetime(2024, 1, 2, 3, 4, 5))
 

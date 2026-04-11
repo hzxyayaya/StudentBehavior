@@ -4,7 +4,7 @@
   "target_label": "risk_label_binary",
   "auc": 0.9772,
   "source": "trained",
-  "updated_at": "2026-04-11T01:14:25",
+  "updated_at": "2026-04-11T12:54:01",
   "trained_at": "2026-04-10T16:50:25Z",
   "evaluated_at": "2026-04-10T16:50:42Z",
   "accuracy": 0.7703,

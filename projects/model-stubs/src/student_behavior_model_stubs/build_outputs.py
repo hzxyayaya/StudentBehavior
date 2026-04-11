@@ -295,6 +295,23 @@ def _term_sort_key(term_key: str) -> tuple[int, str]:
     return 10**9, term_key
 
 
+def _dedupe_students_by_latest_term(student_results: pd.DataFrame) -> pd.DataFrame:
+    if student_results.empty or "student_id" not in student_results.columns:
+        return student_results.copy()
+
+    ordered = student_results.copy()
+    ordered["student_id"] = ordered["student_id"].fillna("").astype(str)
+    ordered["term_key"] = ordered["term_key"].fillna("").astype(str)
+    ordered["__term_sort_key"] = ordered["term_key"].map(_term_sort_key)
+    ordered = ordered.sort_values(
+        by=["student_id", "__term_sort_key"],
+        ascending=[True, False],
+        kind="stable",
+    )
+    deduped = ordered.drop_duplicates(subset=["student_id"], keep="first").reset_index(drop=True)
+    return deduped.drop(columns=["__term_sort_key"])
+
+
 def _average_dimension_scores(
     rows: Sequence[object],
 ) -> list[dict[str, object]]:
@@ -387,10 +404,16 @@ def build_overview_by_term(student_results: pd.DataFrame) -> dict[str, object]:
         if "intervention_priority_level" in ordered_results.columns
         else ordered_results["risk_level"]
     )
+    display_results = _dedupe_students_by_latest_term(ordered_results)
+    display_intervention_levels = (
+        display_results["intervention_priority_level"].fillna("").astype(str)
+        if "intervention_priority_level" in display_results.columns
+        else display_results["risk_level"]
+    )
 
     major_risk_summary: list[dict[str, object]] = []
     major_groups = sorted(
-        ordered_results.groupby("major_name", sort=True),
+        display_results.groupby("major_name", sort=True),
         key=lambda item: item[0],
     )
     for major_name, major_frame in major_groups:
@@ -399,7 +422,7 @@ def build_overview_by_term(student_results: pd.DataFrame) -> dict[str, object]:
                 "major_name": major_name,
                 "student_count": int(len(major_frame)),
                 "high_risk_count": int((major_frame["risk_level"] == "高风险").sum()),
-                "average_risk_probability": round(float(major_frame["risk_probability"].mean() / 100.0), 2),
+                "average_risk_probability": round(float(major_frame["risk_probability"].mean()), 2),
             }
         )
 
@@ -414,7 +437,7 @@ def build_overview_by_term(student_results: pd.DataFrame) -> dict[str, object]:
             {
                 "term_key": term_key,
                 "student_count": int(len(term_frame)),
-                "average_risk_probability": round(float(term_frame["risk_probability"].mean() / 100.0), 2),
+                "average_risk_probability": round(float(term_frame["risk_probability"].mean()), 2),
                 "risk_distribution": risk_distribution,
                 "dimension_summary": _average_dimension_scores(term_frame["dimension_scores_json"]),
             }
@@ -423,31 +446,31 @@ def build_overview_by_term(student_results: pd.DataFrame) -> dict[str, object]:
     group_score_summary = {
         str(group_segment): _average_dimension_scores(group_frame["dimension_scores_json"])
         for group_segment, group_frame in sorted(
-            ordered_results.groupby("group_segment", sort=True), key=lambda item: item[0]
+            display_results.groupby("group_segment", sort=True), key=lambda item: item[0]
         )
     }
-    risk_band_distribution = _count_risk_distribution(ordered_results["risk_level"])
+    risk_band_distribution = _count_risk_distribution(display_results["risk_level"])
     risk_trend_summary = {"terms": trend_terms}
-    top_warning_factors = _top_warning_factors(ordered_results)
+    top_warning_factors = _top_warning_factors(display_results)
     intervention_priority_summary = _intervention_priority_summary(
-        ordered_results.assign(risk_level=intervention_levels)
+        display_results.assign(risk_level=display_intervention_levels)
     )
-    destination_distribution = _count_present_distribution(ordered_results["destination_label"])
-    major_destination_summary = _major_destination_summary(ordered_results)
-    group_destination_association = _group_destination_association(ordered_results)
+    destination_distribution = _count_present_distribution(display_results["destination_label"])
+    major_destination_summary = _major_destination_summary(display_results)
+    group_destination_association = _group_destination_association(display_results)
 
     return {
-        "student_count": int(len(ordered_results)),
+        "student_count": int(len(display_results)),
         "risk_distribution": risk_band_distribution,
         "risk_band_distribution": risk_band_distribution,
-        "group_distribution": _count_distribution(ordered_results["group_segment"]),
+        "group_distribution": _count_distribution(display_results["group_segment"]),
         "major_risk_summary": major_risk_summary,
         "destination_distribution": destination_distribution,
         "major_destination_summary": major_destination_summary,
         "group_destination_association": group_destination_association,
         "trend_summary": risk_trend_summary,
         "risk_trend_summary": risk_trend_summary,
-        "dimension_summary": _average_dimension_scores(ordered_results["dimension_scores_json"]),
+        "dimension_summary": _average_dimension_scores(display_results["dimension_scores_json"]),
         "group_score_summary": group_score_summary,
         "risk_factor_summary": top_warning_factors,
         "top_warning_factors": top_warning_factors,
@@ -460,13 +483,19 @@ def build_model_summary(*, now: datetime) -> dict[str, object]:
     if not isinstance(now, datetime):
         raise TypeError("now must be a datetime")
 
-    summary = {
+    trained_fields = _build_trained_model_summary_fields()
+    if trained_fields and trained_fields.get("auc") is not None:
+        return {
+            **_MODEL_SUMMARY_STUB,
+            "source": "stub",
+            "updated_at": now.isoformat(timespec="seconds"),
+            **trained_fields,
+        }
+    return {
         **_MODEL_SUMMARY_STUB,
         "source": "stub",
         "updated_at": now.isoformat(timespec="seconds"),
     }
-    summary.update(_build_trained_model_summary_fields())
-    return summary
 
 
 def _resolve_student_name(

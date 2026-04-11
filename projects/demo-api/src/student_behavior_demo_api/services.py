@@ -57,26 +57,32 @@ class DemoApiStore:
         if term not in self._overview_terms:
             raise KeyError(term)
         payload = dict(self._overview_payload)
-        term_rows = [
-            row
-            for row in _load_warning_rows(
-                self._warnings_path or _resolve_warning_artifact_path(self._repo_root)
-            )
-            if row["term_key"] == term
-        ]
-
-        should_use_term_fallback = term != self._overview_term
-
-        if should_use_term_fallback:
-            payload = _build_term_aware_overview_fallback(payload, term, term_rows)
-        elif "dimension_summary" not in payload or _is_sparse_dimension_summary(payload.get("dimension_summary")):
-            term_dimension_summary = _build_average_dimension_scores(term_rows)
-            if term_dimension_summary:
-                payload["dimension_summary"] = term_dimension_summary
+        warning_rows = _load_warning_rows(
+            self._warnings_path or _resolve_warning_artifact_path(self._repo_root)
+        )
+        display_rows = _dedupe_rows_by_latest_term(warning_rows)
+        if _is_placeholder_risk_distribution(payload.get("risk_distribution")):
+            payload["risk_distribution"] = _build_risk_distribution(display_rows)
+        if not payload.get("group_distribution"):
+            payload["group_distribution"] = _build_group_distribution(display_rows)
+        if not payload.get("major_risk_summary"):
+            payload["major_risk_summary"] = _build_major_risk_summary(display_rows)
+        if "dimension_summary" not in payload or _is_sparse_dimension_summary(payload.get("dimension_summary")):
+            dimension_summary = _build_average_dimension_scores(display_rows)
+            if dimension_summary:
+                payload["dimension_summary"] = dimension_summary
         if "risk_band_distribution" not in payload:
-            payload["risk_band_distribution"] = _build_risk_band_distribution(term_rows)
+            payload["risk_band_distribution"] = _build_risk_band_distribution(display_rows)
         if "risk_factor_summary" not in payload:
-            payload["risk_factor_summary"] = _build_risk_factor_summary(term_rows)
+            payload["risk_factor_summary"] = _build_risk_factor_summary(display_rows)
+        if not payload.get("destination_distribution"):
+            payload["destination_distribution"] = _build_destination_distribution(display_rows)
+        if not payload.get("major_destination_summary"):
+            payload["major_destination_summary"] = _build_major_destination_summary(display_rows)
+        if not payload.get("group_destination_association"):
+            payload["group_destination_association"] = _build_group_destination_association(display_rows)
+        payload.setdefault("summary_term", "all_students_latest_term")
+        payload.setdefault("summary_source", "deduped_student_overview")
         return payload
 
     def get_model_summary(self, term: str | None = None) -> dict[str, Any]:
@@ -965,6 +971,29 @@ def _build_destination_distribution(rows: list[Mapping[str, Any]]) -> dict[str, 
     return {key: counts[key] for key in sorted(counts)}
 
 
+def _dedupe_rows_by_latest_term(rows: list[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    latest_rows: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        student_id = row.get("student_id")
+        term_key = row.get("term_key")
+        if not isinstance(student_id, str) or not student_id or not isinstance(term_key, str):
+            continue
+        current = latest_rows.get(student_id)
+        if current is None or _sort_term_key({"term_key": term_key}) > _sort_term_key(current):
+            latest_rows[student_id] = dict(row)
+    return list(latest_rows.values())
+
+
+def _is_placeholder_risk_distribution(raw: Any) -> bool:
+    if not isinstance(raw, Mapping):
+        return True
+    values = list(raw.values())
+    if not values:
+        return True
+    numeric_values = [value for value in values if isinstance(value, (int, float))]
+    return len(numeric_values) == len(values) and all(float(value) == 0.0 for value in numeric_values)
+
+
 def _build_major_destination_summary(rows: list[Mapping[str, Any]]) -> list[dict[str, Any]]:
     majors: dict[str, list[Mapping[str, Any]]] = {}
     for row in rows:
@@ -1060,7 +1089,12 @@ def _is_sparse_dimension_summary(raw: Any) -> bool:
     for item in raw:
         if not isinstance(item, Mapping):
             return True
-        if any(item.get(key) not in (None, [], "") for key in ("level", "label", "metrics", "explanation")):
+        has_rich_fields = any(
+            item.get(key) not in (None, [], "") for key in ("level", "label", "metrics", "explanation")
+        )
+        if not item.get("dimension_code") and not has_rich_fields:
+            return True
+        if has_rich_fields:
             return False
     return True
 
