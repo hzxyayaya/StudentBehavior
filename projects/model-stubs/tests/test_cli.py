@@ -113,6 +113,10 @@ def test_main_build_writes_all_expected_artifacts(
         return original_run_build(features_csv, output_dir, warnings_now=fixed_now)
 
     monkeypatch.setattr(cli_module, "run_build", _fixed_run_build)
+    monkeypatch.setattr(
+        "student_behavior_model_stubs.build_outputs._build_trained_model_summary_fields",
+        lambda: {},
+    )
 
     exit_code = cli_module.main(["build", str(input_csv), "--output-dir", str(output_dir)])
 
