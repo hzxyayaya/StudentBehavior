@@ -63,6 +63,13 @@ _DESTINATION_SOURCE_PRECEDENCE = {
 }
 
 
+def _student_term_sort_key(term_key: str) -> tuple[int, int]:
+    parts = str(term_key).split("-")
+    if len(parts) == 2 and all(part.isdigit() for part in parts):
+        return int(parts[0]), int(parts[1])
+    return (0, 0)
+
+
 @dataclass(frozen=True)
 class SourceSpec:
     filename: str
@@ -303,6 +310,7 @@ def build_demo_features_from_excels(
         resolved_data_dir,
         include_heavy_sources=include_heavy_sources,
         official_student_ids=official_student_ids,
+        feature_keys=features.loc[:, _KEY_COLUMNS].copy(),
     )
     combined = _merge_feature_frames(features, extra_features)
     combined = _merge_destination_truth(
@@ -483,21 +491,38 @@ def _build_extra_demo_metrics(
     *,
     include_heavy_sources: bool,
     official_student_ids: set[str],
+    feature_keys: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     metric_frames = [
         _aggregate_grade_support_metrics(data_dir, official_student_ids=official_student_ids),
         _aggregate_attendance_support_metrics(data_dir, official_student_ids=official_student_ids),
+        _aggregate_library_support_metrics(data_dir, official_student_ids=official_student_ids),
+        _aggregate_network_usage_metrics(
+            data_dir,
+            official_student_ids=official_student_ids,
+            feature_keys=feature_keys,
+        ),
+        _aggregate_access_control_metrics(data_dir, official_student_ids=official_student_ids),
+        _aggregate_physical_support_metrics(data_dir, official_student_ids=official_student_ids),
+        _aggregate_appraisal_support_metrics(
+            data_dir,
+            official_student_ids=official_student_ids,
+            feature_keys=feature_keys,
+        ),
     ]
     if include_heavy_sources:
         metric_frames.extend(
             [
-                _aggregate_class_engagement_metrics(data_dir, official_student_ids=official_student_ids),
-                _aggregate_online_learning_metrics(data_dir, official_student_ids=official_student_ids),
-                _aggregate_library_support_metrics(data_dir, official_student_ids=official_student_ids),
-                _aggregate_network_usage_metrics(data_dir, official_student_ids=official_student_ids),
-                _aggregate_access_control_metrics(data_dir, official_student_ids=official_student_ids),
-                _aggregate_physical_support_metrics(data_dir, official_student_ids=official_student_ids),
-                _aggregate_appraisal_support_metrics(data_dir, official_student_ids=official_student_ids),
+                _aggregate_class_engagement_metrics(
+                    data_dir,
+                    official_student_ids=official_student_ids,
+                    feature_keys=feature_keys,
+                ),
+                _aggregate_online_learning_metrics(
+                    data_dir,
+                    official_student_ids=official_student_ids,
+                    feature_keys=feature_keys,
+                ),
             ]
         )
     keys = _collect_metric_keys(metric_frames)
@@ -735,7 +760,12 @@ def _aggregate_attendance_support_metrics(data_dir: Path, *, official_student_id
     return aggregated
 
 
-def _aggregate_class_engagement_metrics(data_dir: Path, *, official_student_ids: set[str]) -> pd.DataFrame:
+def _aggregate_class_engagement_metrics(
+    data_dir: Path,
+    *,
+    official_student_ids: set[str],
+    feature_keys: pd.DataFrame | None = None,
+) -> pd.DataFrame:
     rows = _read_optional_excel_rows(
         data_dir,
         "课堂任务参与.xlsx",
@@ -755,6 +785,7 @@ def _aggregate_class_engagement_metrics(data_dir: Path, *, official_student_ids:
         ),
     )
     records: list[dict[str, object]] = []
+    student_level_records: list[dict[str, object]] = []
     for row in rows:
         student_id = _pick_student_id(
             row,
@@ -771,36 +802,55 @@ def _aggregate_class_engagement_metrics(data_dir: Path, *, official_student_ids:
             term_keys=("XQ",),
             date_keys=("CREATE_TIME",),
         )
-        if student_id is None or term_key is None:
+        if student_id is None:
             continue
-        records.append(
-            {
-                "student_id": student_id,
-                "term_key": term_key,
-                "video_completion_rate": _normalize_number(_first_value(row, "VIDEOJOB_RATE")),
-                "forum_interaction_total": (
-                    (_normalize_number(_first_value(row, "BBS_NUM")) or 0)
-                    + (_normalize_number(_first_value(row, "TOPIC_NUM")) or 0)
-                    + (_normalize_number(_first_value(row, "REPLY_NUM")) or 0)
-                ),
-            }
-        )
+        payload = {
+            "student_id": student_id,
+            "video_completion_rate": _normalize_number(_first_value(row, "VIDEOJOB_RATE")),
+            "forum_interaction_total": (
+                (_normalize_number(_first_value(row, "BBS_NUM")) or 0)
+                + (_normalize_number(_first_value(row, "TOPIC_NUM")) or 0)
+                + (_normalize_number(_first_value(row, "REPLY_NUM")) or 0)
+            ),
+        }
+        if term_key is None or term_key not in _ANALYSIS_TERMS:
+            student_level_records.append(payload)
+        else:
+            records.append({"term_key": term_key, **payload})
 
-    if not records:
+    frames: list[pd.DataFrame] = []
+    if records:
+        frame = pd.DataFrame.from_records(records)
+        frames.append(
+            frame.groupby(_KEY_COLUMNS, dropna=False)
+            .agg(
+                video_completion_rate=("video_completion_rate", "mean"),
+                forum_interaction_total=("forum_interaction_total", "sum"),
+            )
+            .reset_index()
+        )
+    if student_level_records and feature_keys is not None:
+        student_frame = (
+            pd.DataFrame.from_records(student_level_records)
+            .groupby("student_id", dropna=False)
+            .agg(
+                video_completion_rate=("video_completion_rate", "mean"),
+                forum_interaction_total=("forum_interaction_total", "sum"),
+            )
+            .reset_index()
+        )
+        frames.append(_attach_student_level_metrics_to_latest_term(student_frame, feature_keys))
+    if not frames:
         return pd.DataFrame(columns=[*_KEY_COLUMNS, "video_completion_rate", "forum_interaction_total"])
-
-    frame = pd.DataFrame.from_records(records)
-    return (
-        frame.groupby(_KEY_COLUMNS, dropna=False)
-        .agg(
-            video_completion_rate=("video_completion_rate", "mean"),
-            forum_interaction_total=("forum_interaction_total", "sum"),
-        )
-        .reset_index()
-    )
+    return _merge_metric_frames(frames)
 
 
-def _aggregate_online_learning_metrics(data_dir: Path, *, official_student_ids: set[str]) -> pd.DataFrame:
+def _aggregate_online_learning_metrics(
+    data_dir: Path,
+    *,
+    official_student_ids: set[str],
+    feature_keys: pd.DataFrame | None = None,
+) -> pd.DataFrame:
     task_rows = _read_optional_excel_rows(
         data_dir,
         "课堂任务参与.xlsx",
@@ -820,6 +870,7 @@ def _aggregate_online_learning_metrics(data_dir: Path, *, official_student_ids: 
         ),
     )
     task_records: list[dict[str, object]] = []
+    student_level_task_records: list[dict[str, object]] = []
     for row in task_rows:
         student_id = _pick_student_id(
             row,
@@ -836,42 +887,47 @@ def _aggregate_online_learning_metrics(data_dir: Path, *, official_student_ids: 
             term_keys=("XQ",),
             date_keys=("CREATE_TIME",),
         )
-        if student_id is None or term_key is None:
+        if student_id is None:
             continue
-        task_records.append(
-            {
-                "student_id": student_id,
-                "term_key": term_key,
-                "video_watch_time": _normalize_number(_first_value(row, "VIDEOJOB_TIME")),
-                "online_test_avg_score": _normalize_number(_first_value(row, "TEST_AVGSCORE")),
-                "online_work_avg_score": _normalize_number(_first_value(row, "WORK_AVGSCORE")),
-                "online_exam_avg_score": _normalize_number(_first_value(row, "EXAM_AVGSCORE")),
-            }
-        )
+        payload = {
+            "student_id": student_id,
+            "video_watch_time": _normalize_number(_first_value(row, "VIDEOJOB_TIME")),
+            "online_test_avg_score": _normalize_number(_first_value(row, "TEST_AVGSCORE")),
+            "online_work_avg_score": _normalize_number(_first_value(row, "WORK_AVGSCORE")),
+            "online_exam_avg_score": _normalize_number(_first_value(row, "EXAM_AVGSCORE")),
+        }
+        if term_key is None:
+            student_level_task_records.append(payload)
+        else:
+            task_records.append({"term_key": term_key, **payload})
 
-    if not task_records:
-        return pd.DataFrame(
-            columns=[
-                *_KEY_COLUMNS,
-                "video_watch_time_sum",
-                "online_test_avg_score",
-                "online_work_avg_score",
-                "online_exam_avg_score",
-                "platform_engagement_score",
-            ]
+    frames: list[pd.DataFrame] = []
+    if task_records:
+        task_metrics = (
+            pd.DataFrame.from_records(task_records)
+            .groupby(_KEY_COLUMNS, dropna=False)
+            .agg(
+                video_watch_time_sum=("video_watch_time", "sum"),
+                online_test_avg_score=("online_test_avg_score", "mean"),
+                online_work_avg_score=("online_work_avg_score", "mean"),
+                online_exam_avg_score=("online_exam_avg_score", "mean"),
+            )
+            .reset_index()
         )
-
-    task_metrics = (
-        pd.DataFrame.from_records(task_records)
-        .groupby(_KEY_COLUMNS, dropna=False)
-        .agg(
-            video_watch_time_sum=("video_watch_time", "sum"),
-            online_test_avg_score=("online_test_avg_score", "mean"),
-            online_work_avg_score=("online_work_avg_score", "mean"),
-            online_exam_avg_score=("online_exam_avg_score", "mean"),
+        frames.append(task_metrics)
+    if student_level_task_records and feature_keys is not None:
+        student_task_metrics = (
+            pd.DataFrame.from_records(student_level_task_records)
+            .groupby("student_id", dropna=False)
+            .agg(
+                video_watch_time_sum=("video_watch_time", "sum"),
+                online_test_avg_score=("online_test_avg_score", "mean"),
+                online_work_avg_score=("online_work_avg_score", "mean"),
+                online_exam_avg_score=("online_exam_avg_score", "mean"),
+            )
+            .reset_index()
         )
-        .reset_index()
-    )
+        frames.append(_attach_student_level_metrics_to_latest_term(student_task_metrics, feature_keys))
 
     platform_rows = _read_optional_excel_rows(
         data_dir,
@@ -893,17 +949,59 @@ def _aggregate_online_learning_metrics(data_dir: Path, *, official_student_ids: 
             continue
         platform_records.append({"student_id": student_id, "platform_engagement_score": platform_score})
 
-    if not platform_records:
-        task_metrics["platform_engagement_score"] = None
-        return task_metrics
+    if platform_records and feature_keys is not None:
+        platform_metrics = (
+            pd.DataFrame.from_records(platform_records)
+            .groupby("student_id", dropna=False)["platform_engagement_score"]
+            .mean()
+            .reset_index()
+        )
+        frames.append(_attach_student_level_metrics_to_latest_term(platform_metrics, feature_keys))
 
-    platform_metrics = (
-        pd.DataFrame.from_records(platform_records)
-        .groupby("student_id", dropna=False)["platform_engagement_score"]
-        .mean()
-        .reset_index()
+    if not frames:
+        return pd.DataFrame(
+            columns=[
+                *_KEY_COLUMNS,
+                "video_watch_time_sum",
+                "online_test_avg_score",
+                "online_work_avg_score",
+                "online_exam_avg_score",
+                "platform_engagement_score",
+            ]
+        )
+    return _merge_metric_frames(frames)
+
+
+def _attach_student_level_metrics_to_latest_term(
+    metrics: pd.DataFrame,
+    feature_keys: pd.DataFrame,
+) -> pd.DataFrame:
+    if metrics.empty or feature_keys.empty:
+        return pd.DataFrame(columns=[*_KEY_COLUMNS, *[c for c in metrics.columns if c != "student_id"]])
+
+    latest_term_by_student = feature_keys.dropna(subset=["student_id", "term_key"]).copy()
+    latest_term_by_student["student_id"] = latest_term_by_student["student_id"].astype(str)
+    latest_term_by_student["term_key"] = latest_term_by_student["term_key"].astype(str)
+    latest_term_by_student["__sort_key"] = latest_term_by_student["term_key"].map(_student_term_sort_key)
+    latest_term_by_student = (
+        latest_term_by_student
+        .sort_values(by=["student_id", "__sort_key"], ascending=[True, False], kind="stable")
+        .drop_duplicates(subset=["student_id"], keep="first")
+        .loc[:, ["student_id", "term_key"]]
     )
-    return task_metrics.merge(platform_metrics, on="student_id", how="left")
+    return latest_term_by_student.merge(metrics, on="student_id", how="inner")
+
+
+def _merge_metric_frames(frames: list[pd.DataFrame]) -> pd.DataFrame:
+    keys = _collect_metric_keys(frames)
+    if keys.empty:
+        return pd.DataFrame(columns=_KEY_COLUMNS)
+    merged = keys.copy()
+    for frame in frames:
+        if frame.empty:
+            continue
+        merged = merged.merge(frame, on=_KEY_COLUMNS, how="left")
+    return merged
 
 
 def _aggregate_library_support_metrics(data_dir: Path, *, official_student_ids: set[str]) -> pd.DataFrame:
@@ -974,13 +1072,19 @@ def _aggregate_library_support_metrics(data_dir: Path, *, official_student_ids: 
     return pd.DataFrame.from_records(visits)
 
 
-def _aggregate_network_usage_metrics(data_dir: Path, *, official_student_ids: set[str]) -> pd.DataFrame:
+def _aggregate_network_usage_metrics(
+    data_dir: Path,
+    *,
+    official_student_ids: set[str],
+    feature_keys: pd.DataFrame | None = None,
+) -> pd.DataFrame:
     rows = _read_optional_excel_rows(
         data_dir,
         "上网统计.xlsx",
         ("XSBH", "XH", "LOGIN_NAME", "USERNUM", "TJNY", "XN", "XQ", "SWLJSC", "XXPJZ"),
     )
     records: list[dict[str, object]] = []
+    student_level_records: list[dict[str, object]] = []
     for row in rows:
         student_id = _pick_student_id(
             row,
@@ -993,32 +1097,48 @@ def _aggregate_network_usage_metrics(data_dir: Path, *, official_student_ids: se
         term_key = _pick_term_key(row, year_keys=("XN",), term_keys=("XQ",), date_keys=("TJNY",))
         duration_sum = _normalize_number(_first_value(row, "SWLJSC"))
         school_avg = _normalize_number(_first_value(row, "XXPJZ"))
-        if student_id is None or term_key is None or duration_sum is None:
+        if student_id is None or duration_sum is None:
             continue
         duration_value = float(duration_sum)
         school_avg_value = None if school_avg is None else float(school_avg)
-        records.append(
-            {
-                "student_id": student_id,
-                "term_key": term_key,
-                "term_online_duration_sum": duration_value,
-                "duration_gap_component": None if school_avg_value is None else duration_value - school_avg_value,
-            }
-        )
+        payload = {
+            "student_id": student_id,
+            "term_online_duration_sum": duration_value,
+            "duration_gap_component": None if school_avg_value is None else duration_value - school_avg_value,
+        }
+        if term_key is None or term_key not in _ANALYSIS_TERMS:
+            student_level_records.append(payload)
+        else:
+            records.append({"term_key": term_key, **payload})
 
-    if not records:
+    frames: list[pd.DataFrame] = []
+    if records:
+        frame = pd.DataFrame.from_records(records)
+        frames.append(
+            frame.groupby(_KEY_COLUMNS, dropna=False)
+            .agg(
+                term_online_duration_sum=("term_online_duration_sum", "sum"),
+                monthly_online_duration_avg=("term_online_duration_sum", "mean"),
+                online_duration_vs_school_avg_gap=("duration_gap_component", "mean"),
+            )
+            .reset_index()
+        )
+    if student_level_records and feature_keys is not None:
+        student_frame = (
+            pd.DataFrame.from_records(student_level_records)
+            .groupby("student_id", dropna=False)
+            .agg(
+                term_online_duration_sum=("term_online_duration_sum", "sum"),
+                monthly_online_duration_avg=("term_online_duration_sum", "mean"),
+                online_duration_vs_school_avg_gap=("duration_gap_component", "mean"),
+            )
+            .reset_index()
+        )
+        frames.append(_attach_student_level_metrics_to_latest_term(student_frame, feature_keys))
+
+    if not frames:
         return pd.DataFrame(columns=[*_KEY_COLUMNS, "term_online_duration_sum", "monthly_online_duration_avg", "online_duration_vs_school_avg_gap"])
-
-    frame = pd.DataFrame.from_records(records)
-    return (
-        frame.groupby(_KEY_COLUMNS, dropna=False)
-        .agg(
-            term_online_duration_sum=("term_online_duration_sum", "sum"),
-            monthly_online_duration_avg=("term_online_duration_sum", "mean"),
-            online_duration_vs_school_avg_gap=("duration_gap_component", "mean"),
-        )
-        .reset_index()
-    )
+    return _merge_metric_frames(frames)
 
 
 def _aggregate_access_control_metrics(data_dir: Path, *, official_student_ids: set[str]) -> pd.DataFrame:
@@ -1101,7 +1221,12 @@ def _aggregate_access_control_metrics(data_dir: Path, *, official_student_ids: s
     return merged.drop(columns=["return_event_count"])
 
 
-def _aggregate_physical_support_metrics(data_dir: Path, *, official_student_ids: set[str]) -> pd.DataFrame:
+def _aggregate_physical_support_metrics(
+    data_dir: Path,
+    *,
+    official_student_ids: set[str],
+    feature_keys: pd.DataFrame | None = None,
+) -> pd.DataFrame:
     test_rows = _read_optional_excel_rows(
         data_dir,
         "体测数据.xlsx",
@@ -1115,6 +1240,7 @@ def _aggregate_physical_support_metrics(data_dir: Path, *, official_student_ids:
     frames: list[pd.DataFrame] = []
 
     test_records: list[dict[str, object]] = []
+    test_student_level_records: list[dict[str, object]] = []
     for row in test_rows:
         student_id = _pick_student_id(
             row,
@@ -1126,17 +1252,18 @@ def _aggregate_physical_support_metrics(data_dir: Path, *, official_student_ids:
         )
         term_key = _pick_term_key(row, year_keys=("TCNF",), default_term="1")
         score = _normalize_number(_first_value(row, "ZF"))
-        if student_id is None or term_key is None or score is None:
+        if student_id is None or score is None:
             continue
         score_value = float(score)
-        test_records.append(
-            {
-                "student_id": student_id,
-                "term_key": term_key,
-                "physical_test_avg_score": score_value,
-                "physical_test_pass_flag": score_value >= 60,
-            }
-        )
+        payload = {
+            "student_id": student_id,
+            "physical_test_avg_score": score_value,
+            "physical_test_pass_flag": score_value >= 60,
+        }
+        if term_key is None or term_key not in _ANALYSIS_TERMS:
+            test_student_level_records.append(payload)
+        else:
+            test_records.append({"term_key": term_key, **payload})
     if test_records:
         frames.append(
             pd.DataFrame.from_records(test_records)
@@ -1144,11 +1271,23 @@ def _aggregate_physical_support_metrics(data_dir: Path, *, official_student_ids:
             .agg(
                 physical_test_avg_score=("physical_test_avg_score", "mean"),
                 physical_test_pass_flag=("physical_test_pass_flag", "max"),
+                )
+                .reset_index()
+        )
+    if test_student_level_records and feature_keys is not None:
+        test_student_level_frame = (
+            pd.DataFrame.from_records(test_student_level_records)
+            .groupby("student_id", dropna=False)
+            .agg(
+                physical_test_avg_score=("physical_test_avg_score", "mean"),
+                physical_test_pass_flag=("physical_test_pass_flag", "max"),
             )
             .reset_index()
         )
+        frames.append(_attach_student_level_metrics_to_latest_term(test_student_level_frame, feature_keys))
 
     exercise_records: list[dict[str, object]] = []
+    exercise_student_level_records: list[dict[str, object]] = []
     for row in exercise_rows:
         student_id = _pick_student_id(
             row,
@@ -1160,9 +1299,13 @@ def _aggregate_physical_support_metrics(data_dir: Path, *, official_student_ids:
         )
         term_key = _pick_term_key(row, combined_term_keys=("XQ",), year_keys=("XN",), term_keys=("XQ",))
         count = _normalize_number(_first_value(row, "DKCS"))
-        if student_id is None or term_key is None or count is None:
+        if student_id is None or count is None:
             continue
-        exercise_records.append({"student_id": student_id, "term_key": term_key, "exercise_count": float(count)})
+        payload = {"student_id": student_id, "exercise_count": float(count)}
+        if term_key is None or term_key not in _ANALYSIS_TERMS:
+            exercise_student_level_records.append(payload)
+        else:
+            exercise_records.append({"student_id": student_id, "term_key": term_key, "exercise_count": float(count)})
     if exercise_records:
         frames.append(
             pd.DataFrame.from_records(exercise_records)
@@ -1170,6 +1313,14 @@ def _aggregate_physical_support_metrics(data_dir: Path, *, official_student_ids:
             .mean()
             .reset_index(name="weekly_exercise_count_avg")
         )
+    if exercise_student_level_records and feature_keys is not None:
+        exercise_student_level_frame = (
+            pd.DataFrame.from_records(exercise_student_level_records)
+            .groupby("student_id", dropna=False)["exercise_count"]
+            .mean()
+            .reset_index(name="weekly_exercise_count_avg")
+        )
+        frames.append(_attach_student_level_metrics_to_latest_term(exercise_student_level_frame, feature_keys))
 
     keys = _collect_metric_keys(frames)
     if keys.empty:
@@ -1180,7 +1331,12 @@ def _aggregate_physical_support_metrics(data_dir: Path, *, official_student_ids:
     return merged
 
 
-def _aggregate_appraisal_support_metrics(data_dir: Path, *, official_student_ids: set[str]) -> pd.DataFrame:
+def _aggregate_appraisal_support_metrics(
+    data_dir: Path,
+    *,
+    official_student_ids: set[str],
+    feature_keys: pd.DataFrame | None = None,
+) -> pd.DataFrame:
     scholarship_rows = _read_optional_excel_rows(
         data_dir,
         "奖学金获奖.xlsx",
@@ -1194,6 +1350,7 @@ def _aggregate_appraisal_support_metrics(data_dir: Path, *, official_student_ids
     frames: list[pd.DataFrame] = []
 
     scholarship_records: list[dict[str, object]] = []
+    scholarship_student_level_records: list[dict[str, object]] = []
     for row in scholarship_rows:
         student_id = _pick_student_id(
             row,
@@ -1205,16 +1362,17 @@ def _aggregate_appraisal_support_metrics(data_dir: Path, *, official_student_ids
         )
         term_key = _pick_term_key(row, year_keys=("PDXN",), default_term="1")
         amount = _normalize_number(_first_value(row, "FFJE"))
-        if student_id is None or term_key is None or amount is None:
+        if student_id is None or amount is None:
             continue
-        scholarship_records.append(
-            {
-                "student_id": student_id,
-                "term_key": term_key,
-                "scholarship_amount_sum": float(amount),
-                "scholarship_level_score": _scholarship_level_score(_first_value(row, "PDDJ")),
-            }
-        )
+        payload = {
+            "student_id": student_id,
+            "scholarship_amount_sum": float(amount),
+            "scholarship_level_score": _scholarship_level_score(_first_value(row, "PDDJ")),
+        }
+        if term_key is None or term_key not in _ANALYSIS_TERMS:
+            scholarship_student_level_records.append(payload)
+        else:
+            scholarship_records.append({"term_key": term_key, **payload})
     if scholarship_records:
         frames.append(
             pd.DataFrame.from_records(scholarship_records)
@@ -1225,8 +1383,20 @@ def _aggregate_appraisal_support_metrics(data_dir: Path, *, official_student_ids
             )
             .reset_index()
         )
+    if scholarship_student_level_records and feature_keys is not None:
+        scholarship_student_frame = (
+            pd.DataFrame.from_records(scholarship_student_level_records)
+            .groupby("student_id", dropna=False)
+            .agg(
+                scholarship_amount_sum=("scholarship_amount_sum", "sum"),
+                scholarship_level_score=("scholarship_level_score", "max"),
+            )
+            .reset_index()
+        )
+        frames.append(_attach_student_level_metrics_to_latest_term(scholarship_student_frame, feature_keys))
 
     status_records: list[dict[str, object]] = []
+    status_student_level_records: list[dict[str, object]] = []
     for row in status_rows:
         student_id = _pick_student_id(
             row,
@@ -1237,20 +1407,21 @@ def _aggregate_appraisal_support_metrics(data_dir: Path, *, official_student_ids
             official_student_ids=official_student_ids,
         )
         term_key = _pick_term_key(row, date_keys=("YDRQ",))
-        if student_id is None or term_key is None:
+        if student_id is None:
             continue
-        status_records.append(
-            {
-                "student_id": student_id,
-                "term_key": term_key,
-                "negative_status_alert_flag": _is_negative_status_change(
-                    _first_value(row, "YDLBDM"),
-                    _first_value(row, "YDYYDM"),
-                    _first_value(row, "SFZX"),
-                ),
-                "status_change_count": 1,
-            }
-        )
+        payload = {
+            "student_id": student_id,
+            "negative_status_alert_flag": _is_negative_status_change(
+                _first_value(row, "YDLBDM"),
+                _first_value(row, "YDYYDM"),
+                _first_value(row, "SFZX"),
+            ),
+            "status_change_count": 1,
+        }
+        if term_key is None or term_key not in _ANALYSIS_TERMS:
+            status_student_level_records.append(payload)
+        else:
+            status_records.append({"term_key": term_key, **payload})
     if status_records:
         frames.append(
             pd.DataFrame.from_records(status_records)
@@ -1261,6 +1432,17 @@ def _aggregate_appraisal_support_metrics(data_dir: Path, *, official_student_ids
             )
             .reset_index()
         )
+    if status_student_level_records and feature_keys is not None:
+        status_student_frame = (
+            pd.DataFrame.from_records(status_student_level_records)
+            .groupby("student_id", dropna=False)
+            .agg(
+                negative_status_alert_flag=("negative_status_alert_flag", "max"),
+                status_change_count=("status_change_count", "sum"),
+            )
+            .reset_index()
+        )
+        frames.append(_attach_student_level_metrics_to_latest_term(status_student_frame, feature_keys))
 
     keys = _collect_metric_keys(frames)
     if keys.empty:

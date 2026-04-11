@@ -817,6 +817,9 @@ def _build_average_dimension_scores(rows: list[Mapping[str, Any]]) -> list[dict[
         for item in dimension_scores:
             if not isinstance(item, Mapping):
                 raise ValueError("dimension_scores_json items must be objects")
+            provenance = item.get("provenance")
+            if isinstance(provenance, Mapping) and provenance.get("is_unavailable") is True:
+                continue
             dimension = item.get("dimension")
             score = item.get("score")
             if not isinstance(dimension, str) or not dimension:

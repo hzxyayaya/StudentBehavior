@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { createRouter as createAppRouter } from '@/app/router'
@@ -25,6 +25,7 @@ describe('router', () => {
     auth.signIn('demo-token', '演示管理员', '2024-2')
     const router = createAppRouter()
     await router.push('/')
+    await flushPromises()
     await router.isReady()
     expect(router.currentRoute.value.path).toBe('/overview')
   })

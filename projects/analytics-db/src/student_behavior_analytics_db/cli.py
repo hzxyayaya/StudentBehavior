@@ -30,15 +30,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args[0] == "build-demo-features":
         parser = argparse.ArgumentParser(prog="analytics-db build-demo-features")
         parser.add_argument(
-            "--include-heavy-sources",
+            "--skip-heavy-sources",
             action="store_true",
-            help="opt in to reading heavyweight source workbooks during feature rebuild",
+            help="skip heavyweight source workbooks during feature rebuild",
         )
         parsed_args = parser.parse_args(args[1:])
         repo_root = resolve_checkout_root()
         summary = build_demo_features_from_excels(
             repo_root=repo_root,
-            include_heavy_sources=parsed_args.include_heavy_sources,
+            include_heavy_sources=not parsed_args.skip_heavy_sources,
         )
         print(f"data_dir={summary['data_dir']}")
         print(f"output_csv={summary['output_csv']}")

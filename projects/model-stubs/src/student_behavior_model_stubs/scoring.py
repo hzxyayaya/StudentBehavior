@@ -327,6 +327,13 @@ def _dimension_score_map(row: Mapping[str, object]) -> dict[str, float]:
     return {str(item["dimension_code"]): float(item["score"]) for item in build_dimension_scores(row)}
 
 
+def _dimension_availability_map(row: Mapping[str, object]) -> dict[str, bool]:
+    return {
+        str(item["dimension_code"]): not bool(item.get("provenance", {}).get("is_unavailable"))
+        for item in build_dimension_scores(row)
+    }
+
+
 def compute_risk_probability(row: Mapping[str, object]) -> float:
     academic = _coerce_float(row.get("academic_base_score_raw"), _RAW_SCORE_DEFAULT)
     class_engagement = _coerce_float(row.get("class_engagement_score_raw"), _RAW_SCORE_DEFAULT)
@@ -350,6 +357,7 @@ def map_risk_level(probability: float) -> str:
 
 def compute_group_segment(row: Mapping[str, object]) -> str:
     scores = _dimension_score_map(row)
+    availability = _dimension_availability_map(row)
     academic = scores["academic_base"]
     class_engagement = scores["class_engagement"]
     online = scores["online_activeness"]
@@ -358,11 +366,30 @@ def compute_group_segment(row: Mapping[str, object]) -> str:
     physical = scores["physical_resilience"]
     appraisal = scores["appraisal_status_alert"]
 
-    if academic >= 0.8 and class_engagement >= 0.75 and online >= 0.7 and daily >= 0.65:
+    if (
+        availability["academic_base"]
+        and availability["class_engagement"]
+        and availability["online_activeness"]
+        and availability["daily_routine_boundary"]
+        and academic >= 0.8
+        and class_engagement >= 0.75
+        and online >= 0.7
+        and daily >= 0.65
+    ):
         return _GROUP_SEGMENTS["stable"]
-    if academic >= 0.7 and physical >= 0.75 and appraisal >= 0.7:
+    if (
+        availability["academic_base"]
+        and availability["physical_resilience"]
+        and availability["appraisal_status_alert"]
+        and academic >= 0.7
+        and physical >= 0.75
+        and appraisal >= 0.7
+    ):
         return _GROUP_SEGMENTS["balanced"]
-    if network < 0.45 or daily < 0.45:
+    if (
+        (availability["network_habits"] and network < 0.45)
+        or (availability["daily_routine_boundary"] and daily < 0.45)
+    ):
         return _GROUP_SEGMENTS["routine_risk"]
     return _GROUP_SEGMENTS["class_risk"]
 

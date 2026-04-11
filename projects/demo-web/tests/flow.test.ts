@@ -134,7 +134,7 @@ describe('demo flow links', () => {
       throw new Error('missing overview dimension cards')
     }
 
-    expect(overviewCards).toHaveLength(2)
+    expect(overviewCards).toHaveLength(8)
     expect(firstOverviewCard.text()).toContain('学业基础表现')
     expect(firstOverviewCard.text()).toContain('高')
     expect(firstOverviewCard.text()).toContain('82分')
@@ -147,6 +147,8 @@ describe('demo flow links', () => {
     expect(secondOverviewCard.text()).toContain('74分')
     expect(secondOverviewCard.text()).toContain('课堂投入一般')
     expect(secondOverviewCard.text()).toContain('出勤较稳但课堂参与仍有提升空间。')
+    expect(wrapper.text()).toContain('在线学习积极性')
+    expect(wrapper.text()).toContain('当前学期无有效数据')
     expect(wrapper.text()).toContain('干预优先级分级概览')
     expect(wrapper.text()).toContain('较高优先')
     expect(wrapper.text()).toContain('趋势')
@@ -994,7 +996,8 @@ describe('task pages', () => {
     expect(wrapper.text()).toContain('企业就业 3')
     expect(wrapper.text()).toContain('群体去向关联')
     expect(wrapper.text()).toContain('综合发展优势组')
-    expect(wrapper.text()).toContain('组内占比 29.4%')
+    expect(wrapper.text()).toContain('去向覆盖 15 人')
+    expect(wrapper.text()).toContain('升学 15 人')
     expect(wrapper.text()).toContain('图书馆沉浸度')
     expect(wrapper.text()).toContain('方向解释链路')
     expect(wrapper.text()).toContain('学业基础表现')

@@ -452,6 +452,26 @@ def test_compute_group_segment_is_not_coupled_to_display_labels(monkeypatch: pyt
     assert label == "学习投入稳定组"
 
 
+def test_compute_group_segment_does_not_force_routine_risk_when_network_and_daily_dimensions_are_unavailable() -> None:
+    label = compute_group_segment(
+        _base_row()
+        | {
+            "network_habits_score_raw": None,
+            "daily_routine_boundary_score_raw": None,
+            "monthly_online_duration_avg": None,
+            "term_online_duration_sum": None,
+            "online_duration_vs_school_avg_gap": None,
+            "first_daily_access_time_avg": None,
+            "first_daily_access_time_std": None,
+            "late_return_count": None,
+            "late_return_ratio": None,
+            "daily_access_time_variability": None,
+        }
+    )
+
+    assert label == "综合发展优势组"
+
+
 def test_build_dimension_scores_returns_eight_dimensions() -> None:
     scores = build_dimension_scores(_base_row())
 

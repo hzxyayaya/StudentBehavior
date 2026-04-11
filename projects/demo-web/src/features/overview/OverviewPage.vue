@@ -310,6 +310,17 @@ import { getModelSummary, getOverview } from '@/lib/api'
 import { formatApiErrorMessage } from '@/lib/format'
 import type { ModelSummaryData, RiskLevel } from '@/lib/types'
 
+const OVERVIEW_DIMENSIONS = [
+  { dimension: '学业基础表现', dimension_code: 'academic_base' },
+  { dimension: '课堂学习投入', dimension_code: 'class_engagement' },
+  { dimension: '在线学习积极性', dimension_code: 'online_activeness' },
+  { dimension: '图书馆沉浸度', dimension_code: 'library_immersion' },
+  { dimension: '网络作息自律指数', dimension_code: 'network_habits' },
+  { dimension: '早晚生活作息规律', dimension_code: 'daily_routine_boundary' },
+  { dimension: '体质及运动状况', dimension_code: 'physical_resilience' },
+  { dimension: '综合荣誉与异动预警', dimension_code: 'appraisal_status_alert' },
+] as const
+
 const termStore = useTermStore()
 
 const overviewQuery = useQuery({
@@ -324,7 +335,25 @@ const summaryQuery = useQuery({
 
 const overview = computed(() => overviewQuery.data.value)
 const summary = computed(() => summaryQuery.data.value)
-const dimensionRows = computed(() => overview.value?.dimension_summary ?? [])
+const dimensionRows = computed(() => {
+  const rows = overview.value?.dimension_summary ?? []
+  const rowMap = new Map(
+    rows.map((item) => [item.dimension_code ?? item.dimension, item] as const),
+  )
+  return OVERVIEW_DIMENSIONS.map((base) => {
+    const matched = rowMap.get(base.dimension_code) ?? rowMap.get(base.dimension)
+    if (matched) return matched
+    return {
+      dimension: base.dimension,
+      dimension_code: base.dimension_code,
+      score: 0,
+      level: 'low' as const,
+      label: '当前学期无有效数据',
+      explanation: `${base.dimension}当前学期无有效源表指标，暂不做该维度判定。`,
+      metrics: [],
+    }
+  })
+})
 const activePortraitTab = ref<'bar' | 'radar' | 'detail'>('bar')
 const portraitTabs = [
   { key: 'bar', label: '柱状图' },

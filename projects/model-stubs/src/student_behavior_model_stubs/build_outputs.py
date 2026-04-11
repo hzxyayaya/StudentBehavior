@@ -312,12 +312,125 @@ def _dedupe_students_by_latest_term(student_results: pd.DataFrame) -> pd.DataFra
     return deduped.drop(columns=["__term_sort_key"])
 
 
+def _dimension_is_available(item: Mapping[str, object]) -> bool:
+    provenance = item.get("provenance")
+    if isinstance(provenance, Mapping) and provenance.get("is_unavailable") is True:
+        return False
+    return True
+
+
+def _group_segment_from_dimension_items(items: Sequence[Mapping[str, object]]) -> str:
+    by_code = {str(item.get("dimension_code", "")): item for item in items}
+
+    def score(code: str) -> float:
+        try:
+            return float(by_code[code].get("score"))
+        except (KeyError, TypeError, ValueError):
+            return 0.0
+
+    def available(code: str) -> bool:
+        return code in by_code and _dimension_is_available(by_code[code])
+
+    academic = score("academic_base")
+    class_engagement = score("class_engagement")
+    online = score("online_activeness")
+    network = score("network_habits")
+    daily = score("daily_routine_boundary")
+    physical = score("physical_resilience")
+    appraisal = score("appraisal_status_alert")
+
+    if (
+        available("academic_base")
+        and available("class_engagement")
+        and available("online_activeness")
+        and available("daily_routine_boundary")
+        and academic >= 0.8
+        and class_engagement >= 0.75
+        and online >= 0.7
+        and daily >= 0.65
+    ):
+        return "学习投入稳定组"
+    if (
+        available("academic_base")
+        and available("physical_resilience")
+        and available("appraisal_status_alert")
+        and academic >= 0.7
+        and physical >= 0.75
+        and appraisal >= 0.7
+    ):
+        return "综合发展优势组"
+    if (
+        (available("network_habits") and network < 0.45)
+        or (available("daily_routine_boundary") and daily < 0.45)
+    ):
+        return "作息失衡风险组"
+    return "课堂参与薄弱组"
+
+
+def _dedupe_students_by_latest_available_dimensions(student_results: pd.DataFrame) -> pd.DataFrame:
+    if student_results.empty or "student_id" not in student_results.columns:
+        return student_results.copy()
+
+    ordered = student_results.copy()
+    ordered["student_id"] = ordered["student_id"].fillna("").astype(str)
+    ordered["term_key"] = ordered["term_key"].fillna("").astype(str)
+    ordered["__term_sort_key"] = ordered["term_key"].map(_term_sort_key)
+    ordered = ordered.sort_values(
+        by=["student_id", "__term_sort_key"],
+        ascending=[True, False],
+        kind="stable",
+    )
+
+    synthesized_rows: list[dict[str, object]] = []
+    for _, student_frame in ordered.groupby("student_id", sort=False):
+        base_row = student_frame.iloc[0].to_dict()
+        latest_items_by_code: dict[str, dict[str, object]] = {}
+        unavailable_items_by_code: dict[str, dict[str, object]] = {}
+        for raw_scores in student_frame["dimension_scores_json"]:
+            for item in _coerce_dimension_scores(raw_scores):
+                if not isinstance(item, Mapping):
+                    continue
+                code = str(item.get("dimension_code", "")).strip()
+                if not code:
+                    continue
+                if _dimension_is_available(item):
+                    latest_items_by_code.setdefault(code, dict(item))
+                else:
+                    unavailable_items_by_code.setdefault(code, dict(item))
+        merged_items: list[dict[str, object]] = []
+        for code in (
+            "academic_base",
+            "class_engagement",
+            "online_activeness",
+            "library_immersion",
+            "network_habits",
+            "daily_routine_boundary",
+            "physical_resilience",
+            "appraisal_status_alert",
+        ):
+            item = latest_items_by_code.get(code) or unavailable_items_by_code.get(code)
+            if item is not None:
+                merged_items.append(item)
+        if merged_items:
+            base_row["dimension_scores_json"] = _json_dump(merged_items)
+            base_row["group_segment"] = _group_segment_from_dimension_items(merged_items)
+        synthesized_rows.append(base_row)
+
+    result = pd.DataFrame.from_records(synthesized_rows)
+    if "__term_sort_key" in result.columns:
+        result = result.drop(columns=["__term_sort_key"])
+    return result
+
+
 def _average_dimension_scores(
     rows: Sequence[object],
 ) -> list[dict[str, object]]:
     totals: dict[str, dict[str, object]] = {}
     for value in rows:
         for item in _coerce_dimension_scores(value):
+            provenance = item.get("provenance")
+            if isinstance(provenance, Mapping) and provenance.get("is_unavailable") is True:
+                continue
             dimension_code = str(item.get("dimension_code", "")).strip()
             dimension = str(item.get("dimension", "")).strip()
             try:
@@ -404,7 +517,7 @@ def build_overview_by_term(student_results: pd.DataFrame) -> dict[str, object]:
         if "intervention_priority_level" in ordered_results.columns
         else ordered_results["risk_level"]
     )
-    display_results = _dedupe_students_by_latest_term(ordered_results)
+    display_results = _dedupe_students_by_latest_available_dimensions(ordered_results)
     display_intervention_levels = (
         display_results["intervention_priority_level"].fillna("").astype(str)
         if "intervention_priority_level" in display_results.columns

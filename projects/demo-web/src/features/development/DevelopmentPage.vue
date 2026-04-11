@@ -90,21 +90,21 @@
       <article class="panel">
         <div class="panel-inner stack">
           <h3>群体去向关联</h3>
-          <div v-if="destinationAssociations.length === 0 && groups.length === 0" class="muted">暂无群体方向数据</div>
-          <template v-if="destinationAssociations.length > 0">
-            <div v-for="association in destinationAssociations" :key="association.group_segment" class="group-row">
+          <div v-if="groupAssociationRows.length === 0 && groups.length === 0" class="muted">暂无群体方向数据</div>
+          <template v-if="groupAssociationRows.length > 0">
+            <div v-for="association in groupAssociationRows" :key="association.group_segment" class="group-row">
               <div>
                 <strong>{{ association.group_segment }}</strong>
                 <div class="muted">
-                  {{ association.student_count }} 人
+                  {{ association.group_student_count }} 人
                   <span v-if="typeof association.group_student_count === 'number'">
-                    · 群体总数 {{ association.group_student_count }} 人
+                    · 去向覆盖 {{ association.destination_student_count }} 人
                   </span>
                 </div>
               </div>
               <div class="stack compact align-end">
-                <strong>{{ association.destination_label ?? '待补充' }}</strong>
-                <span class="muted">组内占比 {{ formatRatio(association.share_within_group) }}</span>
+                <strong>{{ association.top_destination_label ?? '待补充' }}</strong>
+                <span class="muted">{{ association.destination_summary }}</span>
                 <span v-if="summarizeLegacyGroupContext(association.group_segment)" class="muted">
                   {{ summarizeLegacyGroupContext(association.group_segment) }}
                 </span>
@@ -197,7 +197,7 @@ const destinationDistributionRows = computed(() =>
     .slice(0, 6),
 )
 const majorDestinationRows = computed(() => (developmentQuery.data.value?.major_destination_summary ?? []).slice(0, 6))
-const destinationAssociations = computed(() => (developmentQuery.data.value?.group_destination_association ?? []).slice(0, 6))
+const destinationAssociations = computed(() => developmentQuery.data.value?.group_destination_association ?? [])
 const dimensionRows = computed(() => (developmentQuery.data.value?.dimension_highlights ?? []).slice(0, 4))
 const groups = computed(() => (developmentQuery.data.value?.group_direction_segments ?? []).slice(0, 4))
 const directionChains = computed(() => (developmentQuery.data.value?.direction_chains ?? []).slice(0, 4))
@@ -235,6 +235,42 @@ const errorMessage = computed(() =>
 )
 const legacyMajorByName = computed(() => new Map(majorRows.value.map((row) => [row.major_name, row])))
 const legacyGroupByName = computed(() => new Map(groups.value.map((group) => [group.group_segment, group])))
+const groupAssociationRows = computed(() => {
+  const buckets = new Map<
+    string,
+    {
+      group_segment: string
+      group_student_count: number
+      destination_student_count: number
+      top_destination_label: string | undefined
+      top_destination_count: number
+      destination_summary: string
+    }
+  >()
+
+  for (const association of destinationAssociations.value) {
+    const key = association.group_segment
+    const current = buckets.get(key) ?? {
+      group_segment: key,
+      group_student_count: association.group_student_count ?? 0,
+      destination_student_count: 0,
+      top_destination_label: undefined,
+      top_destination_count: 0,
+      destination_summary: '',
+    }
+    current.group_student_count = association.group_student_count ?? current.group_student_count
+    current.destination_student_count += association.student_count
+    const entry = `${association.destination_label ?? '待补充'} ${association.student_count} 人`
+    current.destination_summary = current.destination_summary ? `${current.destination_summary} · ${entry}` : entry
+    if (association.student_count > current.top_destination_count) {
+      current.top_destination_label = association.destination_label
+      current.top_destination_count = association.student_count
+    }
+    buckets.set(key, current)
+  }
+
+  return Array.from(buckets.values()).slice(0, 6)
+})
 
 function retry() {
   developmentQuery.refetch()

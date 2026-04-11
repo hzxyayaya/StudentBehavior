@@ -311,6 +311,7 @@ def test_build_overview_by_term_includes_required_sections() -> None:
                 ),
             }
             for item in _coerce_dimension_scores(student_results.iloc[0]["dimension_scores_json"])
+            if not bool(item.get("provenance", {}).get("is_unavailable"))
         ],
         key=lambda item: item["dimension_code"],
     )
@@ -328,7 +329,7 @@ def test_build_overview_by_term_includes_required_sections() -> None:
     assert isinstance(overview["risk_trend_summary"], dict)
     assert set(overview["risk_band_distribution"]) == {"高风险", "较高风险", "一般风险", "低风险"}
     assert overview["dimension_summary"] == expected_dimension_summary
-    assert len(overview["top_warning_factors"]) == 3
+    assert len(overview["top_warning_factors"]) == len(expected_dimension_summary[:3])
     assert len(overview["intervention_priority_summary"]) == 4
     assert overview["risk_trend_summary"] == overview["trend_summary"]
     assert overview["risk_band_distribution"] == overview["risk_distribution"]

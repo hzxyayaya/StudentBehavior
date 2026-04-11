@@ -95,7 +95,7 @@ def test_extract_table_names_handles_quoted_and_schema_qualified_tables() -> Non
     assert db._extract_table_names(sql_text) == {"Student_Events", "term_features"}
 
 
-def test_cli_build_demo_features_defaults_to_lightweight_build(monkeypatch) -> None:
+def test_cli_build_demo_features_defaults_to_full_build(monkeypatch) -> None:
     captured: dict[str, object] = {}
 
     def fake_resolve_checkout_root() -> Path:
@@ -110,10 +110,10 @@ def test_cli_build_demo_features_defaults_to_lightweight_build(monkeypatch) -> N
     monkeypatch.setattr(cli, "build_demo_features_from_excels", fake_build_demo_features_from_excels)
 
     assert cli.main(["build-demo-features"]) == 0
-    assert captured == {"repo_root": Path("C:/demo-repo"), "include_heavy_sources": False}
+    assert captured == {"repo_root": Path("C:/demo-repo"), "include_heavy_sources": True}
 
 
-def test_cli_build_demo_features_can_opt_in_heavy_source_build(monkeypatch) -> None:
+def test_cli_build_demo_features_can_skip_heavy_source_build(monkeypatch) -> None:
     captured: dict[str, object] = {}
 
     def fake_resolve_checkout_root() -> Path:
@@ -127,5 +127,5 @@ def test_cli_build_demo_features_can_opt_in_heavy_source_build(monkeypatch) -> N
     monkeypatch.setattr(cli, "resolve_checkout_root", fake_resolve_checkout_root)
     monkeypatch.setattr(cli, "build_demo_features_from_excels", fake_build_demo_features_from_excels)
 
-    assert cli.main(["build-demo-features", "--include-heavy-sources"]) == 0
-    assert captured == {"repo_root": Path("C:/demo-repo"), "include_heavy_sources": True}
+    assert cli.main(["build-demo-features", "--skip-heavy-sources"]) == 0
+    assert captured == {"repo_root": Path("C:/demo-repo"), "include_heavy_sources": False}
