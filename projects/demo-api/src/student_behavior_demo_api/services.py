@@ -3,14 +3,18 @@ from __future__ import annotations
 import csv
 import json
 import math
-import sqlite3
 from collections import defaultdict
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
+
 from student_behavior_demo_api.loaders import load_json_records
+from student_behavior_demo_api.loaders import load_runtime_payload_rows
+from student_behavior_demo_api.loaders import load_runtime_single_payload
 from student_behavior_demo_api.loaders import load_student_results
+from student_behavior_demo_api.loaders import validate_student_results_columns
 from student_behavior_demo_api.loaders import validate_model_summary_payload
 from student_behavior_demo_api.loaders import validate_overview_payload
 
@@ -47,7 +51,10 @@ class DemoApiStore:
         self._repo_root = resolved_repo_root
         self._warnings_path = warnings_path
         self._sqlite_path = sqlite_path or resolved_repo_root / "data" / "demo.sqlite3"
-        overview_record = _load_single_record(resolved_overview_path)
+        overview_record = _load_overview_record(
+            overview_path=resolved_overview_path,
+            sqlite_path=self._sqlite_path,
+        )
         self._overview_term = overview_term or _infer_overview_term(overview_record)
         self._overview_terms = _infer_overview_terms(overview_record, self._overview_term)
         validate_overview_payload({"term_buckets": {self._overview_term: overview_record}})
@@ -66,7 +73,8 @@ class DemoApiStore:
             raise KeyError(term)
         payload = dict(self._overview_payload)
         warning_rows = _load_warning_rows(
-            self._warnings_path or _resolve_warning_artifact_path(self._repo_root)
+            self._warnings_path or _resolve_warning_artifact_path(self._repo_root),
+            self._sqlite_path,
         )
         display_rows = _dedupe_rows_by_latest_term(warning_rows)
         if _is_placeholder_risk_distribution(payload.get("risk_distribution")):
@@ -98,7 +106,7 @@ class DemoApiStore:
 
     def get_student_profile(self, *, student_id: str, term: str) -> dict[str, Any]:
         student_rows = _load_student_result_rows(
-            self._repo_root, self._warnings_path
+            self._repo_root, self._warnings_path, self._sqlite_path
         )
         student_rows = [row for row in student_rows if row.get("student_id") == student_id]
         if not student_rows:
@@ -153,7 +161,7 @@ class DemoApiStore:
         }
 
     def get_student_report(self, *, student_id: str, term: str) -> dict[str, Any]:
-        report_rows = _load_student_report_rows(self._repo_root)
+        report_rows = _load_student_report_rows(self._repo_root, self._sqlite_path)
         current_row = next(
             (row for row in report_rows if row.get("student_id") == student_id and row.get("term_key") == term),
             None,
@@ -161,7 +169,7 @@ class DemoApiStore:
         if current_row is None:
             raise KeyError((student_id, term))
 
-        student_rows = _load_student_result_rows(self._repo_root, self._warnings_path)
+        student_rows = _load_student_result_rows(self._repo_root, self._warnings_path, self._sqlite_path)
         student_rows = [row for row in student_rows if row.get("student_id") == student_id]
         current_warning = next((row for row in student_rows if row.get("term_key") == term), None)
         if current_warning is None:
@@ -211,12 +219,15 @@ class DemoApiStore:
         return payload
 
     def get_groups(self, *, term: str) -> dict[str, Any]:
-        warning_rows = _load_warning_rows(self._warnings_path or _resolve_warning_artifact_path(self._repo_root))
+        warning_rows = _load_warning_rows(
+            self._warnings_path or _resolve_warning_artifact_path(self._repo_root),
+            self._sqlite_path,
+        )
         term_rows = [row for row in warning_rows if row["term_key"] == term]
         if not term_rows:
             raise KeyError(term)
 
-        report_rows = _load_student_report_rows(self._repo_root)
+        report_rows = _load_student_report_rows(self._repo_root, self._sqlite_path)
         report_index: dict[tuple[str, str], dict[str, Any]] = {}
         for row in report_rows:
             student_id = row.get("student_id")
@@ -312,7 +323,10 @@ class DemoApiStore:
         return {
             "term": term,
             "risk_trend_summary": _build_risk_trend_summary(
-                _load_warning_rows(self._warnings_path or _resolve_warning_artifact_path(self._repo_root))
+                _load_warning_rows(
+                    self._warnings_path or _resolve_warning_artifact_path(self._repo_root),
+                    self._sqlite_path,
+                )
             ),
             "key_factors": overview.get("risk_factor_summary", []),
             "current_dimensions": overview.get("dimension_summary", []),
@@ -324,7 +338,10 @@ class DemoApiStore:
         overview = self.get_overview(term)
         groups = self.get_groups(term=term)
         group_rows = groups.get("groups", [])
-        warning_rows = _load_warning_rows(self._warnings_path or _resolve_warning_artifact_path(self._repo_root))
+        warning_rows = _load_warning_rows(
+            self._warnings_path or _resolve_warning_artifact_path(self._repo_root),
+            self._sqlite_path,
+        )
         term_rows = [row for row in warning_rows if row.get("term_key") == term]
         destination_analysis = _extract_destination_analysis(overview)
         return {
@@ -473,7 +490,10 @@ class DemoApiStore:
         major_name: str | None = None,
         risk_change_direction: str | None = None,
     ) -> dict[str, Any]:
-        warning_rows = _load_warning_rows(self._warnings_path or _resolve_warning_artifact_path(self._repo_root))
+        warning_rows = _load_warning_rows(
+            self._warnings_path or _resolve_warning_artifact_path(self._repo_root),
+            self._sqlite_path,
+        )
         if term not in {row["term_key"] for row in warning_rows}:
             raise KeyError(term)
         allowed_levels = _resolve_allowed_risk_levels(risk_level)
@@ -569,37 +589,16 @@ def _load_single_record(path: Path) -> Mapping[str, Any]:
 
 
 def _load_model_summary_record(*, model_summary_path: Path, sqlite_path: Path) -> Mapping[str, Any]:
-    sqlite_record = _load_model_summary_from_sqlite(sqlite_path)
+    sqlite_record = load_runtime_single_payload(sqlite_path, table_name="runtime_model_summary")
     if sqlite_record is not None:
         return sqlite_record
     return _load_single_record(model_summary_path)
 
-
-def _load_model_summary_from_sqlite(sqlite_path: Path) -> Mapping[str, Any] | None:
-    if not sqlite_path.exists():
-        return None
-
-    connection = sqlite3.connect(str(sqlite_path))
-    try:
-        row = connection.execute(
-            "select payload_json from runtime_model_summary where summary_key = ?",
-            ("current",),
-        ).fetchone()
-    except sqlite3.DatabaseError:
-        return None
-    finally:
-        connection.close()
-
-    if row is None or not row[0]:
-        return None
-
-    try:
-        payload = json.loads(str(row[0]))
-    except json.JSONDecodeError:
-        return None
-    if not isinstance(payload, Mapping):
-        return None
-    return payload
+def _load_overview_record(*, overview_path: Path, sqlite_path: Path) -> Mapping[str, Any]:
+    sqlite_record = load_runtime_single_payload(sqlite_path, table_name="runtime_overview")
+    if sqlite_record is not None:
+        return sqlite_record
+    return _load_single_record(overview_path)
 
 
 def _normalize_model_summary_payload(payload: Mapping[str, Any]) -> dict[str, Any]:
@@ -631,7 +630,15 @@ def _extract_report_metadata(
     return metadata
 
 
-def _load_warning_rows(path: Path | None) -> list[dict[str, Any]]:
+def _load_warning_rows(path: Path | None, sqlite_path: Path) -> list[dict[str, Any]]:
+    sqlite_rows = load_runtime_payload_rows(
+        sqlite_path,
+        table_name="runtime_student_results",
+        order_by="student_id, term_key",
+    )
+    if sqlite_rows:
+        return _normalize_warning_rows(sqlite_rows)
+
     if path is None:
         raise FileNotFoundError("v1_student_results.csv")
 
@@ -680,15 +687,75 @@ def _load_warning_rows(path: Path | None) -> list[dict[str, Any]]:
                 if key in row:
                     row[key] = _as_float(row.get(key))
             rows.append(row)
-        return rows
+        return _normalize_warning_rows(rows)
 
 
-def _load_student_report_rows(repo_root: Path) -> list[dict[str, Any]]:
+def _normalize_warning_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    normalized_rows: list[dict[str, Any]] = []
+    for raw_row in rows:
+        row = dict(raw_row)
+        student_id = row.get("student_id")
+        if not isinstance(student_id, str) or not student_id:
+            raise ValueError("warnings rows must include student_id")
+
+        term_key = row.get("term_key")
+        if not isinstance(term_key, str) or not term_key:
+            raise ValueError("warnings rows must include term_key")
+
+        group_segment = row.get("group_segment")
+        if not isinstance(group_segment, str) or not group_segment:
+            raise ValueError("warnings rows must include group_segment")
+
+        if "dimension_scores_json" not in row:
+            raise ValueError("warnings rows must include dimension_scores_json")
+
+        risk_probability_raw = row.get("risk_probability")
+        if risk_probability_raw in (None, ""):
+            raise ValueError("warnings rows must include risk_probability")
+        row["risk_probability"] = float(risk_probability_raw)
+        if not math.isfinite(row["risk_probability"]):
+            raise ValueError("warnings rows must include finite risk_probability")
+
+        dimension_scores_raw = row.get("dimension_scores_json")
+        if isinstance(dimension_scores_raw, list):
+            row["dimension_scores_json"] = json.dumps(dimension_scores_raw, ensure_ascii=False)
+        elif isinstance(dimension_scores_raw, str) and not dimension_scores_raw.strip():
+            row["dimension_scores_json"] = "[]"
+
+        for key in ("base_risk_score", "risk_adjustment_score", "adjusted_risk_score", "risk_delta"):
+            if key in row:
+                row[key] = _as_float(row.get(key))
+        normalized_rows.append(row)
+    return normalized_rows
+
+
+def _load_student_report_rows(repo_root: Path, sqlite_path: Path) -> list[dict[str, Any]]:
+    sqlite_rows = load_runtime_payload_rows(
+        sqlite_path,
+        table_name="runtime_student_reports",
+        order_by="student_id, term_key",
+    )
+    if sqlite_rows:
+        return sqlite_rows
     report_path = _resolve_artifact_path(repo_root, "v1_student_reports.jsonl")
     return load_json_records(report_path)
 
 
-def _load_student_result_rows(repo_root: Path, warnings_path: Path | None) -> list[dict[str, Any]]:
+def _load_student_result_rows(repo_root: Path, warnings_path: Path | None, sqlite_path: Path) -> list[dict[str, Any]]:
+    sqlite_rows = load_runtime_payload_rows(
+        sqlite_path,
+        table_name="runtime_student_results",
+        order_by="student_id, term_key",
+    )
+    if sqlite_rows:
+        frame = pd.DataFrame(sqlite_rows)
+        frame = validate_student_results_columns(frame)
+        if "dimension_scores_json" in frame:
+            frame["dimension_scores_json"] = frame["dimension_scores_json"].fillna("").astype(str)
+            blank_scores = frame["dimension_scores_json"].str.strip() == ""
+            frame.loc[blank_scores, "dimension_scores_json"] = "[]"
+        return frame.to_dict(orient="records")
+
     results_path = _resolve_student_results_artifact_path(repo_root, warnings_path)
     frame = load_student_results(results_path)
     frame = frame.copy()

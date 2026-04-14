@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -112,3 +113,66 @@ def validate_overview_payload(payload: Mapping[str, Any]) -> Mapping[str, Any]:
 def validate_model_summary_payload(payload: Mapping[str, Any]) -> Mapping[str, Any]:
     _ensure_required_keys(payload, MODEL_SUMMARY_REQUIRED_KEYS)
     return payload
+
+
+def load_runtime_single_payload(
+    sqlite_path: Path,
+    *,
+    table_name: str,
+    key_column: str = "summary_key",
+    key_value: str = "current",
+) -> dict[str, Any] | None:
+    row = _load_runtime_payload_rows(
+        sqlite_path,
+        query=f"select payload_json from {table_name} where {key_column} = ?",
+        parameters=(key_value,),
+    )
+    if not row:
+        return None
+    payload = row[0]
+    if not isinstance(payload, dict):
+        return None
+    return payload
+
+
+def load_runtime_payload_rows(
+    sqlite_path: Path,
+    *,
+    table_name: str,
+    order_by: str | None = None,
+) -> list[dict[str, Any]]:
+    query = f"select payload_json from {table_name}"
+    if order_by:
+        query += f" order by {order_by}"
+    return _load_runtime_payload_rows(sqlite_path, query=query, parameters=())
+
+
+def _load_runtime_payload_rows(
+    sqlite_path: Path,
+    *,
+    query: str,
+    parameters: tuple[object, ...],
+) -> list[dict[str, Any]]:
+    if not sqlite_path.exists():
+        return []
+
+    connection = sqlite3.connect(str(sqlite_path))
+    try:
+        raw_rows = connection.execute(query, parameters).fetchall()
+    except sqlite3.DatabaseError:
+        return []
+    finally:
+        connection.close()
+
+    payload_rows: list[dict[str, Any]] = []
+    for raw_row in raw_rows:
+        if not raw_row or not raw_row[0]:
+            continue
+        try:
+            payload = json.loads(str(raw_row[0]))
+        except json.JSONDecodeError:
+            return []
+        if not isinstance(payload, dict):
+            return []
+        payload_rows.append(payload)
+    return payload_rows

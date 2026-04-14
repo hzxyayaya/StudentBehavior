@@ -995,6 +995,126 @@ def test_get_model_summary_falls_back_to_file_when_sqlite_missing_or_invalid(
     assert payload["auc"] == 0.91
 
 
+def test_demo_api_store_reads_core_runtime_data_from_sqlite_when_available(tmp_path: Path) -> None:
+    sqlite_path = tmp_path / "data" / "demo.sqlite3"
+    sqlite_path.parent.mkdir(parents=True, exist_ok=True)
+    connection = sqlite3.connect(sqlite_path)
+    try:
+        connection.executescript(
+            """
+            create table runtime_overview (summary_key text primary key, payload_json text not null);
+            create table runtime_model_summary (summary_key text primary key, payload_json text not null);
+            create table runtime_student_results (student_id text, term_key text, payload_json text not null);
+            create table runtime_student_reports (student_id text, term_key text, payload_json text not null);
+            """
+        )
+        connection.execute(
+            "insert into runtime_overview (summary_key, payload_json) values (?, ?)",
+            (
+                "current",
+                json.dumps(
+                    {
+                        "student_count": 2,
+                        "risk_distribution": {"high": 0, "medium": 1, "low": 1},
+                        "group_distribution": {"课堂参与薄弱组": 2},
+                        "major_risk_summary": [],
+                        "trend_summary": {"terms": [{"term_key": "2024-2"}]},
+                    },
+                    ensure_ascii=False,
+                ),
+            ),
+        )
+        connection.execute(
+            "insert into runtime_model_summary (summary_key, payload_json) values (?, ?)",
+            (
+                "current",
+                json.dumps(
+                    {
+                        "cluster_method": "stub-eight-dimension-group-rules",
+                        "risk_model": "sqlite-academic-risk-model",
+                        "target_label": "risk_label_binary",
+                        "auc": 0.9772,
+                        "updated_at": "2026-04-14T09:00:00Z",
+                    },
+                    ensure_ascii=False,
+                ),
+            ),
+        )
+        result_payload = json.dumps(
+            {
+                "student_id": "20230001",
+                "term_key": "2024-2",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "group_segment": "课堂参与薄弱组",
+                "risk_probability": 0.81,
+                "risk_level": "一般风险",
+                "dimension_scores_json": "[]",
+                "base_risk_score": 52.0,
+                "risk_adjustment_score": -1.0,
+                "adjusted_risk_score": 51.0,
+                "risk_delta": -1.0,
+                "risk_change_direction": "falling",
+                "base_risk_explanation": "base",
+                "behavior_adjustment_explanation": "adjust",
+                "risk_change_explanation": "change",
+            },
+            ensure_ascii=False,
+        )
+        connection.execute(
+            "insert into runtime_student_results (student_id, term_key, payload_json) values (?, ?, ?)",
+            ("20230001", "2024-2", result_payload),
+        )
+        connection.execute(
+            "insert into runtime_student_reports (student_id, term_key, payload_json) values (?, ?, ?)",
+            (
+                "20230001",
+                "2024-2",
+                json.dumps(
+                    {
+                        "student_id": "20230001",
+                        "term_key": "2024-2",
+                        "top_factors": [],
+                        "intervention_advice": ["建议 A"],
+                        "report_text": "report",
+                    },
+                    ensure_ascii=False,
+                ),
+            ),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    artifact_dir = tmp_path / "artifacts" / "model_stubs"
+    artifact_dir.mkdir(parents=True, exist_ok=True)
+    (artifact_dir / "v1_overview_by_term.json").write_text("{}", encoding="utf-8")
+    (artifact_dir / "v1_model_summary.json").write_text("{}", encoding="utf-8")
+    (artifact_dir / "v1_student_results.csv").write_text("", encoding="utf-8")
+    (artifact_dir / "v1_student_reports.jsonl").write_text("", encoding="utf-8")
+
+    store = DemoApiStore(
+        overview_path=artifact_dir / "v1_overview_by_term.json",
+        model_summary_path=artifact_dir / "v1_model_summary.json",
+        sqlite_path=sqlite_path,
+        overview_term="2024-2",
+        warnings_path=artifact_dir / "v1_student_results.csv",
+        repo_root=tmp_path,
+    )
+
+    overview = store.get_overview("2024-2")
+    summary = store.get_model_summary(term="2024-2")
+    profile = store.get_student_profile(student_id="20230001", term="2024-2")
+    report = store.get_student_report(student_id="20230001", term="2024-2")
+    warnings = store.list_warnings(term="2024-2", page=1, page_size=10)
+
+    assert overview["student_count"] == 2
+    assert summary["risk_model"] == "sqlite-academic-risk-model"
+    assert profile["student_name"] == "Bob"
+    assert report["report_text"] == "report"
+    assert warnings["total"] == 1
+
+
 def test_get_result_model_summary_preserves_reserved_api_fields(
     tmp_path: Path, sample_artifacts_dir: Path
 ) -> None:
