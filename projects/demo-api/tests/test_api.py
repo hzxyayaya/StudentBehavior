@@ -377,6 +377,158 @@ def test_sqlite_backed_core_endpoints_work_when_runtime_tables_exist(
     assert report_response.json()["data"]["report_text"] == "report"
 
 
+def test_sqlite_backed_groups_trajectory_and_development_endpoints_work(
+    monkeypatch, tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    import sqlite3
+
+    sqlite_path = tmp_path / "data" / "demo.sqlite3"
+    sqlite_path.parent.mkdir(parents=True, exist_ok=True)
+    connection = sqlite3.connect(sqlite_path)
+    try:
+        connection.executescript(
+            """
+            create table runtime_overview (summary_key text primary key, payload_json text not null);
+            create table runtime_model_summary (summary_key text primary key, payload_json text not null);
+            create table runtime_student_results (student_id text, term_key text, payload_json text not null);
+            create table runtime_student_reports (student_id text, term_key text, payload_json text not null);
+            """
+        )
+        connection.execute(
+            "insert into runtime_overview (summary_key, payload_json) values (?, ?)",
+            (
+                "current",
+                json.dumps(
+                    {
+                        "student_count": 1,
+                        "risk_distribution": {"high": 0, "medium": 1, "low": 0},
+                        "risk_band_distribution": {"高风险": 0, "较高风险": 1, "一般风险": 0, "低风险": 0},
+                        "group_distribution": {"综合发展优势组": 1},
+                        "major_risk_summary": [],
+                        "destination_distribution": {"升学": 1},
+                        "major_destination_summary": [
+                            {
+                                "major_name": "软件工程",
+                                "student_count": 1,
+                                "destination_student_count": 1,
+                                "top_destination_label": "升学",
+                                "top_destination_count": 1,
+                                "destination_distribution": {"升学": 1},
+                            }
+                        ],
+                        "group_destination_association": [
+                            {
+                                "group_segment": "综合发展优势组",
+                                "destination_label": "升学",
+                                "student_count": 1,
+                                "group_student_count": 1,
+                                "share_within_group": 1.0,
+                            }
+                        ],
+                        "dimension_summary": [{"dimension": "学业基础表现", "average_score": 0.82}],
+                        "risk_factor_summary": [{"feature": "academic_base", "feature_cn": "学业基础表现", "count": 1, "importance": 0.82}],
+                        "trend_summary": {"terms": [{"term_key": "2024-2", "student_count": 1, "risk_distribution": {"高风险": 0, "较高风险": 1, "一般风险": 0, "低风险": 0}}]},
+                    },
+                    ensure_ascii=False,
+                ),
+            ),
+        )
+        connection.execute(
+            "insert into runtime_model_summary (summary_key, payload_json) values (?, ?)",
+            (
+                "current",
+                json.dumps(
+                    {
+                        "cluster_method": "stub-eight-dimension-group-rules",
+                        "risk_model": "sqlite-academic-risk-model",
+                        "target_label": "risk_label_binary",
+                        "auc": 0.9772,
+                        "updated_at": "2026-04-14T09:00:00Z",
+                    },
+                    ensure_ascii=False,
+                ),
+            ),
+        )
+        result_payload = json.dumps(
+            {
+                "student_id": "20230001",
+                "term_key": "2024-2",
+                "student_name": "Bob",
+                "major_name": "软件工程",
+                "group_segment": "综合发展优势组",
+                "risk_probability": 0.52,
+                "risk_level": "一般风险",
+                "dimension_scores_json": "[]",
+                "top_risk_factors_json": "[]",
+                "top_protective_factors_json": "[]",
+                "base_risk_score": 52.0,
+                "risk_adjustment_score": -1.0,
+                "adjusted_risk_score": 51.0,
+                "risk_delta": -1.0,
+                "risk_change_direction": "falling",
+                "base_risk_explanation": "base",
+                "behavior_adjustment_explanation": "adjust",
+                "risk_change_explanation": "change",
+            },
+            ensure_ascii=False,
+        )
+        connection.execute(
+            "insert into runtime_student_results (student_id, term_key, payload_json) values (?, ?, ?)",
+            ("20230001", "2024-2", result_payload),
+        )
+        connection.execute(
+            "insert into runtime_student_reports (student_id, term_key, payload_json) values (?, ?, ?)",
+            (
+                "20230001",
+                "2024-2",
+                json.dumps(
+                    {
+                        "student_id": "20230001",
+                        "term_key": "2024-2",
+                        "top_factors": [
+                            {"dimension": "学业基础表现", "importance": 0.82}
+                        ],
+                        "intervention_advice": ["建议 A"],
+                        "report_text": "report",
+                    },
+                    ensure_ascii=False,
+                ),
+            ),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    artifact_dir = tmp_path / "artifacts" / "model_stubs"
+    artifact_dir.mkdir(parents=True, exist_ok=True)
+    (artifact_dir / "v1_overview_by_term.json").write_text("{}", encoding="utf-8")
+    (artifact_dir / "v1_model_summary.json").write_text("{}", encoding="utf-8")
+    (artifact_dir / "v1_student_results.csv").write_text("", encoding="utf-8")
+    (artifact_dir / "v1_student_reports.jsonl").write_text("", encoding="utf-8")
+
+    store = DemoApiStore(
+        overview_path=artifact_dir / "v1_overview_by_term.json",
+        model_summary_path=artifact_dir / "v1_model_summary.json",
+        sqlite_path=sqlite_path,
+        overview_term="2024-2",
+        warnings_path=artifact_dir / "v1_student_results.csv",
+        repo_root=tmp_path,
+    )
+    monkeypatch.setattr(main_module, "get_store", lambda: store)
+    client = TestClient(app)
+
+    groups_response = client.get("/api/analytics/groups", params={"term": "2024-2"})
+    trajectory_response = client.get("/api/analytics/trajectory", params={"term": "2024-2"})
+    development_response = client.get("/api/analytics/development", params={"term": "2024-2"})
+
+    assert groups_response.status_code == 200
+    assert groups_response.json()["data"]["groups"][0]["group_segment"] == "综合发展优势组"
+    assert trajectory_response.status_code == 200
+    assert trajectory_response.json()["data"]["term"] == "2024-2"
+    assert development_response.status_code == 200
+    assert development_response.json()["data"]["destination_distribution"] == {"升学": 1}
+
+
 @pytest.mark.parametrize(
     ("path", "params", "expected_keys"),
     [
