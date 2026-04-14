@@ -37,5 +37,6 @@ prompts/
 .tmp_rg_files.txt
 .playwright-cli/
 output/
+data/*.sqlite3
 artifacts/semester_features/
 artifacts/*.csv

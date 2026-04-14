@@ -105,6 +105,26 @@ uv run uvicorn student_behavior_demo_api.main:app --reload --port 8000
 - OpenAPI: [http://127.0.0.1:8000/openapi.json](http://127.0.0.1:8000/openapi.json)
 - Scalar: [http://127.0.0.1:8000/scalar](http://127.0.0.1:8000/scalar)
 
+## SQLite 维护库
+
+当前仓库支持把现有 `semester_features` 与 `model_stubs` 产物同步进本地 SQLite。
+
+命令：
+
+```powershell
+cd C:\Users\Orion\Desktop\program\StudentBehavior\projects\analytics-db
+uv run analytics-db build-runtime-sqlite
+```
+
+生成位置：
+
+- `data/demo.sqlite3`
+
+说明：
+
+- SQLite 文件为本地生成产物，不提交进仓库
+- 当前 `demo-api` 已支持优先从 SQLite 读取 `model_summary`
+
 ## 四、启动前端
 
 工作目录：
