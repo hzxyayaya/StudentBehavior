@@ -52,6 +52,12 @@ EXPECTED_TABLES = {
     "student_running_events",
     "student_evaluation_labels",
     "student_term_features",
+    "runtime_student_term_features",
+    "runtime_student_results",
+    "runtime_student_reports",
+    "runtime_model_summary",
+    "runtime_overview",
+    "runtime_warnings",
 }
 
 EXPECTED_SQL_FILES = [
@@ -59,6 +65,7 @@ EXPECTED_SQL_FILES = [
     "002_create_fact_tables.sql",
     "003_create_student_term_features.sql",
     "004_indexes.sql",
+    "005_create_demo_runtime_tables.sql",
 ]
 
 
@@ -129,3 +136,29 @@ def test_cli_build_demo_features_can_skip_heavy_source_build(monkeypatch) -> Non
 
     assert cli.main(["build-demo-features", "--skip-heavy-sources"]) == 0
     assert captured == {"repo_root": Path("C:/demo-repo"), "include_heavy_sources": False}
+
+
+def test_cli_build_runtime_sqlite_prints_summary(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_resolve_checkout_root() -> Path:
+        return Path("C:/demo-repo")
+
+    def fake_build_sqlite_runtime_db(*, repo_root: Path, sqlite_path: Path | None = None):
+        captured["repo_root"] = repo_root
+        captured["sqlite_path"] = sqlite_path
+        return {
+            "sqlite_path": "C:/demo-repo/data/demo.sqlite3",
+            "student_term_features_count": 10,
+            "student_results_count": 11,
+            "student_reports_count": 12,
+            "model_summary_count": 1,
+            "overview_count": 1,
+            "warnings_count": 1,
+        }
+
+    monkeypatch.setattr(cli, "resolve_checkout_root", fake_resolve_checkout_root)
+    monkeypatch.setattr(cli, "build_sqlite_runtime_db", fake_build_sqlite_runtime_db)
+
+    assert cli.main(["build-runtime-sqlite"]) == 0
+    assert captured == {"repo_root": Path("C:/demo-repo"), "sqlite_path": None}

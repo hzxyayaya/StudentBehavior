@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import json
 import math
+import sqlite3
 from collections import defaultdict
 from collections.abc import Mapping
 from pathlib import Path
@@ -31,6 +32,7 @@ class DemoApiStore:
         self,
         overview_path: Path | None = None,
         model_summary_path: Path | None = None,
+        sqlite_path: Path | None = None,
         warnings_path: Path | None = None,
         overview_term: str | None = None,
         repo_root: Path | None = None,
@@ -44,13 +46,19 @@ class DemoApiStore:
         )
         self._repo_root = resolved_repo_root
         self._warnings_path = warnings_path
+        self._sqlite_path = sqlite_path or resolved_repo_root / "data" / "demo.sqlite3"
         overview_record = _load_single_record(resolved_overview_path)
         self._overview_term = overview_term or _infer_overview_term(overview_record)
         self._overview_terms = _infer_overview_terms(overview_record, self._overview_term)
         validate_overview_payload({"term_buckets": {self._overview_term: overview_record}})
         self._overview_payload = dict(overview_record)
         self._model_summary_payload = _normalize_model_summary_payload(
-            validate_model_summary_payload(_load_single_record(resolved_model_summary_path))
+            validate_model_summary_payload(
+                _load_model_summary_record(
+                    model_summary_path=resolved_model_summary_path,
+                    sqlite_path=self._sqlite_path,
+                )
+            )
         )
 
     def get_overview(self, term: str) -> dict[str, Any]:
@@ -558,6 +566,40 @@ def _load_single_record(path: Path) -> Mapping[str, Any]:
     if len(records) != 1:
         raise ValueError(f"expected exactly one record in {path}")
     return records[0]
+
+
+def _load_model_summary_record(*, model_summary_path: Path, sqlite_path: Path) -> Mapping[str, Any]:
+    sqlite_record = _load_model_summary_from_sqlite(sqlite_path)
+    if sqlite_record is not None:
+        return sqlite_record
+    return _load_single_record(model_summary_path)
+
+
+def _load_model_summary_from_sqlite(sqlite_path: Path) -> Mapping[str, Any] | None:
+    if not sqlite_path.exists():
+        return None
+
+    connection = sqlite3.connect(str(sqlite_path))
+    try:
+        row = connection.execute(
+            "select payload_json from runtime_model_summary where summary_key = ?",
+            ("current",),
+        ).fetchone()
+    except sqlite3.DatabaseError:
+        return None
+    finally:
+        connection.close()
+
+    if row is None or not row[0]:
+        return None
+
+    try:
+        payload = json.loads(str(row[0]))
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(payload, Mapping):
+        return None
+    return payload
 
 
 def _normalize_model_summary_payload(payload: Mapping[str, Any]) -> dict[str, Any]:

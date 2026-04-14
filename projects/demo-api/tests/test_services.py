@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import sqlite3
 
 import pandas as pd
 import pytest
@@ -923,6 +924,75 @@ def test_get_model_summary_exposes_trained_metrics_when_present(
     assert payload["valid_sample_count"] == 30
     assert payload["test_sample_count"] == 50
     assert payload["feature_count"] == 64
+
+
+def test_get_model_summary_prefers_sqlite_runtime_payload_when_available(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    sqlite_path = tmp_path / "data" / "demo.sqlite3"
+    sqlite_path.parent.mkdir(parents=True, exist_ok=True)
+    connection = sqlite3.connect(sqlite_path)
+    try:
+        connection.execute(
+            "create table runtime_model_summary (summary_key text primary key, payload_json text not null)"
+        )
+        connection.execute(
+            "insert into runtime_model_summary (summary_key, payload_json) values (?, ?)",
+            (
+                "current",
+                json.dumps(
+                    {
+                        "cluster_method": "stub-eight-dimension-group-rules",
+                        "risk_model": "sqlite-academic-risk-model",
+                        "target_label": "risk_label_binary",
+                        "auc": 0.9772,
+                        "updated_at": "2026-04-14T09:00:00Z",
+                        "source": "trained",
+                    },
+                    ensure_ascii=False,
+                ),
+            ),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        sqlite_path=sqlite_path,
+        overview_term="2024-2",
+        warnings_path=sample_artifacts_dir / "v1_student_results.csv",
+        repo_root=tmp_path,
+    )
+
+    payload = store.get_model_summary(term="2024-2")
+
+    assert payload["risk_model"] == "sqlite-academic-risk-model"
+    assert payload["auc"] == 0.9772
+    assert payload["source"] == "trained"
+
+
+def test_get_model_summary_falls_back_to_file_when_sqlite_missing_or_invalid(
+    tmp_path: Path, sample_artifacts_dir: Path
+) -> None:
+    sqlite_path = tmp_path / "data" / "demo.sqlite3"
+    sqlite_path.parent.mkdir(parents=True, exist_ok=True)
+    sqlite_path.write_text("not-a-sqlite-database", encoding="utf-8")
+
+    store = DemoApiStore(
+        overview_path=sample_artifacts_dir / "v1_overview_by_term.json",
+        model_summary_path=sample_artifacts_dir / "v1_model_summary.json",
+        sqlite_path=sqlite_path,
+        overview_term="2024-2",
+        warnings_path=sample_artifacts_dir / "v1_student_results.csv",
+        repo_root=tmp_path,
+    )
+
+    payload = store.get_model_summary(term="2024-2")
+
+    assert payload["risk_model"] == "stub-eight-dimension-risk-rules"
+    assert payload["auc"] == 0.91
 
 
 def test_get_result_model_summary_preserves_reserved_api_fields(
