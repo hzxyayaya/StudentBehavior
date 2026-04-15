@@ -42,10 +42,10 @@ class DemoApiStore:
         repo_root: Path | None = None,
     ) -> None:
         resolved_repo_root = repo_root or Path(__file__).resolve().parents[4]
-        resolved_overview_path = overview_path or _resolve_artifact_path(
+        resolved_overview_path = overview_path or _artifact_path(
             resolved_repo_root, "v1_overview_by_term.json"
         )
-        resolved_model_summary_path = model_summary_path or _resolve_artifact_path(
+        resolved_model_summary_path = model_summary_path or _artifact_path(
             resolved_repo_root, "v1_model_summary.json"
         )
         self._repo_root = resolved_repo_root
@@ -73,7 +73,7 @@ class DemoApiStore:
             raise KeyError(term)
         payload = dict(self._overview_payload)
         warning_rows = _load_warning_rows(
-            self._warnings_path or _resolve_warning_artifact_path(self._repo_root),
+            self._warnings_path or _warning_artifact_path(self._repo_root),
             self._sqlite_path,
         )
         display_rows = _dedupe_rows_by_latest_term(warning_rows)
@@ -220,7 +220,7 @@ class DemoApiStore:
 
     def get_groups(self, *, term: str) -> dict[str, Any]:
         warning_rows = _load_warning_rows(
-            self._warnings_path or _resolve_warning_artifact_path(self._repo_root),
+            self._warnings_path or _warning_artifact_path(self._repo_root),
             self._sqlite_path,
         )
         term_rows = [row for row in warning_rows if row["term_key"] == term]
@@ -324,7 +324,7 @@ class DemoApiStore:
             "term": term,
             "risk_trend_summary": _build_risk_trend_summary(
                 _load_warning_rows(
-                    self._warnings_path or _resolve_warning_artifact_path(self._repo_root),
+                    self._warnings_path or _warning_artifact_path(self._repo_root),
                     self._sqlite_path,
                 )
             ),
@@ -339,7 +339,7 @@ class DemoApiStore:
         groups = self.get_groups(term=term)
         group_rows = groups.get("groups", [])
         warning_rows = _load_warning_rows(
-            self._warnings_path or _resolve_warning_artifact_path(self._repo_root),
+            self._warnings_path or _warning_artifact_path(self._repo_root),
             self._sqlite_path,
         )
         term_rows = [row for row in warning_rows if row.get("term_key") == term]
@@ -491,7 +491,7 @@ class DemoApiStore:
         risk_change_direction: str | None = None,
     ) -> dict[str, Any]:
         warning_rows = _load_warning_rows(
-            self._warnings_path or _resolve_warning_artifact_path(self._repo_root),
+            self._warnings_path or _warning_artifact_path(self._repo_root),
             self._sqlite_path,
         )
         if term not in {row["term_key"] for row in warning_rows}:
@@ -574,8 +574,12 @@ class DemoApiStore:
         }
 
 
+def _artifact_path(repo_root: Path, artifact_name: str) -> Path:
+    return repo_root / "artifacts" / "model_stubs" / artifact_name
+
+
 def _resolve_artifact_path(repo_root: Path, artifact_name: str) -> Path:
-    artifact_path = repo_root / "artifacts" / "model_stubs" / artifact_name
+    artifact_path = _artifact_path(repo_root, artifact_name)
     if artifact_path.exists():
         return artifact_path
     raise FileNotFoundError(artifact_path)
@@ -737,7 +741,7 @@ def _load_student_report_rows(repo_root: Path, sqlite_path: Path) -> list[dict[s
     )
     if sqlite_rows:
         return sqlite_rows
-    report_path = _resolve_artifact_path(repo_root, "v1_student_reports.jsonl")
+    report_path = _artifact_path(repo_root, "v1_student_reports.jsonl")
     return load_json_records(report_path)
 
 
@@ -1635,17 +1639,14 @@ def _sort_term_key(row: Mapping[str, Any]) -> tuple[int, int, str]:
     return (0, 0, str(term_key))
 
 
-def _resolve_warning_artifact_path(repo_root: Path) -> Path:
-    artifact_path = repo_root / "artifacts" / "model_stubs" / "v1_student_results.csv"
-    if artifact_path.exists():
-        return artifact_path
-    raise FileNotFoundError(artifact_path)
+def _warning_artifact_path(repo_root: Path) -> Path:
+    return repo_root / "artifacts" / "model_stubs" / "v1_student_results.csv"
 
 
 def _resolve_student_results_artifact_path(repo_root: Path, warnings_path: Path | None) -> Path:
     if warnings_path is not None:
         return warnings_path
-    return _resolve_warning_artifact_path(repo_root)
+    return _warning_artifact_path(repo_root)
 
 
 def _infer_overview_term(payload: Mapping[str, Any]) -> str:
